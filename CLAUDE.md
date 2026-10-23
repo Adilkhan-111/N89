@@ -21,6 +21,8 @@
 - Язык кода — **C#**. Visual Scripting установлен, но не используется.
 - Доступен Unity MCP (`mcp__unity-mcp__*`): можно читать логи консоли, делать скриншоты сцены и выполнять команды в редакторе.
 - Папка `Assets/Welcome/` — служебная часть шаблона, игровой код туда не класть.
+- Шрифты — `Assets/_Project/Art/Fonts/` (Monoton, Audiowide — OFL; Permanent Marker — Apache 2.0; лицензии лежат рядом). Кириллицы в них нет, поэтому тексты UI пока на английском.
+- Главное меню (`Assets/_Project/Scenes/MainMenu.unity`) пересобирается через меню редактора **N89 > Build Main Menu Scene** (`Scripts/Editor/MainMenuSceneBuilder.cs`). Пересборка затирает ручные правки сцены.
 
 ## Сюжет (кратко)
 

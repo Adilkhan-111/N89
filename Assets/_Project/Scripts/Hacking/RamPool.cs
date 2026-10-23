@@ -5,8 +5,8 @@ namespace N89.Hacking
     // Оперативная память импланта: слоты тратятся на взломы и сами восстанавливаются со временем.
     public class RamPool : MonoBehaviour
     {
-        [SerializeField] private int _maxRam = 4;
-        [SerializeField] private float _secondsPerSlot = 5f;
+        [SerializeField] private int _maxRam = 15;
+        [SerializeField] private float _secondsPerSlot = 1.3f;
 
         private float _ram;
 

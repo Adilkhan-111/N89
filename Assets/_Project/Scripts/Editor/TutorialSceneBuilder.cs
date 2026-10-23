@@ -34,6 +34,7 @@ namespace N89.EditorTools
         private const float LabRadius = 15f;
         private const float WallThickness = 0.625f;
         private const float DoorLength = 3.2f;
+        private const int RamSlots = 15;
 
         private const int WallLayer = 6;
         private const int GlassLayer = 7;
@@ -71,8 +72,9 @@ namespace N89.EditorTools
             TMP_FontAsset audiowide = MainMenuSceneBuilder.GetOrCreateFontAsset("Audiowide-Regular");
 
             // --- Данные взломов ---
-            QuickhackData unlock = CreateQuickhack("Unlock", "ВЗЛОМ ЗАМКА", 1, 0.6f, QuickhackEffect.Unlock);
-            QuickhackData shortCircuit = CreateQuickhack("ShortCircuit", "КОРОТКОЕ ЗАМЫКАНИЕ", 2, 1f, QuickhackEffect.ShortCircuit);
+            // Цены под 15 слотов RAM: та же доля памяти, что была при 4 слотах (1 и 2)
+            QuickhackData unlock = CreateQuickhack("Unlock", "ВЗЛОМ ЗАМКА", 4, 0.6f, QuickhackEffect.Unlock);
+            QuickhackData shortCircuit = CreateQuickhack("ShortCircuit", "КОРОТКОЕ ЗАМЫКАНИЕ", 7, 1f, QuickhackEffect.ShortCircuit);
 
             // --- Префабы ---
             Material particleMat = MainMenuSceneBuilder.GetOrCreateMaterial("ParticleUnlit", new Material(s_unlit));
@@ -209,6 +211,16 @@ namespace N89.EditorTools
             // --- UI ---
             HudRefs hud = BuildHud(player.GetComponent<HackingController>(), mono, audiowide);
 
+            // --- Катсцена выстрела в спину: трассер и вспышка попадания (включаются из кода) ---
+            Transform cutscene = new GameObject("Cutscene").transform;
+            SpriteRenderer tracer = CreateSprite("Tracer", cutscene, s_white, Vector2.zero, 25, false);
+            tracer.color = new Color(1f, 0.95f, 0.7f);
+            tracer.gameObject.SetActive(false);
+            SpriteRenderer impactLine = CreateSprite("ImpactLine", cutscene, s_white, Vector2.zero, 26, false);
+            impactLine.color = Color.white;
+            AddLight(impactLine.transform, "Glow", Vector2.zero, new Color(0.8f, 0.9f, 1f), 3f, 2.5f);
+            impactLine.gameObject.SetActive(false);
+
             // --- Режиссёр туториала ---
             TutorialDirector director = new GameObject("TutorialDirector").AddComponent<TutorialDirector>();
             Configure(director, so =>
@@ -238,6 +250,13 @@ namespace N89.EditorTools
                 P(so, "_assassin").objectReferenceValue = escape.Assassin;
                 SetArray(so, "_alarmLights", alarmLights.ToArray());
                 P(so, "_globalLight").objectReferenceValue = globalLight;
+                P(so, "_letterboxTop").objectReferenceValue = hud.LetterboxTop;
+                P(so, "_letterboxBottom").objectReferenceValue = hud.LetterboxBottom;
+                P(so, "_tracer").objectReferenceValue = tracer;
+                P(so, "_impactLine").objectReferenceValue = impactLine;
+                P(so, "_muzzleFxPrefab").objectReferenceValue = muzzle;
+                P(so, "_bloodPoolPrefab").objectReferenceValue = bloodPool;
+                P(so, "_deadSprite").objectReferenceValue = SpriteFactory.PlayerDead();
             });
 
             escape.Assassin.gameObject.SetActive(false);
@@ -323,7 +342,7 @@ namespace N89.EditorTools
         }
 
         // Маршрут побега к востоку от шлюза: коридор A → комната охраны B → коридор C (на север) →
-        // коридор D (на восток) → зал E с ярко освещённым выходом. Стены ставятся по осевым линиям.
+        // склад F → коридор D (на восток) → зал E с ярко освещённым выходом. Стены ставятся по осевым линиям.
         private static EscapeRefs BuildEscapeRoute(Transform route, Transform lights, float gateX, QuickhackData unlock,
             GameObject guardPrefab, GameObject dronePrefab, TMP_FontAsset font)
         {
@@ -346,55 +365,64 @@ namespace N89.EditorTools
 
             // A: коридор от шлюза до первой двери
             float corridorY = DoorLength * 0.5f + h;
-            W(gateX, corridorY, 24f, corridorY);
-            W(gateX, -corridorY, 24f, -corridorY);
-            F("Floor_A", new Vector2((gateX + 24f) * 0.5f, 0f), new Vector2(24f - gateX, 3.8f));
+            W(gateX, corridorY, 26f, corridorY);
+            W(gateX, -corridorY, 26f, -corridorY);
+            F("Floor_A", new Vector2((gateX + 26f) * 0.5f, 0f), new Vector2(26f - gateX, 3.8f));
 
-            // B: комната охраны 10x10 с дверями на западе и севере
-            W(24f, -5f - h, 24f, -1.6f);
-            W(24f, 1.6f, 24f, 5f + h);
-            W(24f - h, -5f, 34f + h, -5f);
-            W(34f, -5f - h, 34f, 5f + h);
-            W(24f - h, 5f, 29.4f, 5f);
-            W(32.6f, 5f, 34f + h, 5f);
-            F("Floor_B", new Vector2(29f, 0f), new Vector2(10f, 10f));
-            Door doorA = CreateDoor(route, "Door_A", new Vector2(24f, 0f), door, new Vector2(23.4f, 2.2f));
+            // B: комната охраны 14x14 с дверями на западе и севере
+            W(26f, -7f - h, 26f, -1.6f);
+            W(26f, 1.6f, 26f, 7f + h);
+            W(26f - h, -7f, 40f + h, -7f);
+            W(40f, -7f - h, 40f, 7f + h);
+            W(26f - h, 7f, 34.9f, 7f);
+            W(38.1f, 7f, 40f + h, 7f);
+            F("Floor_B", new Vector2(33f, 0f), new Vector2(14f, 14f));
+            Door doorA = CreateDoor(route, "Door_A", new Vector2(26f, 0f), door, new Vector2(25.4f, 2.2f));
             MakeHackable(doorA, "ДВЕРЬ // СЕКТОР Б", unlock);
-            Door doorB = CreateDoor(route, "Door_B", new Vector2(31f, 5f), door, new Vector2(33.3f, 4.4f), 0f);
+            Door doorB = CreateDoor(route, "Door_B", new Vector2(36.5f, 7f), door, new Vector2(38.8f, 6.4f), 0f);
             MakeHackable(doorB, "ДВЕРЬ // СЕРВИСНЫЙ ХОД", unlock);
 
-            // C: коридор на север
-            W(29.4f - h, 5f, 29.4f - h, 18.11f + h);
-            W(32.6f + h, 5f, 32.6f + h, 14.29f);
-            F("Floor_C", new Vector2(31f, 11.55f), new Vector2(3.8f, 13.1f));
+            // C: короткий коридор на север
+            W(34.9f - h, 7f, 34.9f - h, 14f);
+            W(38.1f + h, 7f, 38.1f + h, 14f);
+            F("Floor_C", new Vector2(36.5f, 10.5f), new Vector2(3.8f, 7f));
 
-            // D: коридор на восток с запертой дверью посередине
-            W(29.4f - 2f * h, 18.11f, 46f, 18.11f);
-            W(32.6f, 14.29f, 46f, 14.29f);
-            F("Floor_D", new Vector2(39.3f, 16.2f), new Vector2(13.4f, 3.8f));
-            Door doorC = CreateDoor(route, "Door_C", new Vector2(40f, 16.2f), door, new Vector2(39.4f, 17.5f));
+            // F: склад 16x12 — вход с юга, выход на восток через запертую дверь
+            W(30f - h, 14f, 34.9f, 14f);
+            W(38.1f, 14f, 46f + h, 14f);
+            W(30f, 14f - h, 30f, 26f + h);
+            W(30f - h, 26f, 46f + h, 26f);
+            W(46f, 14f - h, 46f, 18.5f);
+            W(46f, 21.7f, 46f, 26f + h);
+            F("Floor_F", new Vector2(38f, 20f), new Vector2(16f, 12f));
+            Door doorC = CreateDoor(route, "Door_C", new Vector2(46f, 20.1f), door, new Vector2(45.4f, 22.3f));
             MakeHackable(doorC, "ДВЕРЬ // ВЫХОД К ПЕРИМЕТРУ", unlock);
 
-            // E: зал с выходом на востоке
-            W(46f, 8f - h, 46f, 14.29f);
-            W(46f, 18.11f, 46f, 24f + h);
-            W(46f - h, 8f, 62f + h, 8f);
-            W(46f - h, 24f, 62f + h, 24f);
-            W(62f, 8f - h, 62f, 14.2f);
-            W(62f, 19f, 62f, 24f + h);
-            F("Floor_E", new Vector2(54f, 16f), new Vector2(16f, 16f));
+            // D: коридор на восток
+            W(46f, 18.5f - h, 54f, 18.5f - h);
+            W(46f, 21.7f + h, 54f, 21.7f + h);
+            F("Floor_D", new Vector2(50f, 20.1f), new Vector2(8f, 3.8f));
+
+            // E: зал 20x20 с выходом на востоке
+            W(54f, 10f - h, 54f, 18.5f);
+            W(54f, 21.7f, 54f, 30f + h);
+            W(54f - h, 10f, 74f + h, 10f);
+            W(54f - h, 30f, 74f + h, 30f);
+            W(74f, 10f - h, 74f, 17.7f);
+            W(74f, 22.5f, 74f, 30f + h);
+            F("Floor_E", new Vector2(64f, 20f), new Vector2(20f, 20f));
 
             // Снаружи — яркий свет: выход видно издалека
-            W(62f, 14.2f - h, 66.3f, 14.2f - h);
-            W(62f, 19f + h, 66.3f, 19f + h);
-            W(66f, 14.2f - 2f * h, 66f, 19f + 2f * h);
-            SpriteRenderer outside = F("Floor_Outside", new Vector2(64f, 16.6f), new Vector2(4f, 4.8f));
+            W(74f, 17.7f - h, 78.3f, 17.7f - h);
+            W(74f, 22.5f + h, 78.3f, 22.5f + h);
+            W(78f, 17.7f - 2f * h, 78f, 22.5f + 2f * h);
+            SpriteRenderer outside = F("Floor_Outside", new Vector2(76f, 20.1f), new Vector2(4f, 4.8f));
             outside.sharedMaterial = s_unlit;
             outside.color = new Color(0.9f, 1f, 0.95f);
 
             var sign = new GameObject("ExitSign").AddComponent<TextMeshPro>();
             sign.transform.SetParent(route);
-            sign.transform.position = new Vector2(60.2f, 20.3f);
+            sign.transform.position = new Vector2(72.2f, 23.8f);
             sign.font = font;
             sign.text = "ВЫХОД";
             sign.fontSize = 9f;
@@ -404,48 +432,66 @@ namespace N89.EditorTools
             sign.GetComponent<MeshRenderer>().sortingOrder = 15;
 
             // Укрытия
-            CreateProp("Crate", route, crate, new Vector2(27.2f, 2.6f));
-            CreateProp("Crate", route, crate, new Vector2(27.2f, -2.6f));
-            CreateProp("Console", route, SpriteFactory.Console(), new Vector2(33f, -3.9f));
-            CreateProp("Crate", route, crate, new Vector2(50f, 12f));
-            CreateProp("Crate", route, crate, new Vector2(50f, 20.2f));
-            CreateProp("Crate", route, crate, new Vector2(55.5f, 13f));
-            CreateProp("Crate", route, crate, new Vector2(55.5f, 19.4f));
+            CreateProp("Crate", route, crate, new Vector2(29.5f, 3.2f));
+            CreateProp("Crate", route, crate, new Vector2(29.5f, -3.2f));
+            CreateProp("Crate", route, crate, new Vector2(34.5f, 0.5f));
+            CreateProp("Crate", route, crate, new Vector2(34.5f, -0.5f));
+            CreateProp("Console", route, SpriteFactory.Console(), new Vector2(38.5f, -5.6f));
+            // Склад: ящики внутри облёта дрона, чтобы он их не задевал
+            CreateProp("Crate", route, crate, new Vector2(35.5f, 18f));
+            CreateProp("Crate", route, crate, new Vector2(35.5f, 22f));
+            CreateProp("Crate", route, crate, new Vector2(40.5f, 20f));
+            CreateProp("Crate", route, crate, new Vector2(41.5f, 20f));
+            // Зал
+            CreateProp("Crate", route, crate, new Vector2(58.5f, 14f));
+            CreateProp("Crate", route, crate, new Vector2(58.5f, 26f));
+            CreateProp("Crate", route, crate, new Vector2(64f, 16.5f));
+            CreateProp("Crate", route, crate, new Vector2(64f, 23.5f));
+            CreateProp("Crate", route, crate, new Vector2(69f, 14.5f));
+            CreateProp("Crate", route, crate, new Vector2(69f, 25.5f));
 
             // Охрана корпорации Е
-            SpawnEnemy(guardPrefab, route, new Vector2(31.5f, -2.6f), 180f, new Vector2(0f, 5.2f), 1.2f);
-            SpawnEnemy(guardPrefab, route, new Vector2(32.8f, 3.4f), 210f, Vector2.zero, 0f);
-            // Дроны облетают свой периметр по кругу (точки — смещения от старта)
-            SpawnPerimeterDrone(dronePrefab, route, new Vector2(31f, 8.5f), 270f, 4f,
-                new Vector2(-0.9f, 0f), new Vector2(-0.9f, 6.5f), new Vector2(0.9f, 6.5f), new Vector2(0.9f, 0f));
-            SpawnEnemy(guardPrefab, route, new Vector2(44f, 16.2f), 180f, Vector2.zero, 0f);
-            SpawnPerimeterDrone(dronePrefab, route, new Vector2(51f, 21.5f), 270f, 4.5f,
-                new Vector2(6f, 0f), new Vector2(6f, -11f), new Vector2(-2.5f, -11f), new Vector2(-2.5f, 0f));
-            SpawnEnemy(guardPrefab, route, new Vector2(56.5f, 10f), 120f, Vector2.zero, 0f);
+            // B: патруль вдоль восточной стены и двое на постах
+            SpawnEnemy(guardPrefab, route, new Vector2(37.5f, -5f), 180f, new Vector2(0f, 9f), 1.2f);
+            SpawnEnemy(guardPrefab, route, new Vector2(39f, 5.5f), 200f, Vector2.zero, 0f);
+            SpawnEnemy(guardPrefab, route, new Vector2(32f, -5.5f), 150f, Vector2.zero, 0f);
+            // F: дрон облетает склад по кругу (точки — смещения от старта), патруль у западной стены, пост у двери
+            SpawnPerimeterDrone(dronePrefab, route, new Vector2(32.5f, 24.5f), 0f, 4.5f,
+                new Vector2(12f, 0f), new Vector2(12f, -8.7f), new Vector2(0f, -8.7f));
+            SpawnEnemy(guardPrefab, route, new Vector2(31.5f, 17f), 90f, new Vector2(0f, 6f), 1.2f);
+            SpawnEnemy(guardPrefab, route, new Vector2(44f, 23f), 225f, Vector2.zero, 0f);
+            // D: пост за дверью склада
+            SpawnEnemy(guardPrefab, route, new Vector2(52.5f, 20.1f), 180f, Vector2.zero, 0f);
+            // E: дрон по периметру зала, патруль по центру и двое по углам
+            SpawnPerimeterDrone(dronePrefab, route, new Vector2(60f, 28f), 0f, 4.5f,
+                new Vector2(11.5f, 0f), new Vector2(11.5f, -16f), new Vector2(-3.5f, -16f), new Vector2(-3.5f, 0f));
+            SpawnEnemy(guardPrefab, route, new Vector2(60.5f, 20f), 0f, new Vector2(7f, 0f), 1.3f);
+            SpawnEnemy(guardPrefab, route, new Vector2(66f, 11.5f), 120f, Vector2.zero, 0f);
+            SpawnEnemy(guardPrefab, route, new Vector2(71f, 28f), 225f, Vector2.zero, 0f);
 
             // Тот, кто стреляет в спину: появляется у входа в зал в самом конце
-            EnemyAI assassin = SpawnEnemy(guardPrefab, route, new Vector2(46.8f, 16.2f), 0f, Vector2.zero, 0f);
+            EnemyAI assassin = SpawnEnemy(guardPrefab, route, new Vector2(54.8f, 20.1f), 0f, Vector2.zero, 0f);
             assassin.name = "Assassin";
 
             // Свет: обычный и тревожный
-            AddLight(lights, "Route_A", new Vector2(18.6f, 0f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
-            AddLight(lights, "Route_B", new Vector2(29f, 0f), new Color(0.55f, 0.6f, 0.85f), 8f, 0.9f);
-            AddLight(lights, "Route_C", new Vector2(31f, 11.5f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
-            AddLight(lights, "Route_D1", new Vector2(36.5f, 16.2f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
-            AddLight(lights, "Route_D2", new Vector2(43.5f, 16.2f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
-            AddLight(lights, "Route_E", new Vector2(54f, 16f), new Color(0.55f, 0.6f, 0.85f), 10f, 0.8f);
+            AddLight(lights, "Route_A", new Vector2(19.6f, 0f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
+            AddLight(lights, "Route_B", new Vector2(33f, 0f), new Color(0.55f, 0.6f, 0.85f), 10f, 0.9f);
+            AddLight(lights, "Route_C", new Vector2(36.5f, 10.5f), new Color(0.5f, 0.55f, 0.8f), 4f, 0.7f);
+            AddLight(lights, "Route_F", new Vector2(38f, 20f), new Color(0.55f, 0.6f, 0.85f), 10f, 0.85f);
+            AddLight(lights, "Route_D", new Vector2(50f, 20.1f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
+            AddLight(lights, "Route_E", new Vector2(64f, 20f), new Color(0.55f, 0.6f, 0.85f), 12f, 0.8f);
             // Дневной свет снаружи заливает зал — выход видно ещё от входа
-            AddLight(lights, "Exit_Daylight", new Vector2(64.5f, 16.6f), new Color(0.95f, 1f, 0.95f), 18f, 4f).falloffIntensity = 0.3f;
-            AddLight(lights, "Exit_Doorway", new Vector2(61f, 16.6f), new Color(0.9f, 1f, 0.92f), 8f, 4f).falloffIntensity = 0.3f;
-            AddLight(lights, "Exit_Sign", new Vector2(60.2f, 20.3f), new Color(0.35f, 1f, 0.55f), 3f, 1.2f);
+            AddLight(lights, "Exit_Daylight", new Vector2(76.5f, 20.1f), new Color(0.95f, 1f, 0.95f), 18f, 4f).falloffIntensity = 0.3f;
+            AddLight(lights, "Exit_Doorway", new Vector2(73f, 20.1f), new Color(0.9f, 1f, 0.92f), 8f, 4f).falloffIntensity = 0.3f;
+            AddLight(lights, "Exit_Sign", new Vector2(72.2f, 23.8f), new Color(0.35f, 1f, 0.55f), 3f, 1.2f);
 
             var alarms = new List<Light2D>
             {
-                AddLight(lights, "Alarm_A", new Vector2(18.6f, 0f), new Color(1f, 0.1f, 0.15f), 7f, 1.8f),
-                AddLight(lights, "Alarm_B", new Vector2(29f, 0f), new Color(1f, 0.1f, 0.15f), 9f, 1.8f),
-                AddLight(lights, "Alarm_C", new Vector2(31f, 11.5f), new Color(1f, 0.1f, 0.15f), 6f, 1.6f),
-                AddLight(lights, "Alarm_D", new Vector2(40f, 16.2f), new Color(1f, 0.1f, 0.15f), 8f, 1.6f),
-                AddLight(lights, "Alarm_E", new Vector2(54f, 16f), new Color(1f, 0.1f, 0.15f), 11f, 1.6f),
+                AddLight(lights, "Alarm_A", new Vector2(19.6f, 0f), new Color(1f, 0.1f, 0.15f), 7f, 1.8f),
+                AddLight(lights, "Alarm_B", new Vector2(33f, 0f), new Color(1f, 0.1f, 0.15f), 11f, 1.8f),
+                AddLight(lights, "Alarm_F", new Vector2(38f, 20f), new Color(1f, 0.1f, 0.15f), 11f, 1.6f),
+                AddLight(lights, "Alarm_D", new Vector2(50f, 20.1f), new Color(1f, 0.1f, 0.15f), 6f, 1.6f),
+                AddLight(lights, "Alarm_E", new Vector2(64f, 20f), new Color(1f, 0.1f, 0.15f), 13f, 1.6f),
             };
 
             var start = new GameObject("EscapeStart").transform;
@@ -456,11 +502,11 @@ namespace N89.EditorTools
             {
                 Start = start,
                 FirstDoor = doorA,
-                Corridor = CreateZone(route, "Zone_Corridor", new Vector2(20f, 0f), new Vector2(2f, 3.2f)),
-                GuardRoom = CreateZone(route, "Zone_GuardRoom", new Vector2(25.6f, 0f), new Vector2(1.6f, 3.2f)),
-                DroneCorridor = CreateZone(route, "Zone_DroneCorridor", new Vector2(31f, 6.6f), new Vector2(3.2f, 1.4f)),
-                Hall = CreateZone(route, "Zone_Hall", new Vector2(47.6f, 16.2f), new Vector2(1.6f, 3.6f)),
-                Exit = CreateZone(route, "Zone_Exit", new Vector2(58.5f, 16.6f), new Vector2(1.6f, 4.8f)),
+                Corridor = CreateZone(route, "Zone_Corridor", new Vector2(22f, 0f), new Vector2(2f, 3.2f)),
+                GuardRoom = CreateZone(route, "Zone_GuardRoom", new Vector2(27.6f, 0f), new Vector2(1.6f, 3.2f)),
+                DroneCorridor = CreateZone(route, "Zone_DroneCorridor", new Vector2(36.5f, 12.5f), new Vector2(3.2f, 1.4f)),
+                Hall = CreateZone(route, "Zone_Hall", new Vector2(55.6f, 20.1f), new Vector2(1.6f, 3.6f)),
+                Exit = CreateZone(route, "Zone_Exit", new Vector2(70.5f, 20.1f), new Vector2(1.6f, 4.8f)),
                 Assassin = assassin,
                 Alarms = alarms,
             };
@@ -624,6 +670,12 @@ namespace N89.EditorTools
             });
 
             RamPool ram = root.AddComponent<RamPool>();
+            Configure(ram, so =>
+            {
+                P(so, "_maxRam").intValue = RamSlots;
+                // Полная шкала восстанавливается примерно за 20 секунд
+                P(so, "_secondsPerSlot").floatValue = 1.3f;
+            });
             HackingController hacking = root.AddComponent<HackingController>();
             Configure(hacking, so =>
             {
@@ -944,6 +996,8 @@ namespace N89.EditorTools
             public HackingHud HackingHud;
             public ScreenFader Fader;
             public TutorialEndScreen EndScreen;
+            public RectTransform LetterboxTop;
+            public RectTransform LetterboxBottom;
         }
 
         private static HudRefs BuildHud(HackingController hacking, TMP_FontAsset mono, TMP_FontAsset audiowide)
@@ -985,15 +1039,27 @@ namespace N89.EditorTools
             });
 
             // RAM
-            RectTransform ram = Anchor(MainMenuSceneBuilder.CreateRect("RAM", canvasRect), Vector2.zero, Vector2.zero, new Vector2(40f, 40f), new Vector2(320f, 80f));
+            // Узкие слоты, чтобы все 15 поместились в одну строку
+            const float slotStep = 26f;
+            float ramWidth = RamSlots * slotStep;
+            RectTransform ram = Anchor(MainMenuSceneBuilder.CreateRect("RAM", canvasRect), Vector2.zero, Vector2.zero, new Vector2(40f, 40f), new Vector2(ramWidth, 80f));
             CanvasGroup ramGroup = Group(ram.gameObject, 0f);
-            TextMeshProUGUI ramLabel = Text("Label", ram, audiowide, "RAM 4/4", 26f, Cyan, TextAlignmentOptions.BottomLeft);
-            Anchor(ramLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 30f), new Vector2(320f, 40f));
-            var slots = new Image[4];
+            // Подложка с неоновой кромкой и подписью импланта
+            Image ramBack = Img("Back", ram, new Color(0.02f, 0.04f, 0.08f, 0.75f));
+            Anchor(ramBack.rectTransform, Vector2.zero, Vector2.zero, new Vector2(-16f, -14f), new Vector2(ramWidth + 26f, 112f));
+            Image ramEdge = Img("Edge", ram, Magenta);
+            Anchor(ramEdge.rectTransform, Vector2.zero, Vector2.zero, new Vector2(-16f, -14f), new Vector2(4f, 112f));
+            TextMeshProUGUI ramHeader = Text("Header", ram, mono, "НЕЙРОИМПЛАНТ // ОЗУ", 16f, Magenta, TextAlignmentOptions.BottomLeft);
+            Anchor(ramHeader.rectTransform, Vector2.zero, Vector2.zero, new Vector2(0f, 72f), new Vector2(ramWidth, 22f));
+            TextMeshProUGUI ramLabel = Text("Label", ram, audiowide, $"RAM {RamSlots}/{RamSlots}", 26f, Cyan, TextAlignmentOptions.BottomLeft);
+            ramLabel.richText = true;
+            Anchor(ramLabel.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(0f, 30f), new Vector2(ramWidth, 40f));
+            var slots = new Image[RamSlots];
             for (int i = 0; i < slots.Length; i++)
             {
+                // Пивот в центре — слот "подпрыгивает" при заряде и трате
                 Image bg = Img($"Slot{i}", ram, new Color(0.05f, 0.15f, 0.18f, 0.9f));
-                Anchor(bg.rectTransform, Vector2.zero, Vector2.zero, new Vector2(i * 62f, 0f), new Vector2(54f, 22f));
+                Anchor(bg.rectTransform, Vector2.zero, new Vector2(0.5f, 0.5f), new Vector2(i * slotStep + (slotStep - 6f) * 0.5f, 11f), new Vector2(slotStep - 6f, 22f));
                 Image fill = Img("Fill", bg.rectTransform, Cyan);
                 MainMenuSceneBuilder.Stretch(fill.rectTransform);
                 MakeFilled(fill);
@@ -1050,14 +1116,31 @@ namespace N89.EditorTools
                 P(so, "_warningText").objectReferenceValue = warningText;
             });
 
+            // Киношные полосы для катсцен (высота 0 — спрятаны). Под субтитрами, чтобы не закрывать их
+            Image letterboxTop = Img("LetterboxTop", canvasRect, Color.black);
+            letterboxTop.rectTransform.anchorMin = new Vector2(0f, 1f);
+            letterboxTop.rectTransform.anchorMax = new Vector2(1f, 1f);
+            letterboxTop.rectTransform.pivot = new Vector2(0.5f, 1f);
+            letterboxTop.rectTransform.anchoredPosition = Vector2.zero;
+            letterboxTop.rectTransform.sizeDelta = Vector2.zero;
+            Image letterboxBottom = Img("LetterboxBottom", canvasRect, Color.black);
+            letterboxBottom.rectTransform.anchorMin = new Vector2(0f, 0f);
+            letterboxBottom.rectTransform.anchorMax = new Vector2(1f, 0f);
+            letterboxBottom.rectTransform.pivot = new Vector2(0.5f, 0f);
+            letterboxBottom.rectTransform.anchoredPosition = Vector2.zero;
+            letterboxBottom.rectTransform.sizeDelta = Vector2.zero;
+
             // Субтитры голоса
             Image subtitles = Img("Subtitles", canvasRect, new Color(0f, 0f, 0f, 0.7f));
-            Anchor(subtitles.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(1300f, 150f));
+            Anchor(subtitles.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 50f), new Vector2(1000f, 150f));
             CanvasGroup subtitleGroup = Group(subtitles.gameObject, 0f);
+            // Полоса слева — цвета говорящего (красит SubtitleBox)
+            Image subtitleAccent = Img("Accent", subtitles.rectTransform, Magenta);
+            Anchor(subtitleAccent.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(6f, 150f));
             TextMeshProUGUI speaker = Text("Speaker", subtitles.rectTransform, mono, "ОПЕРАТОР", 22f, Magenta, TextAlignmentOptions.TopLeft);
             Anchor(speaker.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -14f), new Vector2(600f, 30f));
             TextMeshProUGUI line = Text("Line", subtitles.rectTransform, mono, string.Empty, 32f, Color.white, TextAlignmentOptions.TopLeft);
-            Anchor(line.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -50f), new Vector2(1240f, 90f));
+            Anchor(line.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -50f), new Vector2(940f, 90f));
             line.textWrappingMode = TextWrappingModes.Normal;
             SubtitleBox subtitleBox = subtitles.gameObject.AddComponent<SubtitleBox>();
             Configure(subtitleBox, so =>
@@ -1065,6 +1148,7 @@ namespace N89.EditorTools
                 P(so, "_group").objectReferenceValue = subtitleGroup;
                 P(so, "_speakerLabel").objectReferenceValue = speaker;
                 P(so, "_lineLabel").objectReferenceValue = line;
+                P(so, "_accent").objectReferenceValue = subtitleAccent;
             });
 
             // Перекрестие — под затемнением, чтобы исчезало на экране смерти
@@ -1140,7 +1224,11 @@ namespace N89.EditorTools
                 P(so, "_crosshair").objectReferenceValue = crosshairImage.gameObject;
             });
 
-            return new HudRefs { Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen };
+            return new HudRefs
+            {
+                Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen,
+                LetterboxTop = letterboxTop.rectTransform, LetterboxBottom = letterboxBottom.rectTransform,
+            };
         }
 
         private static Image Img(string name, RectTransform parent, Color color)

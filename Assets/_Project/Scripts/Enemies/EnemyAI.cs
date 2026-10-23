@@ -68,6 +68,9 @@ namespace N89.Enemies
         private bool _searching;
         private float _stuckTime;
 
+        // Для катсцен: повернуть охранника и найти ствол
+        public Transform Body => _body;
+
         private void Start()
         {
             BuildRoute(transform.position);

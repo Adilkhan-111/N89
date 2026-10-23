@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: ShortCircuit
   m_EditorClassIdentifier: Assembly-CSharp::N89.Hacking.QuickhackData
   _displayName: "\u041A\u041E\u0420\u041E\u0422\u041A\u041E\u0415 \u0417\u0410\u041C\u042B\u041A\u0410\u041D\u0418\u0415"
-  _ramCost: 2
+  _ramCost: 7
   _uploadTime: 1
   _effect: 1
   _damage: 99

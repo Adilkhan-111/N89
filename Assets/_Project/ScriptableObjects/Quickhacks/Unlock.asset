@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Unlock
   m_EditorClassIdentifier: Assembly-CSharp::N89.Hacking.QuickhackData
   _displayName: "\u0412\u0417\u041B\u041E\u041C \u0417\u0410\u041C\u041A\u0410"
-  _ramCost: 1
+  _ramCost: 4
   _uploadTime: 0.6
   _effect: 0
   _damage: 99

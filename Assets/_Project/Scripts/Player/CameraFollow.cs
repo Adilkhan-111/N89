@@ -24,6 +24,8 @@ namespace N89.Player
         private float _shakeStrength;
         private float _shakeUntil;
         private bool _flying;
+        private Transform _focus;
+        private float _focusSmoothing;
 
         private void Awake()
         {
@@ -42,6 +44,32 @@ namespace N89.Player
         {
             _basePosition = new Vector3(_target.position.x, _target.position.y, _basePosition.z);
             transform.position = _basePosition;
+        }
+
+        // Катсцена: камера плавно переезжает к другой цели и держит её без сдвига к курсору
+        public void Focus(Transform target, float smoothing)
+        {
+            _focus = target;
+            _focusSmoothing = smoothing;
+        }
+
+        // Монтажная склейка: мгновенно встать над целью и держать её
+        public void CutTo(Transform target)
+        {
+            Focus(target, _smoothing);
+            _basePosition = new Vector3(target.position.x, target.position.y, _basePosition.z);
+            transform.position = _basePosition;
+        }
+
+        public IEnumerator Zoom(float orthographicSize, float duration)
+        {
+            float from = _camera.orthographicSize;
+            for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+            {
+                _camera.orthographicSize = Mathf.Lerp(from, orthographicSize, Mathf.SmoothStep(0f, 1f, t / duration));
+                yield return null;
+            }
+            _camera.orthographicSize = orthographicSize;
         }
 
         // Камера "улетает вверх": перестаёт следить за игроком, отдаляется и плывёт к точке обзора
@@ -72,9 +100,9 @@ namespace N89.Player
                 return;
             }
 
-            Vector2 targetPos = _target.position;
+            Vector2 targetPos = _focus != null ? _focus.position : _target.position;
             Vector2 offset = Vector2.zero;
-            if (Mouse.current != null)
+            if (_focus == null && Mouse.current != null)
             {
                 Vector2 mouseScreen = Mouse.current.position.ReadValue();
                 Vector2 mouseWorld = _camera.ScreenToWorldPoint(mouseScreen);
@@ -92,7 +120,8 @@ namespace N89.Player
             }
 
             Vector3 desired = new Vector3(targetPos.x + offset.x, targetPos.y + offset.y, _basePosition.z);
-            _basePosition = Vector3.Lerp(_basePosition, desired, 1f - Mathf.Exp(-_smoothing * Time.unscaledDeltaTime));
+            float smoothing = _focus != null ? _focusSmoothing : _smoothing;
+            _basePosition = Vector3.Lerp(_basePosition, desired, 1f - Mathf.Exp(-smoothing * Time.unscaledDeltaTime));
 
             Vector3 shake = Vector3.zero;
             if (Time.unscaledTime < _shakeUntil)

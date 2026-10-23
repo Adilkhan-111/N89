@@ -32,6 +32,8 @@ namespace N89.Player
 
         public bool CanMove { get; set; } = true;
         public bool CanShoot { get; set; } = true;
+        // Выключается в катсценах, чтобы 89 не крутился за курсором
+        public bool CanAim { get; set; } = true;
         public Vector2 AimPoint { get; private set; }
         public Health Health => _health;
 
@@ -64,7 +66,7 @@ namespace N89.Player
                 _moveInput = Vector2.ClampMagnitude(_moveInput, 1f);
             }
 
-            if (mouse != null)
+            if (mouse != null && CanAim)
             {
                 Vector3 world = _camera.ScreenToWorldPoint(mouse.position.ReadValue());
                 AimPoint = world;

@@ -27,6 +27,38 @@ namespace N89.EditorTools
                 new Color(0.16f, 0.11f, 0.16f), Skin, Neon, false);
         });
 
+        // 89 лежит лицом вниз, вид сверху, головой вправо (+x): видно всё тело в робе, босые ноги,
+        // раскинутые руки, затылок с неоновым имплантом и выпавший пистолет
+        public static Sprite PlayerDead() => Create("player_dead", 48, 32, c =>
+        {
+            Color gownShade = new Color(0.62f, 0.65f, 0.74f);
+            Color skinShade = new Color(0.72f, 0.55f, 0.45f);
+            Color hair = new Color(0.16f, 0.11f, 0.16f);
+
+            // Ноги: одна прямая, другая согнута в колене
+            c.Line(new Vector2(17f, 13.5f), new Vector2(5f, 11f), 3.4f, gownShade);
+            c.Line(new Vector2(17f, 18.5f), new Vector2(10f, 22f), 3.4f, gownShade);
+            c.Line(new Vector2(10f, 22f), new Vector2(4f, 19.5f), 3.2f, gownShade);
+            c.Circle(3.5f, 11f, 1.8f, Skin);
+            c.Circle(3f, 19.5f, 1.8f, Skin);
+            // Корпус в робе
+            c.Line(new Vector2(16f, 16f), new Vector2(33f, 16f), 9.5f, Gown);
+            c.Line(new Vector2(16f, 12.5f), new Vector2(33f, 12.5f), 2.5f, gownShade);
+            // Руки: одна выброшена вперёд, другая подвёрнута вдоль тела
+            c.Line(new Vector2(31f, 21f), new Vector2(40f, 28f), 2.8f, Skin);
+            c.Line(new Vector2(31f, 21f), new Vector2(34f, 23.5f), 3.6f, Gown);
+            c.Line(new Vector2(31f, 11f), new Vector2(23f, 4.5f), 2.8f, skinShade);
+            c.Line(new Vector2(31f, 11f), new Vector2(28f, 8.5f), 3.6f, gownShade);
+            // Голова — затылок с имплантом (лицом в пол)
+            c.Circle(38.5f, 15.5f, 4.4f, hair);
+            c.Rect(35, 15, 36, 16, Neon);
+            // Выпавший пистолет
+            c.Rect(41, 5, 46, 6, new Color(0.14f, 0.14f, 0.18f));
+            c.Rect(41, 4, 42, 4, new Color(0.14f, 0.14f, 0.18f));
+            c.Rect(42, 6, 46, 6, new Color(0.42f, 0.42f, 0.5f));
+            c.Outline(Outline);
+        });
+
         public static Sprite Guard() => Create("guard", 32, 32, c =>
         {
             // Охранник корпорации Е: тёмная броня, шлем с красным визором, автомат

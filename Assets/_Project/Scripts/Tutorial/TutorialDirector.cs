@@ -56,13 +56,29 @@ namespace N89.Tutorial
         [SerializeField] private EnemyAI _assassin;
         [SerializeField] private Light2D[] _alarmLights;
         [SerializeField] private Light2D _globalLight;
-        [SerializeField] private float _forcedDeathDelay = 0.8f;
 
         [Header("Finale")]
-        [SerializeField] private Vector2 _flyCenter = new Vector2(30f, 8f);
-        [SerializeField] private float _flySize = 30f;
+        [SerializeField] private Vector2 _flyCenter = new Vector2(32f, 8f);
+        [SerializeField] private float _flySize = 34f;
         [SerializeField] private float _flyDuration = 4.5f;
         [SerializeField] private string _menuScene = "MainMenu";
+
+        [Header("Катсцена: выстрел в спину")]
+        [SerializeField] private RectTransform _letterboxTop;
+        [SerializeField] private RectTransform _letterboxBottom;
+        [SerializeField] private float _letterboxHeight = 120f;
+        [Tooltip("Трассер пули: растягивается от ствола до 89")]
+        [SerializeField] private SpriteRenderer _tracer;
+        [Tooltip("Вспышка в момент попадания, вытянута по направлению пули")]
+        [SerializeField] private SpriteRenderer _impactLine;
+        [SerializeField] private float _impactLength = 4f;
+        [Tooltip("Спрайт 89, лежащего лицом вниз (голова смотрит вправо, +x)")]
+        [SerializeField] private Sprite _deadSprite;
+        [SerializeField] private GameObject _muzzleFxPrefab;
+        [SerializeField] private GameObject _bloodPoolPrefab;
+        [Tooltip("Сколько шагов охранник делает к 89, прежде чем выстрелить")]
+        [SerializeField] private float _guardWalk = 3f;
+        [SerializeField] private float _hitZoom = 4.2f;
 
         private bool _finale;
         private bool _dying;
@@ -274,26 +290,248 @@ namespace N89.Tutorial
             yield return ShotInTheBack();
         }
 
+        // Катсцена у выхода: камера разворачивается к охраннику за спиной 89, он подходит и стреляет.
+        // Склейка на 89 — стоп-кадр с вертикальной вспышкой попадания, 89 падает.
         private IEnumerator ShotInTheBack()
         {
             _finale = true;
+            _player.CanMove = false;
+            _player.CanShoot = false;
+            _player.CanAim = false;
             _hacking.HackingEnabled = false;
+            _hackingHud.RamVisible = false;
             _objective.Set(string.Empty);
+            FreezeOtherEnemies();
+            StartCoroutine(Letterbox(_letterboxHeight, 0.5f));
 
-            // Охранник появляется у входа в зал — за спиной 89 — и сразу стреляет
+            yield return new WaitForSeconds(0.8f);
+
+            // Охранник появляется у входа в зал — за спиной 89. ИИ выключен: всё по сценарию
+            _assassin.enabled = false;
             _assassin.gameObject.SetActive(true);
-            _assassin.Engage(_player, 0.1f);
+            Transform guard = _assassin.transform;
+            Transform player = _player.transform;
+            _cameraFollow.Focus(guard, 3f);
+            SayAsync(Operator, "Не дай ему выйти.");
+            yield return new WaitForSeconds(1f);
 
-            float deadline = Time.time + _forcedDeathDelay;
-            while (!_player.Health.IsDead && Time.time < deadline)
+            Vector2 toPlayer = (Vector2)(player.position - guard.position);
+            Vector2 walkTo = (Vector2)guard.position + toPlayer.normalized * Mathf.Clamp(toPlayer.magnitude - 2f, 0f, _guardWalk);
+            while (Vector2.Distance(guard.position, walkTo) > 0.05f)
             {
+                guard.position = Vector2.MoveTowards(guard.position, walkTo, 2.2f * Time.deltaTime);
+                AimGuard(player.position, 720f);
                 yield return null;
             }
 
-            if (!_player.Health.IsDead)
+            // Вскидывает пистолет и замирает
+            for (float t = 0f; t < 0.8f; t += Time.deltaTime)
             {
-                _player.Health.Kill();
+                AimGuard(player.position, 360f);
+                yield return null;
             }
+
+            // Выстрел
+            Transform muzzle = _assassin.Body.Find("Muzzle");
+            Vector2 from = muzzle != null ? muzzle.position : guard.position;
+            Vector2 hitPoint = player.position;
+            Vector2 shotDir = (hitPoint - from).normalized;
+            if (_muzzleFxPrefab != null)
+            {
+                Instantiate(_muzzleFxPrefab, from, _assassin.Body.rotation);
+            }
+            _cameraFollow.Shake(0.15f, 0.1f);
+            StartCoroutine(Tracer(from, hitPoint));
+            yield return new WaitForSecondsRealtime(0.12f);
+
+            // Склейка на 89: попадание, стоп-кадр, вспышка
+            _cameraFollow.CutTo(player);
+            StartCoroutine(_cameraFollow.Zoom(_hitZoom, 0.2f));
+            _player.Health.Kill();
+            Time.timeScale = 0f;
+            StartCoroutine(ImpactLine(hitPoint, shotDir));
+            yield return new WaitForSecondsRealtime(0.18f);
+
+            // Падает в замедлении
+            Time.timeScale = 0.35f;
+            yield return PlayerFall(shotDir);
+            Time.timeScale = 1f;
+            yield return new WaitForSecondsRealtime(1f);
+
+            yield return FinaleSequence();
+        }
+
+        private void AimGuard(Vector2 target, float turnSpeed)
+        {
+            Transform body = _assassin.Body;
+            Vector2 dir = target - (Vector2)body.position;
+            float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+            float next = Mathf.MoveTowardsAngle(body.eulerAngles.z, angle, turnSpeed * Time.deltaTime);
+            body.rotation = Quaternion.Euler(0f, 0f, next);
+        }
+
+        // На время катсцены остальные враги замирают, а пули в полёте исчезают
+        private void FreezeOtherEnemies()
+        {
+            foreach (EnemyAI enemy in FindObjectsByType<EnemyAI>())
+            {
+                if (enemy != _assassin) enemy.enabled = false;
+            }
+            foreach (Bullet bullet in FindObjectsByType<Bullet>())
+            {
+                Destroy(bullet.gameObject);
+            }
+        }
+
+        private IEnumerator Letterbox(float height, float duration)
+        {
+            if (_letterboxTop == null || _letterboxBottom == null)
+            {
+                yield break;
+            }
+
+            float from = _letterboxTop.sizeDelta.y;
+            for (float t = 0f; t <= duration; t += Time.unscaledDeltaTime)
+            {
+                float h = Mathf.Lerp(from, height, Mathf.SmoothStep(0f, 1f, t / duration));
+                _letterboxTop.sizeDelta = new Vector2(0f, h);
+                _letterboxBottom.sizeDelta = new Vector2(0f, h);
+                yield return null;
+            }
+            _letterboxTop.sizeDelta = new Vector2(0f, height);
+            _letterboxBottom.sizeDelta = new Vector2(0f, height);
+        }
+
+        // Тонкий трассер от ствола до 89, гаснет за долю секунды
+        private IEnumerator Tracer(Vector2 from, Vector2 to)
+        {
+            if (_tracer == null)
+            {
+                yield break;
+            }
+
+            Vector2 unit = _tracer.sprite.bounds.size;
+            Vector2 delta = to - from;
+            _tracer.transform.position = (from + to) * 0.5f;
+            _tracer.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(delta.y, delta.x) * Mathf.Rad2Deg);
+            _tracer.gameObject.SetActive(true);
+
+            Color color = _tracer.color;
+            for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
+            {
+                float k = t / 0.25f;
+                _tracer.transform.localScale = new Vector3(delta.magnitude / unit.x, Mathf.Lerp(0.08f, 0f, k) / unit.y, 1f);
+                _tracer.color = new Color(color.r, color.g, color.b, 1f - k);
+                yield return null;
+            }
+
+            _tracer.gameObject.SetActive(false);
+            _tracer.color = color;
+        }
+
+        // Линия попадания по направлению пули: пробивает 89 насквозь, вспыхивает и истончается
+        private IEnumerator ImpactLine(Vector2 point, Vector2 dir)
+        {
+            if (_impactLine == null)
+            {
+                yield break;
+            }
+
+            Vector2 unit = _impactLine.sprite.bounds.size;
+            // Чуть смещена вперёд — как будто пуля вышла с другой стороны
+            _impactLine.transform.position = point + dir * (_impactLength * 0.15f);
+            _impactLine.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            _impactLine.gameObject.SetActive(true);
+            Color color = _impactLine.color;
+            const float width = 0.12f;
+
+            for (float t = 0f; t < 0.06f; t += Time.unscaledDeltaTime)
+            {
+                _impactLine.transform.localScale = new Vector3(Mathf.Lerp(0f, _impactLength, t / 0.06f) / unit.x, width / unit.y, 1f);
+                yield return null;
+            }
+
+            _impactLine.transform.localScale = new Vector3(_impactLength / unit.x, width / unit.y, 1f);
+            yield return new WaitForSecondsRealtime(0.12f);
+
+            for (float t = 0f; t < 0.35f; t += Time.unscaledDeltaTime)
+            {
+                float k = t / 0.35f;
+                _impactLine.transform.localScale = new Vector3(_impactLength / unit.x, Mathf.Lerp(width, 0f, k) / unit.y, 1f);
+                _impactLine.color = new Color(color.r, color.g, color.b, 1f - k);
+                yield return null;
+            }
+
+            _impactLine.gameObject.SetActive(false);
+            _impactLine.color = color;
+        }
+
+        // 89 спотыкается вперёд по линии выстрела и падает лицом вниз: спрайт меняется на лежащее тело,
+        // в момент удара об пол камера вздрагивает, под ним растекается синяя кровь
+        private IEnumerator PlayerFall(Vector2 shotDir)
+        {
+            Transform root = _player.transform;
+            Transform body = root.Find("Body");
+            SpriteRenderer sprite = body.GetComponent<SpriteRenderer>();
+            float shotAngle = Mathf.Atan2(shotDir.y, shotDir.x) * Mathf.Rad2Deg;
+
+            // Шаг вперёд от удара пули, корпус разворачивает по выстрелу
+            Vector3 start = root.position;
+            Vector3 stagger = start + (Vector3)(shotDir * 0.3f);
+            float fromAngle = body.eulerAngles.z;
+            for (float t = 0f; t < 0.15f; t += Time.unscaledDeltaTime)
+            {
+                float k = t / 0.15f;
+                root.position = Vector3.Lerp(start, stagger, k);
+                body.rotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(fromAngle, shotAngle, k));
+                yield return null;
+            }
+
+            // Падение: лежащее тело головой по направлению выстрела
+            if (_deadSprite != null)
+            {
+                sprite.sprite = _deadSprite;
+            }
+            sprite.color = Color.white;
+            float lieAngle = shotAngle + Random.Range(-15f, 15f);
+            body.rotation = Quaternion.Euler(0f, 0f, lieAngle);
+            _cameraFollow.Shake(0.25f, 0.15f);
+
+            Vector3 end = stagger + (Vector3)(shotDir * 0.6f);
+            if (_bloodPoolPrefab != null)
+            {
+                Transform pool = Instantiate(_bloodPoolPrefab, end, Quaternion.Euler(0f, 0f, Random.Range(0f, 360f))).transform;
+                StartCoroutine(Grow(pool, 1.6f, 2.2f));
+            }
+
+            const float duration = 0.35f;
+            for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+            {
+                float k = 1f - Mathf.Pow(1f - t / duration, 3f);
+                root.position = Vector3.Lerp(stagger, end, k);
+                // Удар об пол: тело сплющивается и распрямляется
+                body.localScale = new Vector3(Mathf.Lerp(1.15f, 1f, k), Mathf.Lerp(0.8f, 1f, k), 1f);
+                yield return null;
+            }
+            body.localScale = Vector3.one;
+
+            // Тело темнеет
+            Color dead = new Color(0.72f, 0.74f, 0.86f);
+            for (float t = 0f; t < 1f; t += Time.unscaledDeltaTime)
+            {
+                sprite.color = Color.Lerp(Color.white, dead, t);
+                yield return null;
+            }
+        }
+
+        private static IEnumerator Grow(Transform target, float scale, float duration)
+        {
+            for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+            {
+                target.localScale = Vector3.one * Mathf.Lerp(0f, scale, Mathf.Sqrt(t / duration));
+                yield return null;
+            }
+            target.localScale = Vector3.one * scale;
         }
 
         private void OnPlayerDied(Health health)
@@ -304,7 +542,11 @@ namespace N89.Tutorial
             }
 
             _dying = true;
-            StartCoroutine(_finale ? FinaleSequence() : RestartSequence());
+            // В финале смертью управляет катсцена
+            if (!_finale)
+            {
+                StartCoroutine(RestartSequence());
+            }
         }
 
         // Смерть по ходу побега: короткая вспышка и перезапуск с чекпоинта
@@ -322,15 +564,9 @@ namespace N89.Tutorial
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
-        // Финал: замедление, камера улетает вверх над всем комплексом, итоговый экран
+        // Финал: камера улетает вверх над всем комплексом, итоговый экран
         private IEnumerator FinaleSequence()
         {
-            _fader.Flash(new Color(1f, 0.1f, 0.2f), 0.6f);
-            Time.timeScale = 0.15f;
-            yield return new WaitForSecondsRealtime(1.6f);
-            Time.timeScale = 1f;
-
-            _hackingHud.RamVisible = false;
             Checkpoint.Clear();
 
             SayAsync(Operator, "Субъект 89 ликвидирован.");
@@ -339,6 +575,7 @@ namespace N89.Tutorial
             SayAsync(Operator, "Данные сохранены. Подготовить субъект 90.");
             yield return fly;
 
+            yield return Letterbox(0f, 0.4f);
             yield return _endScreen.Show();
         }
 

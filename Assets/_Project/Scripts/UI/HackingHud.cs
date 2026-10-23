@@ -34,9 +34,18 @@ namespace N89.UI
 
         [SerializeField] private TMP_Text _message;
 
+        [Header("Warning")]
+        [Tooltip("Окно «нельзя стрелять во время взлома»")]
+        [SerializeField] private RectTransform _warningPanel;
+        [SerializeField] private CanvasGroup _warningGroup;
+        [SerializeField] private TMP_Text _warningText;
+        [SerializeField] private float _warningDuration = 1.6f;
+
         private readonly StringBuilder _sb = new StringBuilder();
         private Camera _camera;
         private float _messageUntil;
+        private float _warningShownAt = -100f;
+        private Vector2 _warningHome;
 
         public bool RamVisible { get; set; } = true;
 
@@ -44,7 +53,13 @@ namespace N89.UI
         {
             _camera = Camera.main;
             _hacking.HackFailed += ShowMessage;
+            _hacking.ScanAborted += ShowWarning;
             _message.alpha = 0f;
+            if (_warningPanel != null)
+            {
+                _warningHome = _warningPanel.anchoredPosition;
+                _warningGroup.alpha = 0f;
+            }
         }
 
         private void LateUpdate()
@@ -70,6 +85,39 @@ namespace N89.UI
             {
                 _message.alpha = Mathf.MoveTowards(_message.alpha, 0f, 3f * dt);
             }
+
+            UpdateWarning(dt);
+        }
+
+        private void UpdateWarning(float dt)
+        {
+            if (_warningPanel == null)
+            {
+                return;
+            }
+
+            float age = Time.unscaledTime - _warningShownAt;
+            if (age > _warningDuration)
+            {
+                _warningGroup.alpha = Mathf.MoveTowards(_warningGroup.alpha, 0f, 4f * dt);
+            }
+
+            // Первые доли секунды окно трясётся — как сбой системы
+            Vector2 shake = age < 0.25f ? Random.insideUnitCircle * 10f * (1f - age / 0.25f) : Vector2.zero;
+            _warningPanel.anchoredPosition = _warningHome + shake;
+        }
+
+        private void ShowWarning(string text)
+        {
+            if (_warningPanel == null)
+            {
+                ShowMessage(text);
+                return;
+            }
+
+            _warningText.text = text;
+            _warningGroup.alpha = 1f;
+            _warningShownAt = Time.unscaledTime;
         }
 
         private void UpdateHackPanel(RamPool ram, float dt)

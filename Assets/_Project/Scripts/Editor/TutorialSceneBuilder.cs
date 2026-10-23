@@ -1025,6 +1025,8 @@ namespace N89.EditorTools
             TextMeshProUGUI message = Text("Message", canvasRect, mono, string.Empty, 34f, new Color(1f, 0.25f, 0.3f), TextAlignmentOptions.Center);
             Anchor(message.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -170f), new Vector2(900f, 50f));
 
+            Image warning = BuildWarningWindow(canvasRect, mono, out CanvasGroup warningGroup, out TextMeshProUGUI warningText);
+
             HackingHud hackingHud = go.AddComponent<HackingHud>();
             Configure(hackingHud, so =>
             {
@@ -1043,6 +1045,9 @@ namespace N89.EditorTools
                 P(so, "_uploadFill").objectReferenceValue = uploadFill;
                 P(so, "_uploadLabel").objectReferenceValue = uploadLabel;
                 P(so, "_message").objectReferenceValue = message;
+                P(so, "_warningPanel").objectReferenceValue = warning.rectTransform;
+                P(so, "_warningGroup").objectReferenceValue = warningGroup;
+                P(so, "_warningText").objectReferenceValue = warningText;
             });
 
             // Субтитры голоса
@@ -1152,6 +1157,26 @@ namespace N89.EditorTools
             img.type = Image.Type.Filled;
             img.fillMethod = Image.FillMethod.Horizontal;
             img.fillOrigin = (int)Image.OriginHorizontal.Left;
+        }
+
+        // Окно-ошибка над игроком: «нельзя стрелять во время взлома»
+        public static Image BuildWarningWindow(RectTransform canvasRect, TMP_FontAsset mono, out CanvasGroup group, out TextMeshProUGUI body)
+        {
+            Color red = new Color(1f, 0.25f, 0.3f);
+            Image panel = Img("Warning", canvasRect, new Color(0.06f, 0.01f, 0.03f, 0.92f));
+            Anchor(panel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 210f), new Vector2(760f, 140f));
+            group = Group(panel.gameObject, 0f);
+
+            Image bar = Img("Bar", panel.rectTransform, red);
+            Anchor(bar.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(760f, 6f));
+            Image bottom = Img("BarBottom", panel.rectTransform, red);
+            Anchor(bottom.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(760f, 2f));
+
+            TextMeshProUGUI header = Text("Header", panel.rectTransform, mono, "ОШИБКА // ВЗЛОМ ПРЕРВАН", 22f, red, TextAlignmentOptions.TopLeft);
+            Anchor(header.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(24f, -18f), new Vector2(712f, 30f));
+            body = Text("Body", panel.rectTransform, mono, "НЕЛЬЗЯ СТРЕЛЯТЬ ВО ВРЕМЯ ВЗЛОМА", 36f, Color.white, TextAlignmentOptions.Center);
+            Anchor(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -14f), new Vector2(712f, 60f));
+            return panel;
         }
 
         private static TextMeshProUGUI Text(string name, RectTransform parent, TMP_FontAsset font, string value, float size, Color color, TextAlignmentOptions alignment)

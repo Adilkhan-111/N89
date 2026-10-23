@@ -182,6 +182,7 @@ namespace N89.Tutorial
 
             _objective.Set(string.Empty);
             yield return Say(Operator, "Каждый взлом расходует оперативную память. Шкала RAM — слева внизу.");
+            yield return Say(Operator, "При сканировании оружие блокируется. Попытка выстрела сорвёт взлом.");
             yield return Say(Operator, "Слева за стеклом — дрон. Пули стекло не пробивают.");
             SayAsync(Operator, "Используй «Короткое замыкание».");
             _objective.Set("Уничтожь дрона за стеклом взломом");

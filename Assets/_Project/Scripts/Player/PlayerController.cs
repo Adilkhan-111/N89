@@ -1,4 +1,5 @@
 using N89.Combat;
+using N89.Hacking;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -24,6 +25,7 @@ namespace N89.Player
         [SerializeField] private float _recoilRecovery = 1.2f;
 
         private Rigidbody2D _rb;
+        private HackingController _hacking;
         private Camera _camera;
         private Vector2 _moveInput;
         private float _recoil;
@@ -36,6 +38,7 @@ namespace N89.Player
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            _hacking = GetComponent<HackingController>();
             _camera = Camera.main;
             _health.Died += OnDied;
             _weapon.Fired += OnFired;
@@ -72,7 +75,8 @@ namespace N89.Player
                     _body.rotation = Quaternion.Euler(0f, 0f, angle);
                 }
 
-                if (CanShoot && mouse.leftButton.isPressed)
+                bool hackingBlocks = _hacking != null && _hacking.BlocksShooting;
+                if (CanShoot && !hackingBlocks && mouse.leftButton.isPressed)
                 {
                     _weapon.TryFire(aim);
                 }

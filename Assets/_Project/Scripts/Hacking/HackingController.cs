@@ -22,6 +22,9 @@ namespace N89.Hacking
 
         public bool HackingEnabled { get; set; } = true;
         public bool IsScanning { get; private set; }
+        // Скан сорван выстрелом: пока TAB не отпущен, сканирование не включится и стрелять нельзя
+        public bool ScanLocked { get; private set; }
+        public bool BlocksShooting => IsScanning || ScanLocked;
         public HackableDevice Hovered { get; private set; }
         public HackableDevice UploadTarget { get; private set; }
         public QuickhackData UploadHack { get; private set; }
@@ -30,6 +33,7 @@ namespace N89.Hacking
 
         public event Action<string> HackFailed;
         public event Action<HackableDevice, QuickhackData> HackCompleted;
+        public event Action<string> ScanAborted;
 
         private void Awake()
         {
@@ -45,10 +49,22 @@ namespace N89.Hacking
         private void Update()
         {
             Keyboard kb = Keyboard.current;
-            bool wantScan = HackingEnabled && !_health.IsDead && kb != null && kb.tabKey.isPressed;
+            bool tabHeld = kb != null && kb.tabKey.isPressed;
+            if (!tabHeld)
+            {
+                ScanLocked = false;
+            }
+
+            bool wantScan = HackingEnabled && !_health.IsDead && tabHeld && !ScanLocked;
             if (wantScan != IsScanning)
             {
                 SetScanning(wantScan);
+            }
+
+            // Замедление — не для перестрелок: попытка выстрелить срывает скан и текущий взлом
+            if (IsScanning && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                AbortScan();
             }
 
             Hovered = IsScanning ? FindHovered() : null;
@@ -73,6 +89,19 @@ namespace N89.Hacking
             IsScanning = scanning;
             Time.timeScale = scanning ? _scanTimeScale : 1f;
             Time.fixedDeltaTime = _defaultFixedDeltaTime * Time.timeScale;
+        }
+
+        private void AbortScan()
+        {
+            ScanLocked = true;
+            SetScanning(false);
+
+            // RAM за сорванный взлом не возвращается
+            UploadTarget = null;
+            UploadHack = null;
+            UploadProgress = 0f;
+
+            ScanAborted?.Invoke("НЕЛЬЗЯ СТРЕЛЯТЬ ВО ВРЕМЯ ВЗЛОМА");
         }
 
         private HackableDevice FindHovered()

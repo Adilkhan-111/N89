@@ -249,18 +249,28 @@ MonoBehaviour:
   _weapon: {fileID: 4350661167918690473}
   _health: {fileID: 7691650252503204669}
   _patrolOffset: {x: 0, y: 0}
+  _perimeter: []
   _patrolSpeed: 1.5
+  _waypointPause: 0.8
+  _chases: 0
+  _chaseSpeed: 3.2
+  _stopDistance: 3
+  _bodyRadius: 0.38
+  _moveBlockers:
+    serializedVersion: 2
+    m_Bits: 192
   _viewDistance: 10
   _viewAngle: 120
   _closeRange: 2.5
   _hearingRadius: 8
-  _reactionTime: 0.7
+  _reactionTime: 0.5
   _forgetTime: 3
   _sightBlockers:
     serializedVersion: 2
     m_Bits: 64
-  _turnSpeed: 420
+  _turnSpeed: 620
   _fireAngle: 12
+  _lookAroundAngle: 70
 --- !u!114 &6876639334226242614
 MonoBehaviour:
   m_ObjectHideFlags: 0

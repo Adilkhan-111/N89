@@ -315,6 +315,30 @@ namespace N89.EditorTools
             }
         });
 
+        // Лужа синей крови под убитым охранником: пятно с брызгами вокруг
+        public static Sprite BloodPool() => Create("blood_pool", 32, 32, c =>
+        {
+            var rng = new System.Random(89);
+            Color dark = new Color(0.03f, 0.1f, 0.5f, 0.9f);
+            Color light = new Color(0.12f, 0.38f, 0.95f, 0.9f);
+            for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(16, 16));
+                float edge = 7f + (float)rng.NextDouble() * 3f;
+                if (d < edge)
+                {
+                    c.Replace(x, y, d < edge - 2.5f ? dark : light);
+                }
+            }
+            for (int i = 0; i < 9; i++)
+            {
+                int x = rng.Next(2, 30);
+                int y = rng.Next(2, 30);
+                c.Rect(x, y, x + rng.Next(0, 2), y + rng.Next(0, 2), light);
+            }
+        });
+
         public static Sprite White() => Create("white", 8, 8, c => c.Rect(0, 0, 7, 7, Color.white));
 
         private static Color FloorTile(int x, int y)

@@ -209,8 +209,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::N89.Combat.Health
   _maxHealth: 1
   _destroyOnDeath: 1
-  _deathFxPrefab: {fileID: 390438708401094751, guid: 12e2ea01b1d8b984f807ea25abac5e65, type: 3}
-  _remainsPrefab: {fileID: 7488797080749299359, guid: c05bddf2f92979140beb5332cd053ee5, type: 3}
+  _deathFxPrefab: {fileID: 3303843078949948053, guid: 4aaf74fecc522194181c8f036ba46984, type: 3}
+  _remainsPrefab: {fileID: 6376225218116221651, guid: 1454d25959de99249b787f210a6f4293, type: 3}
   _flashRenderer: {fileID: 1765867777201726526}
   _flashColor: {r: 1, g: 0.35, b: 0.35, a: 1}
 --- !u!114 &2818896947965735485
@@ -249,18 +249,28 @@ MonoBehaviour:
   _weapon: {fileID: 2818896947965735485}
   _health: {fileID: 8971985239283920558}
   _patrolOffset: {x: 0, y: 0}
+  _perimeter: []
   _patrolSpeed: 1.5
+  _waypointPause: 0.8
+  _chases: 1
+  _chaseSpeed: 3.2
+  _stopDistance: 3
+  _bodyRadius: 0.38
+  _moveBlockers:
+    serializedVersion: 2
+    m_Bits: 192
   _viewDistance: 10
   _viewAngle: 120
   _closeRange: 2.5
   _hearingRadius: 8
   _reactionTime: 0.5
-  _forgetTime: 3
+  _forgetTime: 5
   _sightBlockers:
     serializedVersion: 2
     m_Bits: 64
   _turnSpeed: 420
   _fireAngle: 12
+  _lookAroundAngle: 70
 --- !u!114 &7656848468677570482
 MonoBehaviour:
   m_ObjectHideFlags: 0

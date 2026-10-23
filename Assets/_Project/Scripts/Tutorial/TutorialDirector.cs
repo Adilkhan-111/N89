@@ -101,6 +101,7 @@ namespace N89.Tutorial
 
             yield return MovementStep();
             yield return ShootingStep();
+            yield return LookStep();
             yield return DronesStep();
             yield return HackingStep();
             yield return CalibrationEnd();
@@ -134,6 +135,28 @@ namespace N89.Tutorial
             SayAsync(Operator, "Уничтожь учебные мишени.");
             yield return WaitAllDead(_targets, "Уничтожь мишени");
             yield return Say(Operator, "Точность приемлемая.");
+        }
+
+        private IEnumerator LookStep()
+        {
+            yield return Say(Operator, "Обзор оптики расширен. Смотри дальше, чем видишь.");
+            SayAsync(Operator, "Зажми Shift и веди мышью — взгляд уйдёт к прицелу.");
+
+            // Засчитываем, когда Shift суммарно продержали пару секунд
+            _objective.Set("Осмотрись:  зажми [SHIFT] + мышь");
+            float held = 0f;
+            while (held < 2f)
+            {
+                Keyboard kb = Keyboard.current;
+                if (kb != null && kb.shiftKey.isPressed)
+                {
+                    held += Time.unscaledDeltaTime;
+                }
+                yield return null;
+            }
+
+            _objective.Set(string.Empty);
+            yield return Say(Operator, "Враг, которого ты увидел первым, — уже мёртвый враг.");
         }
 
         private IEnumerator DronesStep()

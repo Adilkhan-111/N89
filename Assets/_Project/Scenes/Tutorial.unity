@@ -1040,11 +1040,39 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
       propertyPath: _patrolSpeed
-      value: 2
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
       propertyPath: _patrolOffset.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[0].x
+      value: -0.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[1].x
+      value: -0.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[1].y
       value: 6.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[2].x
+      value: 0.9
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[2].y
+      value: 6.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[3].x
+      value: 0.9
       objectReference: {fileID: 0}
     - target: {fileID: 4485824214472685225, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
       propertyPath: m_Name
@@ -3190,6 +3218,9 @@ MonoBehaviour:
   _smoothing: 8
   _lookAhead: 0.3
   _maxLookAhead: 3
+  _peekAmount: 1
+  _maxPeekDistance: 8
+  _peekBlendSpeed: 6
 --- !u!114 &351152059
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -10884,11 +10915,39 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
       propertyPath: _patrolSpeed
-      value: 2.5
+      value: 4.5
       objectReference: {fileID: 0}
     - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
       propertyPath: _patrolOffset.x
-      value: 7
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.size
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[0].x
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[1].x
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[1].y
+      value: -11
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[2].x
+      value: -2.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[2].y
+      value: -11
+      objectReference: {fileID: 0}
+    - target: {fileID: 1197207573393906292, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
+      propertyPath: _perimeter.Array.data[3].x
+      value: -2.5
       objectReference: {fileID: 0}
     - target: {fileID: 4485824214472685225, guid: e5be4335e98cae0449ff8b08bca7e8a4, type: 3}
       propertyPath: m_Name

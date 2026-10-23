@@ -12,7 +12,14 @@ namespace N89.Player
         [SerializeField] private float _lookAhead = 0.3f;
         [SerializeField] private float _maxLookAhead = 4f;
 
+        [Header("Shift — осмотреться")]
+        [Tooltip("Насколько камера уезжает к прицелу при зажатом Shift (1 — центр экрана встаёт туда, где был курсор)")]
+        [SerializeField] private float _peekAmount = 1f;
+        [SerializeField] private float _maxPeekDistance = 8f;
+        [SerializeField] private float _peekBlendSpeed = 6f;
+
         private Camera _camera;
+        private float _peekWeight;
         private Vector3 _basePosition;
         private float _shakeStrength;
         private float _shakeUntil;
@@ -69,8 +76,19 @@ namespace N89.Player
             Vector2 offset = Vector2.zero;
             if (Mouse.current != null)
             {
-                Vector2 mouseWorld = _camera.ScreenToWorldPoint(Mouse.current.position.ReadValue());
-                offset = Vector2.ClampMagnitude((mouseWorld - targetPos) * _lookAhead, _maxLookAhead);
+                Vector2 mouseScreen = Mouse.current.position.ReadValue();
+                Vector2 mouseWorld = _camera.ScreenToWorldPoint(mouseScreen);
+                Vector2 normalOffset = Vector2.ClampMagnitude((mouseWorld - targetPos) * _lookAhead, _maxLookAhead);
+
+                // Сдвиг для Shift считаем от центра экрана, а не от игрока: иначе камера, уезжая
+                // к прицелу, сама сдвигала бы точку прицела и улетала бы до упора
+                Vector2 screenCenter = new Vector2(_camera.pixelWidth, _camera.pixelHeight) * 0.5f;
+                Vector2 cursorFromCenter = mouseWorld - (Vector2)_camera.ScreenToWorldPoint(screenCenter);
+                Vector2 peekOffset = Vector2.ClampMagnitude(cursorFromCenter * _peekAmount, _maxPeekDistance);
+
+                bool peeking = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+                _peekWeight = Mathf.MoveTowards(_peekWeight, peeking ? 1f : 0f, _peekBlendSpeed * Time.unscaledDeltaTime);
+                offset = Vector2.Lerp(normalOffset, peekOffset, _peekWeight);
             }
 
             Vector3 desired = new Vector3(targetPos.x + offset.x, targetPos.y + offset.y, _basePosition.z);

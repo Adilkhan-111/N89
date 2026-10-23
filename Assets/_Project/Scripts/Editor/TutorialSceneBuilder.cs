@@ -43,6 +43,8 @@ namespace N89.EditorTools
         private static readonly Color Cyan = new Color(0.3f, 1f, 1f);
         private static readonly Color Magenta = new Color(1f, 0.25f, 0.8f);
         private static readonly Color Yellow = new Color(1f, 0.85f, 0.3f);
+        private static readonly Color BloodLight = new Color(0.15f, 0.45f, 1f);
+        private static readonly Color BloodDark = new Color(0.03f, 0.1f, 0.55f);
 
         private static Material s_lit;
         private static Material s_unlit;
@@ -77,9 +79,11 @@ namespace N89.EditorTools
             GameObject sparks = BurstPrefab("FX_Sparks", Yellow, Color.white, 10, 3f, 8f, 0.1f, 0.3f, 0.06f, 0.12f, particleMat);
             GameObject explosion = BurstPrefab("FX_Explosion", new Color(1f, 0.55f, 0.15f), Magenta, 40, 2f, 9f, 0.3f, 0.7f, 0.08f, 0.2f, particleMat);
             GameObject electric = BurstPrefab("FX_ShortCircuit", Cyan, Color.white, 40, 1f, 7f, 0.3f, 0.9f, 0.05f, 0.12f, particleMat);
-            GameObject blood = BurstPrefab("FX_Blood", new Color(0.8f, 0.05f, 0.1f), new Color(0.4f, 0f, 0.05f), 30, 1f, 6f, 0.3f, 0.8f, 0.08f, 0.16f, particleMat);
+            // «Синяя кровь» — проводящая жидкость для имплантов, у людей этого мира кровь синяя
+            GameObject blood = BurstPrefab("FX_Blood", BloodLight, BloodDark, 30, 1f, 6f, 0.3f, 0.8f, 0.08f, 0.16f, particleMat);
             GameObject muzzle = BurstPrefab("FX_Muzzle", new Color(1f, 0.9f, 0.5f), Color.white, 6, 4f, 10f, 0.04f, 0.09f, 0.06f, 0.1f, particleMat);
-            GameObject remains = RemainsPrefab(SpriteFactory.Scorch());
+            GameObject remains = RemainsPrefab("Remains_Scorch", SpriteFactory.Scorch());
+            GameObject bloodPool = RemainsPrefab("Remains_Blood", SpriteFactory.BloodPool());
 
             Bullet playerBullet = BulletPrefab("Bullet_Player", SpriteFactory.Bullet("bullet_player", new Color(1f, 0.95f, 0.6f)), 32f, sparks);
             Bullet turretBullet = BulletPrefab("Bullet_Turret", SpriteFactory.Bullet("bullet_turret", new Color(1f, 0.3f, 0.35f)), 26f, sparks);
@@ -88,10 +92,11 @@ namespace N89.EditorTools
             GameObject dronePrefab = DronePrefab(SpriteFactory.Drone(), explosion, remains);
             GameObject targetPrefab = TargetPrefab(SpriteFactory.Target(), explosion, remains);
             TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
+            // Охрана — люди: истекают синей кровью. Дроны — техника: взрываются
             GameObject guardPrefab = EnemyPrefab("CorpGuard", "ОХРАНА // КОРПОРАЦИЯ Е", SpriteFactory.Guard(), 1, 0.45f, 0.5f,
-                turretBullet, muzzle, explosion, remains, shortCircuit, electric);
-            GameObject combatDronePrefab = EnemyPrefab("CombatDrone", "БОЕВОЙ ДРОН", SpriteFactory.CombatDrone(), 2, 0.7f, 0.7f,
-                turretBullet, muzzle, explosion, remains, shortCircuit, electric);
+                turretBullet, muzzle, blood, bloodPool, shortCircuit, electric, true);
+            GameObject combatDronePrefab = EnemyPrefab("CombatDrone", "БОЕВОЙ ДРОН", SpriteFactory.CombatDrone(), 2, 0.7f, 0.5f,
+                turretBullet, muzzle, explosion, remains, shortCircuit, electric, false);
 
             // --- Сцена ---
             Camera cam = CreateCamera();
@@ -410,9 +415,12 @@ namespace N89.EditorTools
             // Охрана корпорации Е
             SpawnEnemy(guardPrefab, route, new Vector2(31.5f, -2.6f), 180f, new Vector2(0f, 5.2f), 1.2f);
             SpawnEnemy(guardPrefab, route, new Vector2(32.8f, 3.4f), 210f, Vector2.zero, 0f);
-            SpawnEnemy(dronePrefab, route, new Vector2(31f, 8.5f), 270f, new Vector2(0f, 6.5f), 2f);
+            // Дроны облетают свой периметр по кругу (точки — смещения от старта)
+            SpawnPerimeterDrone(dronePrefab, route, new Vector2(31f, 8.5f), 270f, 4f,
+                new Vector2(-0.9f, 0f), new Vector2(-0.9f, 6.5f), new Vector2(0.9f, 6.5f), new Vector2(0.9f, 0f));
             SpawnEnemy(guardPrefab, route, new Vector2(44f, 16.2f), 180f, Vector2.zero, 0f);
-            SpawnEnemy(dronePrefab, route, new Vector2(51f, 21.5f), 270f, new Vector2(7f, 0f), 2.5f);
+            SpawnPerimeterDrone(dronePrefab, route, new Vector2(51f, 21.5f), 270f, 4.5f,
+                new Vector2(6f, 0f), new Vector2(6f, -11f), new Vector2(-2.5f, -11f), new Vector2(-2.5f, 0f));
             SpawnEnemy(guardPrefab, route, new Vector2(56.5f, 10f), 120f, Vector2.zero, 0f);
 
             // Тот, кто стреляет в спину: появляется у входа в зал в самом конце
@@ -480,6 +488,21 @@ namespace N89.EditorTools
                 P(so, "_patrolSpeed").floatValue = speed;
             });
             return ai;
+        }
+
+        private static EnemyAI SpawnPerimeterDrone(GameObject prefab, Transform parent, Vector2 position, float facing, float speed,
+            params Vector2[] perimeter)
+        {
+            EnemyAI ai = SpawnEnemy(prefab, parent, position, facing, Vector2.zero, speed);
+            Configure(ai, so => SetVectorArray(so, "_perimeter", perimeter));
+            return ai;
+        }
+
+        private static void SetVectorArray(SerializedObject so, string name, Vector2[] values)
+        {
+            SerializedProperty array = P(so, name);
+            array.arraySize = values.Length;
+            for (int i = 0; i < values.Length; i++) array.GetArrayElementAtIndex(i).vector2Value = values[i];
         }
 
         private static Vector2 HexVertex(int k)
@@ -707,7 +730,8 @@ namespace N89.EditorTools
 
         // Враг корпорации Е: видит, реагирует, стреляет; взламывается «Коротким замыканием»
         private static GameObject EnemyPrefab(string name, string deviceName, Sprite sprite, int health, float cooldown, float reaction,
-            Bullet bullet, GameObject muzzleFx, GameObject deathFx, GameObject remains, QuickhackData shortCircuit, GameObject electricFx)
+            Bullet bullet, GameObject muzzleFx, GameObject deathFx, GameObject remains, QuickhackData shortCircuit, GameObject electricFx,
+            bool chases)
         {
             var root = new GameObject(name) { layer = EnemyLayer };
             Rigidbody2D rb = root.AddComponent<Rigidbody2D>();
@@ -750,6 +774,12 @@ namespace N89.EditorTools
                 P(so, "_health").objectReferenceValue = hp;
                 P(so, "_reactionTime").floatValue = reaction;
                 P(so, "_sightBlockers").intValue = 1 << WallLayer;
+                P(so, "_moveBlockers").intValue = (1 << WallLayer) | (1 << GlassLayer);
+                P(so, "_bodyRadius").floatValue = col.radius;
+                // Охрана преследует и дольше ищет; дрон держит периметр, зато быстрее крутится
+                P(so, "_chases").boolValue = chases;
+                P(so, "_forgetTime").floatValue = chases ? 5f : 3f;
+                P(so, "_turnSpeed").floatValue = chases ? 420f : 620f;
             });
 
             HackableDevice hack = root.AddComponent<HackableDevice>();
@@ -781,14 +811,14 @@ namespace N89.EditorTools
             return SavePrefab(root, name).GetComponent<Bullet>();
         }
 
-        private static GameObject RemainsPrefab(Sprite sprite)
+        private static GameObject RemainsPrefab(string name, Sprite sprite)
         {
-            var root = new GameObject("Remains_Scorch");
+            var root = new GameObject(name);
             SpriteRenderer sr = root.AddComponent<SpriteRenderer>();
             sr.sprite = sprite;
             sr.sharedMaterial = s_lit;
             sr.sortingOrder = -70;
-            return SavePrefab(root, "Remains_Scorch");
+            return SavePrefab(root, name);
         }
 
         private static GameObject BurstPrefab(string name, Color colorA, Color colorB, int count, float speedMin, float speedMax,

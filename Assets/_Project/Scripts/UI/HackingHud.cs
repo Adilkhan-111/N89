@@ -88,6 +88,11 @@ namespace N89.UI
             for (int i = 0; i < device.Quickhacks.Count; i++)
             {
                 QuickhackData hack = device.Quickhacks[i];
+                if (hack == null)
+                {
+                    continue;
+                }
+
                 bool usable = device.IsAvailable(hack) && ram.Current >= hack.RamCost;
                 string color = usable ? "#FFFFFF" : "#6E6E80";
                 _sb.Append($"<color=#FFD84A>[{i + 1}]</color> <color={color}>{hack.DisplayName}</color>");

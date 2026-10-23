@@ -33,6 +33,9 @@ namespace N89.EditorTools
             EnsureFolder(SettingsDir);
             EnsureFolder(Root + "/Scenes");
 
+            // Сцену создаём до загрузки ассетов: NewScene выгружает ассеты, на которые ещё ничего не ссылается
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
             TMP_FontAsset monoton = GetOrCreateFontAsset("Monoton-Regular");
             TMP_FontAsset audiowide = GetOrCreateFontAsset("Audiowide-Regular");
             TMP_FontAsset marker = GetOrCreateFontAsset("PermanentMarker-Regular");
@@ -41,8 +44,6 @@ namespace N89.EditorTools
             Material titleNeon = CreateNeonMaterial("TitleNeon", monoton, new Color(1f, 0.15f, 0.75f, 0.55f), 1.6f);
             Material markerNeon = CreateNeonMaterial("MarkerNeon", marker, new Color(1f, 0.3f, 0.85f, 0.6f), 1.4f);
             VolumeProfile profile = CreateVolumeProfile();
-
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             Camera cam = CreateCamera();
             CreateVolume(profile);

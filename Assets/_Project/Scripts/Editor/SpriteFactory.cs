@@ -18,18 +18,47 @@ namespace N89.EditorTools
         private static readonly Color Neon = new Color(0.3f, 1f, 1f);
         private static readonly Color Red = new Color(1f, 0.18f, 0.28f);
 
+        // Вид сверху, смотрит вправо (+x). Боевая стойка: левое плечо (сверху) выдвинуто вперёд,
+        // правое (снизу) отведено назад, пистолет в двух руках на линии прицела (y = 16).
         public static Sprite Player() => Create("player", 32, 32, c =>
         {
-            c.Line(new Vector2(14, 23), new Vector2(25, 17.5f), 2.4f, Skin);
-            c.Line(new Vector2(14, 9), new Vector2(25, 14.5f), 2.4f, Skin);
-            c.Rect(24, 15, 30, 17, new Color(0.14f, 0.14f, 0.18f));
-            c.Rect(24, 14, 26, 14, new Color(0.14f, 0.14f, 0.18f));
-            c.Ellipse(13.5f, 16, 5.5f, 10, Gown);
-            c.Rect(11, 8, 12, 24, new Color(0.65f, 0.68f, 0.76f));
-            c.Circle(15, 16, 5, Skin);
-            // Имплант на затылке — неоновая полоска
-            c.Rect(10, 15, 11, 17, Neon);
+            Color gun = new Color(0.14f, 0.14f, 0.18f);
+            Color gownShade = new Color(0.62f, 0.65f, 0.74f);
+            Color skinShade = new Color(0.72f, 0.55f, 0.45f);
+            Color hair = new Color(0.16f, 0.11f, 0.16f);
+            Vector2 leftShoulder = new Vector2(13.5f, 23.5f);
+            Vector2 rightShoulder = new Vector2(7.5f, 9.5f);
+            Vector2 grip = new Vector2(23.5f, 16f);
+
+            // Правая (дальняя) рука: рукав у плеча, дальше кисть тянется к рукояти наискосок
+            c.Line(rightShoulder, grip, 2.6f, skinShade);
+            c.Line(rightShoulder, Vector2.Lerp(rightShoulder, grip, 0.35f), 3.4f, gownShade);
+            // Корпус — "развёрнутые" плечи
+            c.Line(leftShoulder, rightShoulder, 7f, Gown);
+            c.Line(leftShoulder + new Vector2(-1.8f, -0.4f), rightShoulder + new Vector2(-1.8f, -0.4f), 2f, gownShade);
+            // Левая (ближняя) рука — от выдвинутого плеча прямо вперёд
+            c.Line(leftShoulder, grip + new Vector2(0f, 0.6f), 2.6f, Skin);
+            c.Line(leftShoulder, Vector2.Lerp(leftShoulder, grip, 0.35f), 3.4f, Gown);
+            // Пистолет
+            c.Rect(22, 15, 31, 16, gun);
+            c.Rect(22, 14, 24, 14, gun);
+            c.Rect(30, 16, 31, 16, new Color(0.3f, 0.3f, 0.36f));
+            // Голова сверху: в основном макушка (короткие волосы), спереди край лица, на затылке имплант
+            c.Circle(11.5f, 16.5f, 4.1f, hair);
+            c.Rect(14, 15, 15, 17, Skin);
+            c.Rect(7, 16, 8, 17, Neon);
             c.Outline(Outline);
+        });
+
+        public static Sprite Crosshair() => Create("crosshair", 15, 15, c =>
+        {
+            // Белый "+" с разрывом в центре и чёрной обводкой, как в Hotline Miami
+            c.Rect(7, 1, 7, 4, Color.white);
+            c.Rect(7, 10, 7, 13, Color.white);
+            c.Rect(1, 7, 4, 7, Color.white);
+            c.Rect(10, 7, 13, 7, Color.white);
+            c.Rect(7, 7, 7, 7, Color.white);
+            c.Outline(Color.black);
         });
 
         public static Sprite Drone() => Create("drone", 32, 32, c =>

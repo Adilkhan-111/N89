@@ -56,7 +56,11 @@ namespace N89.EditorTools
             MainMenuSceneBuilder.EnsureFolder(QuickhacksDir);
             MainMenuSceneBuilder.EnsureFolder(SettingsDir);
 
-            s_lit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
+            // Сцену создаём ДО загрузки ассетов: NewScene выгружает из памяти ассеты, на которые ещё
+            // ничего не ссылается (например, QuickhackData), и в сцену записались бы пустые ссылки.
+            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            s_lit =AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
             s_unlit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
             s_white = SpriteFactory.White();
 
@@ -85,8 +89,6 @@ namespace N89.EditorTools
             GameObject turretPrefab = TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
 
             // --- Сцена ---
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
             Camera cam = CreateCamera();
             CreateVolume();
 
@@ -201,7 +203,11 @@ namespace N89.EditorTools
 
             // --- Камера и игрок ---
             CameraFollow follow = cam.gameObject.AddComponent<CameraFollow>();
-            Configure(follow, so => P(so, "_target").objectReferenceValue = player.transform);
+            Configure(follow, so =>
+            {
+                P(so, "_target").objectReferenceValue = player.transform;
+                P(so, "_maxLookAhead").floatValue = 3f;
+            });
             PlayerController playerController = player.GetComponent<PlayerController>();
             Configure(playerController, so => P(so, "_cameraFollow").objectReferenceValue = follow);
             cam.transform.position = new Vector3(0f, -9.6f, -10f);
@@ -232,6 +238,7 @@ namespace N89.EditorTools
                 P(so, "_globalLight").objectReferenceValue = globalLight;
             });
 
+            ValidateQuickhacks();
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuildSettings(ScenePath);
             AssetDatabase.SaveAssets();
@@ -408,7 +415,8 @@ namespace N89.EditorTools
             {
                 P(so, "_bulletPrefab").objectReferenceValue = bullet;
                 P(so, "_muzzle").objectReferenceValue = muzzle;
-                P(so, "_cooldown").floatValue = 0.16f;
+                P(so, "_cooldown").floatValue = 0.3f;
+                P(so, "_spreadDegrees").floatValue = 3f;
                 P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << EnemyLayer);
                 P(so, "_muzzleFxPrefab").objectReferenceValue = muzzleFx;
             });
@@ -615,6 +623,17 @@ namespace N89.EditorTools
         {
             string path = $"{QuickhacksDir}/{fileName}.asset";
             var hack = AssetDatabase.LoadAssetAtPath<QuickhackData>(path);
+            if (hack == null && System.IO.File.Exists(path))
+            {
+                // Ассет есть на диске, но ещё не подгружен (например, сразу после перекомпиляции)
+                AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate | ImportAssetOptions.ForceSynchronousImport);
+                hack = AssetDatabase.LoadAssetAtPath<QuickhackData>(path);
+                if (hack == null)
+                {
+                    throw new InvalidOperationException($"Не удалось загрузить {path} — сцена не пересобрана, чтобы не потерять ссылки на взломы.");
+                }
+            }
+
             if (hack == null)
             {
                 hack = ScriptableObject.CreateInstance<QuickhackData>();
@@ -630,6 +649,21 @@ namespace N89.EditorTools
             }
 
             return hack;
+        }
+
+        // Каждое устройство должно ссылаться на сохранённые ассеты взломов, иначе в сцене окажется пустая ссылка
+        private static void ValidateQuickhacks()
+        {
+            foreach (HackableDevice device in Object.FindObjectsByType<HackableDevice>())
+            {
+                foreach (QuickhackData hack in device.Quickhacks)
+                {
+                    if (hack == null || !EditorUtility.IsPersistent(hack))
+                    {
+                        throw new InvalidOperationException($"У {device.name} взлом не сохранён как ассет — сцена не сохранена.");
+                    }
+                }
+            }
         }
 
         // ---------------------------------------------------------------- HUD
@@ -752,6 +786,20 @@ namespace N89.EditorTools
                 P(so, "_lineLabel").objectReferenceValue = line;
             });
 
+            // Перекрестие — под затемнением, чтобы исчезало на экране смерти
+            Image crosshairImage = MainMenuSceneBuilder.Create<Image>("Crosshair", canvasRect);
+            crosshairImage.sprite = SpriteFactory.Crosshair();
+            crosshairImage.raycastTarget = false;
+            Anchor(crosshairImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(45f, 45f));
+            Crosshair crosshair = crosshairImage.gameObject.AddComponent<Crosshair>();
+            Configure(crosshair, so =>
+            {
+                P(so, "_canvasRect").objectReferenceValue = canvasRect;
+                P(so, "_image").objectReferenceValue = crosshairImage;
+                P(so, "_weapon").objectReferenceValue = hacking.GetComponent<Weapon>();
+                P(so, "_hacking").objectReferenceValue = hacking;
+            });
+
             TextMeshProUGUI hint = Text("Hint", canvasRect, mono, "ESC — меню    ENTER — пропустить реплику", 18f, new Color(1f, 1f, 1f, 0.4f), TextAlignmentOptions.BottomRight);
             Anchor(hint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-30f, 20f), new Vector2(700f, 30f));
 
@@ -827,7 +875,7 @@ namespace N89.EditorTools
             var go = new GameObject("Main Camera") { tag = "MainCamera" };
             Camera cam = go.AddComponent<Camera>();
             cam.orthographic = true;
-            cam.orthographicSize = 8f;
+            cam.orthographicSize = 5.5f;
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.02f, 0.01f, 0.04f);
             go.AddComponent<AudioListener>();

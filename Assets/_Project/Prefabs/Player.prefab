@@ -50,7 +50,7 @@ MonoBehaviour:
   m_Light2DProvider:
     rid: -2
   m_SelectionSources:
-    rid: 2931020361475555504
+    rid: 2931020361475555711
   m_FalloffIntensity: 0.6
   m_Color: {r: 0.6, g: 0.9, b: 1, a: 1}
   m_Intensity: 0.6
@@ -96,7 +96,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 2931020361475555504
+    - rid: 2931020361475555711
       type: {class: Light2DProviderSources, ns: UnityEngine.Rendering.Universal, asm: Unity.RenderPipelines.Universal.2D.Runtime}
       data:
         m_SelectedHashCode: 3
@@ -239,8 +239,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::N89.Combat.Weapon
   _bulletPrefab: {fileID: 8889822785421623555, guid: a9b8be1008eeef2479385549af1aa2ea, type: 3}
   _muzzle: {fileID: 6114299602120626492}
-  _cooldown: 0.16
-  _spreadDegrees: 2
+  _cooldown: 0.3
+  _spreadDegrees: 3
   _hitMask:
     serializedVersion: 2
     m_Bits: 704
@@ -298,6 +298,10 @@ MonoBehaviour:
   _health: {fileID: 6769216353183459776}
   _cameraFollow: {fileID: 0}
   _bodyRenderer: {fileID: 5731500346068722370}
+  _shakeStrength: 0.18
+  _shakeDuration: 0.08
+  _recoilDistance: 0.12
+  _recoilRecovery: 1.2
 --- !u!1 &5747304013691695324
 GameObject:
   m_ObjectHideFlags: 0

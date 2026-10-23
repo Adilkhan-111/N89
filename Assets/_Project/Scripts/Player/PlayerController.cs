@@ -16,9 +16,17 @@ namespace N89.Player
         [SerializeField] private CameraFollow _cameraFollow;
         [SerializeField] private SpriteRenderer _bodyRenderer;
 
+        [Header("Recoil")]
+        [SerializeField] private float _shakeStrength = 0.18f;
+        [SerializeField] private float _shakeDuration = 0.08f;
+        [Tooltip("Насколько спрайт откатывается назад при выстреле (в юнитах)")]
+        [SerializeField] private float _recoilDistance = 0.12f;
+        [SerializeField] private float _recoilRecovery = 1.2f;
+
         private Rigidbody2D _rb;
         private Camera _camera;
         private Vector2 _moveInput;
+        private float _recoil;
 
         public bool CanMove { get; set; } = true;
         public bool CanShoot { get; set; } = true;
@@ -69,6 +77,10 @@ namespace N89.Player
                     _weapon.TryFire(aim);
                 }
             }
+
+            // Откат спрайта назад по линии ствола и плавный возврат
+            _recoil = Mathf.MoveTowards(_recoil, 0f, _recoilRecovery * Time.deltaTime);
+            _body.localPosition = -(_body.localRotation * Vector3.right) * _recoil;
         }
 
         private void FixedUpdate()
@@ -79,9 +91,10 @@ namespace N89.Player
 
         private void OnFired()
         {
+            _recoil = _recoilDistance;
             if (_cameraFollow != null)
             {
-                _cameraFollow.Shake(0.08f, 0.06f);
+                _cameraFollow.Shake(_shakeStrength, _shakeDuration);
             }
         }
 

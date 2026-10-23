@@ -49,6 +49,11 @@ namespace N89.Hacking
 
         public bool IsAvailable(QuickhackData hack)
         {
+            if (hack == null)
+            {
+                return false;
+            }
+
             switch (hack.Effect)
             {
                 case QuickhackEffect.Unlock:

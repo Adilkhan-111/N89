@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Linq;
 using N89.Combat;
+using N89.Core;
 using N89.Enemies;
 using N89.Hacking;
 using N89.Player;
@@ -13,11 +14,15 @@ using UnityEngine.SceneManagement;
 
 namespace N89.Tutorial
 {
-    // Сценарий обучения Номера 89 в лаборатории: голос оператора ведёт по шагам
-    // (ходьба → стрельба → дроны → взлом), а в конце субъекта ликвидируют за попытку побега.
+    // Сценарий туториала за Номер 89.
+    // Часть 1 — калибровка в лаборатории: голос оператора учит ходить, стрелять и взламывать.
+    // Часть 2 — побег: 89 взламывает шлюз и бежит через коридоры охраны корпорации Е.
+    // У самого выхода его убивают в спину, камера улетает вверх, показывается итоговый экран.
     public class TutorialDirector : MonoBehaviour
     {
-        private const string Speaker = "ОПЕРАТОР";
+        private const string Operator = "ОПЕРАТОР";
+        private const string Subject = "89";
+        private const string EscapeCheckpoint = "tutorial_escape";
 
         [Header("Player")]
         [SerializeField] private PlayerController _player;
@@ -29,24 +34,38 @@ namespace N89.Tutorial
         [SerializeField] private ObjectivePanel _objective;
         [SerializeField] private HackingHud _hackingHud;
         [SerializeField] private ScreenFader _fader;
+        [SerializeField] private TutorialEndScreen _endScreen;
 
-        [Header("Steps")]
+        [Header("Part 1: калибровка")]
         [SerializeField] private TriggerZone[] _moveMarkers;
         [SerializeField] private Health[] _targets;
         [SerializeField] private Health[] _drones;
         [SerializeField] private Door _hackDoor;
         [SerializeField] private Health _glassDrone;
 
-        [Header("Ending")]
+        [Header("Part 2: побег")]
         [SerializeField] private Door _exitGate;
-        [SerializeField] private TriggerZone _escapeZone;
-        [SerializeField] private Turret[] _turrets;
+        [SerializeField] private HackableDevice _exitGateHack;
+        [SerializeField] private Transform _escapeStart;
+        [SerializeField] private Door _firstEscapeDoor;
+        [SerializeField] private TriggerZone _corridorZone;
+        [SerializeField] private TriggerZone _guardRoomZone;
+        [SerializeField] private TriggerZone _droneCorridorZone;
+        [SerializeField] private TriggerZone _hallZone;
+        [SerializeField] private TriggerZone _exitZone;
+        [SerializeField] private EnemyAI _assassin;
         [SerializeField] private Light2D[] _alarmLights;
         [SerializeField] private Light2D _globalLight;
-        [SerializeField] private float _forcedDeathDelay = 2.5f;
-        [SerializeField] private string _nextScene = "MainMenu";
+        [SerializeField] private float _forcedDeathDelay = 0.8f;
 
-        private bool _ending;
+        [Header("Finale")]
+        [SerializeField] private Vector2 _flyCenter = new Vector2(30f, 8f);
+        [SerializeField] private float _flySize = 30f;
+        [SerializeField] private float _flyDuration = 4.5f;
+        [SerializeField] private string _menuScene = "MainMenu";
+
+        private bool _finale;
+        private bool _dying;
 
         private IEnumerator Start()
         {
@@ -59,27 +78,41 @@ namespace N89.Tutorial
             foreach (TriggerZone marker in _moveMarkers) marker.gameObject.SetActive(false);
             foreach (Health drone in _drones) drone.gameObject.SetActive(false);
             foreach (Light2D light in _alarmLights) light.enabled = false;
+            _exitGateHack.enabled = false;
+            _assassin.gameObject.SetActive(false);
 
             _player.Health.Died += OnPlayerDied;
-
             _fader.SetBlack(1f);
+
+            // После смерти во второй части сцена перезагружается и стартует сразу с побега
+            if (Checkpoint.Is(EscapeCheckpoint))
+            {
+                PrepareEscapeCheckpoint();
+                yield return _fader.Fade(1f, 0f, 0.6f);
+                yield return EscapePart();
+                yield break;
+            }
+
             yield return new WaitForSeconds(0.6f);
             yield return _fader.Fade(1f, 0f, 2f);
 
-            yield return Say("Субъект 89. Пробуждение подтверждено.");
-            yield return Say("Пульс в норме. Нейроимплант активен. Начинаем калибровку.");
+            yield return Say(Operator, "Субъект 89. Пробуждение подтверждено.");
+            yield return Say(Operator, "Пульс в норме. Нейроимплант активен. Начинаем калибровку.");
 
             yield return MovementStep();
             yield return ShootingStep();
             yield return DronesStep();
             yield return HackingStep();
-            yield return EndingStep();
+            yield return CalibrationEnd();
+            yield return EscapePart();
         }
+
+        // ------------------------------------------------------------ Часть 1
 
         private IEnumerator MovementStep()
         {
             _player.CanMove = true;
-            SayAsync("Двигайся. Клавиши W, A, S, D. Встань на отметку.");
+            SayAsync(Operator, "Двигайся. Клавиши W, A, S, D. Встань на отметку.");
 
             for (int i = 0; i < _moveMarkers.Length; i++)
             {
@@ -91,25 +124,25 @@ namespace N89.Tutorial
             }
 
             _objective.Set(string.Empty);
-            yield return Say("Моторика в норме.");
+            yield return Say(Operator, "Моторика в норме.");
         }
 
         private IEnumerator ShootingStep()
         {
-            yield return Say("Мышь — прицел. Левая кнопка мыши — выстрел.");
+            yield return Say(Operator, "Мышь — прицел. Левая кнопка мыши — выстрел.");
             _player.CanShoot = true;
-            SayAsync("Уничтожь учебные мишени.");
+            SayAsync(Operator, "Уничтожь учебные мишени.");
             yield return WaitAllDead(_targets, "Уничтожь мишени");
-            yield return Say("Точность приемлемая.");
+            yield return Say(Operator, "Точность приемлемая.");
         }
 
         private IEnumerator DronesStep()
         {
             foreach (Health drone in _drones) drone.gameObject.SetActive(true);
-            yield return Say("Подвижные цели. Учебные дроны. Они не стреляют.");
-            SayAsync("Пока что.");
+            yield return Say(Operator, "Подвижные цели. Учебные дроны. Они не стреляют.");
+            SayAsync(Operator, "Пока что.");
             yield return WaitAllDead(_drones, "Уничтожь дронов");
-            yield return Say("Хорошо. Ты учишься быстрее предыдущих образцов.");
+            yield return Say(Operator, "Хорошо. Ты учишься быстрее предыдущих образцов.");
         }
 
         private IEnumerator HackingStep()
@@ -118,68 +151,115 @@ namespace N89.Tutorial
             _hacking.HackingEnabled = true;
             _hackingHud.RamVisible = true;
 
-            yield return Say("Твой имплант умеет больше, чем стрелять.");
-            yield return Say("Зажми TAB — режим сканирования. Время замедлится, а уязвимая техника подсветится.");
-            SayAsync("Наведи курсор на дверь справа и нажми 1, чтобы взломать замок.");
+            yield return Say(Operator, "Твой имплант умеет больше, чем стрелять.");
+            yield return Say(Operator, "Зажми TAB — режим сканирования. Время замедлится, а уязвимая техника подсветится.");
+            SayAsync(Operator, "Наведи курсор на дверь справа и нажми 1, чтобы взломать замок.");
             _objective.Set("Взломай дверь:  [TAB] + курсор + [1]");
             yield return new WaitUntil(() => _hackDoor.IsOpen);
 
             _objective.Set(string.Empty);
-            yield return Say("Каждый взлом расходует оперативную память. Шкала RAM — слева внизу.");
-            yield return Say("Слева за стеклом — дрон. Пули стекло не пробивают.");
-            SayAsync("Используй «Короткое замыкание».");
+            yield return Say(Operator, "Каждый взлом расходует оперативную память. Шкала RAM — слева внизу.");
+            yield return Say(Operator, "Слева за стеклом — дрон. Пули стекло не пробивают.");
+            SayAsync(Operator, "Используй «Короткое замыкание».");
             _objective.Set("Уничтожь дрона за стеклом взломом");
             yield return new WaitUntil(() => _glassDrone == null || _glassDrone.IsDead);
 
             _objective.Set(string.Empty);
-            yield return Say("Память восстанавливается сама. Не трать её впустую.");
+            yield return Say(Operator, "Память восстанавливается сама. Не трать её впустую.");
         }
 
-        private IEnumerator EndingStep()
+        private IEnumerator CalibrationEnd()
         {
-            yield return Say("Калибровка завершена. Субъект 89 признан пригодным.");
-            _exitGate.Open();
-            SayAsync("Технический шлюз открыт для обслуживания. Оставайся на месте.");
+            yield return Say(Operator, "Калибровка завершена. Субъект 89 признан пригодным.");
+            yield return Say(Operator, "Вернись в капсулу. Начинаем подготовку к очистке памяти.");
+            yield return Say(Subject, "...Нет.");
 
-            // Ждём, пока 89 попробует сбежать. Если стоит на месте — голос напоминает о себе.
-            float nagAt = Time.time + 14f;
+            _exitGateHack.enabled = true;
+            SayAsync(Subject, "Шлюз в восточной комнате. Если взломать его — я выберусь.");
+            _objective.Set("Сбеги: взломай шлюз в восточной комнате");
+
+            // Пока 89 не решился — оператор напоминает о капсуле
+            float nagAt = Time.time + 15f;
             int nag = 0;
             string[] nags =
             {
-                "Субъект 89. Вернись в капсулу.",
+                "Субъект 89. В капсулу.",
                 "Субъект 89. Это не просьба.",
             };
-            while (!_escapeZone.WasEntered)
+            while (!_exitGate.IsOpen)
             {
                 if (Time.time > nagAt && nag < nags.Length)
                 {
-                    SayAsync(nags[nag++]);
-                    nagAt = Time.time + 14f;
+                    SayAsync(Operator, nags[nag++]);
+                    nagAt = Time.time + 15f;
                 }
                 yield return null;
             }
 
-            yield return EscapeSequence();
+            Checkpoint.Set(EscapeCheckpoint);
+            RaiseAlarm();
+            yield return Say(Operator, "Попытка побега. Охрана — на уровень Б.");
+            SayAsync(Subject, "Бежать. Просто бежать.");
         }
 
-        private IEnumerator EscapeSequence()
+        // ------------------------------------------------------------ Часть 2
+
+        private void PrepareEscapeCheckpoint()
         {
-            _ending = true;
-            _hacking.HackingEnabled = false;
-            _exitGate.Close();
+            Rigidbody2D rb = _player.GetComponent<Rigidbody2D>();
+            rb.position = _escapeStart.position;
+            _player.transform.position = _escapeStart.position;
+            _cameraFollow.SnapToTarget();
 
-            SayAsync("Попытка побега. Протокол ликвидации.");
-            foreach (Light2D light in _alarmLights) light.enabled = true;
-            if (_globalLight != null) _globalLight.color = new Color(1f, 0.35f, 0.4f);
+            _player.CanMove = true;
+            _player.CanShoot = true;
+            _hacking.HackingEnabled = true;
+            _hackingHud.RamVisible = true;
 
-            yield return new WaitForSeconds(0.6f);
-            foreach (Turret turret in _turrets)
+            _hackDoor.Open();
+            _exitGate.Open();
+            RaiseAlarm();
+        }
+
+        private IEnumerator EscapePart()
+        {
+            _objective.Set("Беги");
+
+            yield return new WaitUntil(() => _corridorZone.WasEntered);
+            if (!_firstEscapeDoor.IsOpen)
             {
-                turret.Target = _player.transform;
-                turret.Active = true;
+                SayAsync(Subject, "Заперто... Значит, взломать.");
+                _objective.Set("Взломай дверь:  [TAB] + курсор + [1]");
+                yield return new WaitUntil(() => _firstEscapeDoor.IsOpen);
             }
+            _objective.Set("Беги к выходу");
 
-            // Сбежать нельзя: если турели промахнулись, всё равно добиваем
+            yield return new WaitUntil(() => _guardRoomZone.WasEntered);
+            SayAsync(Operator, "Субъект 89, остановись. Охране разрешён огонь на поражение.");
+            _objective.Set("Прорвись через охрану. Охрана тоже взламывается");
+
+            yield return new WaitUntil(() => _droneCorridorZone.WasEntered);
+            SayAsync(Subject, "Дрон... Как на тренировке. Только этот стреляет.");
+            _objective.Set("Беги к выходу");
+
+            yield return new WaitUntil(() => _hallZone.WasEntered);
+            SayAsync(Subject, "Выход... Я вижу выход!");
+            _objective.Set("Добеги до выхода");
+
+            yield return new WaitUntil(() => _exitZone.WasEntered);
+            yield return ShotInTheBack();
+        }
+
+        private IEnumerator ShotInTheBack()
+        {
+            _finale = true;
+            _hacking.HackingEnabled = false;
+            _objective.Set(string.Empty);
+
+            // Охранник появляется у входа в зал — за спиной 89 — и сразу стреляет
+            _assassin.gameObject.SetActive(true);
+            _assassin.Engage(_player, 0.1f);
+
             float deadline = Time.time + _forcedDeathDelay;
             while (!_player.Health.IsDead && Time.time < deadline)
             {
@@ -194,33 +274,65 @@ namespace N89.Tutorial
 
         private void OnPlayerDied(Health health)
         {
-            StartCoroutine(DeathSequence());
+            if (_dying)
+            {
+                return;
+            }
+
+            _dying = true;
+            StartCoroutine(_finale ? FinaleSequence() : RestartSequence());
         }
 
-        private IEnumerator DeathSequence()
+        // Смерть по ходу побега: короткая вспышка и перезапуск с чекпоинта
+        private IEnumerator RestartSequence()
         {
             _objective.Set(string.Empty);
-            _fader.Flash(new Color(1f, 0.1f, 0.2f), 0.6f);
-            Time.timeScale = 0.2f;
-            yield return new WaitForSecondsRealtime(1.2f);
+            _fader.Flash(new Color(1f, 0.1f, 0.2f), 0.5f);
+            Time.timeScale = 0.3f;
+            yield return new WaitForSecondsRealtime(0.8f);
             Time.timeScale = 1f;
 
-            foreach (Turret turret in _turrets) turret.Active = false;
-            yield return _fader.Fade(0f, 1f, 1.2f);
-            yield return _fader.ShowTitle("СУБЪЕКТ 89 — ЛИКВИДИРОВАН", "Данные калибровки сохранены. Подготовить субъект 90.");
-            yield return new WaitForSecondsRealtime(3f);
+            yield return _fader.Fade(0f, 1f, 0.5f);
+            yield return _fader.ShowTitle("ЕЩЁ РАЗ", "Перемотка...");
+            yield return new WaitForSecondsRealtime(0.4f);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        }
 
-            SceneManager.LoadScene(_nextScene);
+        // Финал: замедление, камера улетает вверх над всем комплексом, итоговый экран
+        private IEnumerator FinaleSequence()
+        {
+            _fader.Flash(new Color(1f, 0.1f, 0.2f), 0.6f);
+            Time.timeScale = 0.15f;
+            yield return new WaitForSecondsRealtime(1.6f);
+            Time.timeScale = 1f;
+
+            _hackingHud.RamVisible = false;
+            Checkpoint.Clear();
+
+            SayAsync(Operator, "Субъект 89 ликвидирован.");
+            Coroutine fly = StartCoroutine(_cameraFollow.FlyAway(_flyCenter, _flySize, _flyDuration));
+            yield return new WaitForSecondsRealtime(_flyDuration * 0.55f);
+            SayAsync(Operator, "Данные сохранены. Подготовить субъект 90.");
+            yield return fly;
+
+            yield return _endScreen.Show();
+        }
+
+        private void RaiseAlarm()
+        {
+            foreach (Light2D light in _alarmLights) light.enabled = true;
+            if (_globalLight != null) _globalLight.color = new Color(1f, 0.45f, 0.5f);
         }
 
         private void Update()
         {
             // Esc — выйти в меню (удобно при тестах)
             Keyboard kb = Keyboard.current;
-            if (kb != null && kb.escapeKey.wasPressedThisFrame && !_ending)
+            if (kb != null && kb.escapeKey.wasPressedThisFrame && !_finale)
             {
                 Time.timeScale = 1f;
-                SceneManager.LoadScene(_nextScene);
+                Checkpoint.Clear();
+                SceneManager.LoadScene(_menuScene);
             }
         }
 
@@ -240,8 +352,8 @@ namespace N89.Tutorial
             _objective.Set(string.Empty);
         }
 
-        private Coroutine Say(string line) => _subtitles.Say(Speaker, line);
+        private Coroutine Say(string speaker, string line) => _subtitles.Say(speaker, line);
 
-        private void SayAsync(string line) => _subtitles.Say(Speaker, line);
+        private void SayAsync(string speaker, string line) => _subtitles.Say(speaker, line);
     }
 }

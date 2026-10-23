@@ -11,6 +11,7 @@ using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
@@ -60,7 +61,7 @@ namespace N89.EditorTools
             // ничего не ссылается (например, QuickhackData), и в сцену записались бы пустые ссылки.
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            s_lit =AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
+            s_lit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
             s_unlit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
             s_white = SpriteFactory.White();
 
@@ -86,7 +87,11 @@ namespace N89.EditorTools
             GameObject playerPrefab = PlayerPrefab(SpriteFactory.Player(), playerBullet, muzzle, blood);
             GameObject dronePrefab = DronePrefab(SpriteFactory.Drone(), explosion, remains);
             GameObject targetPrefab = TargetPrefab(SpriteFactory.Target(), explosion, remains);
-            GameObject turretPrefab = TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
+            TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
+            GameObject guardPrefab = EnemyPrefab("CorpGuard", "ОХРАНА // КОРПОРАЦИЯ Е", SpriteFactory.Guard(), 1, 0.45f, 0.5f,
+                turretBullet, muzzle, explosion, remains, shortCircuit, electric);
+            GameObject combatDronePrefab = EnemyPrefab("CombatDrone", "БОЕВОЙ ДРОН", SpriteFactory.CombatDrone(), 2, 0.7f, 0.7f,
+                turretBullet, muzzle, explosion, remains, shortCircuit, electric);
 
             // --- Сцена ---
             Camera cam = CreateCamera();
@@ -104,14 +109,19 @@ namespace N89.EditorTools
             AddLight(lights, "WestChamber", new Vector2(-10.8f, 0f), new Color(0.2f, 1f, 0.8f), 5f, 1.2f);
             AddLight(lights, "EastChamber", new Vector2(10.8f, 0f), new Color(0.4f, 0.5f, 1f), 5f, 1f);
             AddLight(lights, "Capsule", new Vector2(0f, -11.3f), Cyan, 4f, 1.2f);
-            AddLight(lights, "Corridor", new Vector2(17.5f, 0f), new Color(0.5f, 0.5f, 0.7f), 5f, 0.5f);
+
+            Transform lab = new GameObject("Lab").transform;
+            BuildLab(lab, out Door hackDoor, out Door exitGate, out HackableDevice exitGateHack, out float gateX, unlock);
+
+            Transform route = new GameObject("EscapeRoute").transform;
+            EscapeRefs escape = BuildEscapeRoute(route, lights, gateX, unlock, guardPrefab, combatDronePrefab, mono);
 
             var alarmLights = new List<Light2D>
             {
-                AddLight(lights, "Alarm_Corridor", new Vector2(17.5f, 0f), new Color(1f, 0.1f, 0.15f), 8f, 2f),
                 AddLight(lights, "Alarm_East", new Vector2(10.8f, 0f), new Color(1f, 0.1f, 0.15f), 7f, 2f),
                 AddLight(lights, "Alarm_Center", new Vector2(0f, 0f), new Color(1f, 0.1f, 0.15f), 12f, 1.2f),
             };
+            alarmLights.AddRange(escape.Alarms);
             foreach (Light2D alarm in alarmLights)
             {
                 Pulse pulse = alarm.gameObject.AddComponent<Pulse>();
@@ -124,9 +134,6 @@ namespace N89.EditorTools
                     P(so, "_lightMax").floatValue = alarm.intensity;
                 });
             }
-
-            Transform lab = new GameObject("Lab").transform;
-            BuildLab(lab, out Door hackDoor, out Door exitGate, unlock);
 
             Transform gameplay = new GameObject("Gameplay").transform;
 
@@ -183,24 +190,6 @@ namespace N89.EditorTools
                 P(so, "_shortCircuitFxPrefab").objectReferenceValue = electric;
             });
 
-            Turret[] turrets =
-            {
-                Spawn(turretPrefab, gameplay, new Vector2(21.3f, 0.9f)).GetComponent<Turret>(),
-                Spawn(turretPrefab, gameplay, new Vector2(21.3f, -0.9f)).GetComponent<Turret>(),
-            };
-            foreach (Turret turret in turrets)
-            {
-                turret.transform.Find("Head").rotation = Quaternion.Euler(0f, 0f, 180f);
-            }
-
-            GameObject escapeGo = new GameObject("EscapeZone");
-            escapeGo.transform.SetParent(gameplay);
-            escapeGo.transform.position = new Vector2(15.6f, 0f);
-            BoxCollider2D escapeCollider = escapeGo.AddComponent<BoxCollider2D>();
-            escapeCollider.isTrigger = true;
-            escapeCollider.size = new Vector2(1.4f, DoorLength);
-            TriggerZone escapeZone = escapeGo.AddComponent<TriggerZone>();
-
             // --- Камера и игрок ---
             CameraFollow follow = cam.gameObject.AddComponent<CameraFollow>();
             Configure(follow, so =>
@@ -226,17 +215,27 @@ namespace N89.EditorTools
                 P(so, "_objective").objectReferenceValue = hud.Objective;
                 P(so, "_hackingHud").objectReferenceValue = hud.HackingHud;
                 P(so, "_fader").objectReferenceValue = hud.Fader;
+                P(so, "_endScreen").objectReferenceValue = hud.EndScreen;
                 SetArray(so, "_moveMarkers", markers);
                 SetArray(so, "_targets", targets);
                 SetArray(so, "_drones", drones);
                 P(so, "_hackDoor").objectReferenceValue = hackDoor;
                 P(so, "_glassDrone").objectReferenceValue = glassDrone;
                 P(so, "_exitGate").objectReferenceValue = exitGate;
-                P(so, "_escapeZone").objectReferenceValue = escapeZone;
-                SetArray(so, "_turrets", turrets);
+                P(so, "_exitGateHack").objectReferenceValue = exitGateHack;
+                P(so, "_escapeStart").objectReferenceValue = escape.Start;
+                P(so, "_firstEscapeDoor").objectReferenceValue = escape.FirstDoor;
+                P(so, "_corridorZone").objectReferenceValue = escape.Corridor;
+                P(so, "_guardRoomZone").objectReferenceValue = escape.GuardRoom;
+                P(so, "_droneCorridorZone").objectReferenceValue = escape.DroneCorridor;
+                P(so, "_hallZone").objectReferenceValue = escape.Hall;
+                P(so, "_exitZone").objectReferenceValue = escape.Exit;
+                P(so, "_assassin").objectReferenceValue = escape.Assassin;
                 SetArray(so, "_alarmLights", alarmLights.ToArray());
                 P(so, "_globalLight").objectReferenceValue = globalLight;
             });
+
+            escape.Assassin.gameObject.SetActive(false);
 
             ValidateQuickhacks();
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -247,7 +246,8 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- Лаборатория
 
-        private static void BuildLab(Transform lab, out Door hackDoor, out Door exitGate, QuickhackData unlock)
+        private static void BuildLab(Transform lab, out Door hackDoor, out Door exitGate, out HackableDevice exitGateHack, out float gateX,
+            QuickhackData unlock)
         {
             Sprite wall = SpriteFactory.Wall();
             Sprite glass = SpriteFactory.Glass();
@@ -268,6 +268,7 @@ namespace N89.EditorTools
             }
 
             float eastX = apothem + WallThickness * 0.5f;
+            gateX = eastX;
             float half = DoorLength * 0.5f;
             CreateWall(lab, "OuterWall", new Vector2(eastX, -LabRadius * 0.5f - 0.25f), new Vector2(eastX, -half), wall, WallLayer, 5);
             CreateWall(lab, "OuterWall", new Vector2(eastX, half), new Vector2(eastX, LabRadius * 0.5f + 0.25f), wall, WallLayer, 5);
@@ -275,34 +276,210 @@ namespace N89.EditorTools
             // Восточная комната (за взламываемой дверью)
             CreateWall(lab, "InnerWall", new Vector2(8f, half), new Vector2(8f, 10.9f), wall, WallLayer, 5);
             CreateWall(lab, "InnerWall", new Vector2(8f, -10.9f), new Vector2(8f, -half), wall, WallLayer, 5);
-            Door lockedDoor = CreateDoor(lab, "HackDoor", new Vector2(8f, 0f), door, new Vector2(7.4f, 2.2f));
-            HackableDevice doorHack = lockedDoor.gameObject.AddComponent<HackableDevice>();
-            Configure(doorHack, so =>
-            {
-                P(so, "_deviceName").stringValue = "ДВЕРЬ // ЭЛЕКТРОЗАМОК";
-                SetArray(so, "_quickhacks", unlock);
-                P(so, "_collider").objectReferenceValue = lockedDoor.GetComponent<Collider2D>();
-                SetArray(so, "_highlightRenderers", lockedDoor.transform.Find("Panel").GetComponent<SpriteRenderer>());
-            });
-            hackDoor = lockedDoor;
+            hackDoor = CreateDoor(lab, "HackDoor", new Vector2(8f, 0f), door, new Vector2(7.4f, 2.2f));
+            MakeHackable(hackDoor, "ДВЕРЬ // ЭЛЕКТРОЗАМОК", unlock);
 
             // Западная комната за стеклом
             CreateWall(lab, "InnerWall", new Vector2(-8f, 3f), new Vector2(-8f, 10.9f), wall, WallLayer, 5);
             CreateWall(lab, "InnerWall", new Vector2(-8f, -10.9f), new Vector2(-8f, -3f), wall, WallLayer, 5);
             CreateWall(lab, "Glass", new Vector2(-8f, -3f), new Vector2(-8f, 3f), glass, GlassLayer, 6, false);
 
-            // Шлюз и коридор за ним
+            // Шлюз наружу — взламывается в конце калибровки, за ним начинается побег
             exitGate = CreateDoor(lab, "ExitGate", new Vector2(eastX, 0f), door, new Vector2(eastX - 0.6f, 2.2f));
+            exitGateHack = MakeHackable(exitGate, "ШЛЮЗ // ВНЕШНИЙ КОНТУР", unlock);
+        }
 
-            float corridorEnd = 22.4f;
-            float wallY = half + WallThickness * 0.5f;
-            CreateWall(lab, "CorridorWall", new Vector2(eastX, wallY), new Vector2(corridorEnd, wallY), wall, WallLayer, 5);
-            CreateWall(lab, "CorridorWall", new Vector2(eastX, -wallY), new Vector2(corridorEnd, -wallY), wall, WallLayer, 5);
-            CreateWall(lab, "CorridorWall", new Vector2(corridorEnd, -wallY - 0.3f), new Vector2(corridorEnd, wallY + 0.3f), wall, WallLayer, 5);
+        private static HackableDevice MakeHackable(Door door, string deviceName, QuickhackData unlock)
+        {
+            HackableDevice device = door.gameObject.AddComponent<HackableDevice>();
+            Configure(device, so =>
+            {
+                P(so, "_deviceName").stringValue = deviceName;
+                SetArray(so, "_quickhacks", unlock);
+                P(so, "_collider").objectReferenceValue = door.GetComponent<Collider2D>();
+                SetArray(so, "_highlightRenderers", door.transform.Find("Panel").GetComponent<SpriteRenderer>());
+            });
+            return device;
+        }
 
-            SpriteRenderer corridorFloor = CreateSprite("CorridorFloor", lab, SpriteFactory.FloorTileSprite(), new Vector2((eastX + corridorEnd) * 0.5f, 0f), -100);
-            corridorFloor.drawMode = SpriteDrawMode.Tiled;
-            corridorFloor.size = new Vector2(corridorEnd - eastX, DoorLength);
+        // ---------------------------------------------------------------- Побег (часть 2)
+
+        private struct EscapeRefs
+        {
+            public Transform Start;
+            public Door FirstDoor;
+            public TriggerZone Corridor;
+            public TriggerZone GuardRoom;
+            public TriggerZone DroneCorridor;
+            public TriggerZone Hall;
+            public TriggerZone Exit;
+            public EnemyAI Assassin;
+            public List<Light2D> Alarms;
+        }
+
+        // Маршрут побега к востоку от шлюза: коридор A → комната охраны B → коридор C (на север) →
+        // коридор D (на восток) → зал E с ярко освещённым выходом. Стены ставятся по осевым линиям.
+        private static EscapeRefs BuildEscapeRoute(Transform route, Transform lights, float gateX, QuickhackData unlock,
+            GameObject guardPrefab, GameObject dronePrefab, TMP_FontAsset font)
+        {
+            Sprite wall = SpriteFactory.Wall();
+            Sprite door = SpriteFactory.DoorPanel();
+            Sprite floor = SpriteFactory.FloorTileSprite();
+            Sprite crate = SpriteFactory.Crate();
+            const float h = WallThickness * 0.5f;
+
+            void W(float x1, float y1, float x2, float y2) =>
+                CreateWall(route, "Wall", new Vector2(x1, y1), new Vector2(x2, y2), wall, WallLayer, 5);
+
+            SpriteRenderer F(string name, Vector2 center, Vector2 size)
+            {
+                SpriteRenderer sr = CreateSprite(name, route, floor, center, -100);
+                sr.drawMode = SpriteDrawMode.Tiled;
+                sr.size = size;
+                return sr;
+            }
+
+            // A: коридор от шлюза до первой двери
+            float corridorY = DoorLength * 0.5f + h;
+            W(gateX, corridorY, 24f, corridorY);
+            W(gateX, -corridorY, 24f, -corridorY);
+            F("Floor_A", new Vector2((gateX + 24f) * 0.5f, 0f), new Vector2(24f - gateX, 3.8f));
+
+            // B: комната охраны 10x10 с дверями на западе и севере
+            W(24f, -5f - h, 24f, -1.6f);
+            W(24f, 1.6f, 24f, 5f + h);
+            W(24f - h, -5f, 34f + h, -5f);
+            W(34f, -5f - h, 34f, 5f + h);
+            W(24f - h, 5f, 29.4f, 5f);
+            W(32.6f, 5f, 34f + h, 5f);
+            F("Floor_B", new Vector2(29f, 0f), new Vector2(10f, 10f));
+            Door doorA = CreateDoor(route, "Door_A", new Vector2(24f, 0f), door, new Vector2(23.4f, 2.2f));
+            MakeHackable(doorA, "ДВЕРЬ // СЕКТОР Б", unlock);
+            Door doorB = CreateDoor(route, "Door_B", new Vector2(31f, 5f), door, new Vector2(33.3f, 4.4f), 0f);
+            MakeHackable(doorB, "ДВЕРЬ // СЕРВИСНЫЙ ХОД", unlock);
+
+            // C: коридор на север
+            W(29.4f - h, 5f, 29.4f - h, 18.11f + h);
+            W(32.6f + h, 5f, 32.6f + h, 14.29f);
+            F("Floor_C", new Vector2(31f, 11.55f), new Vector2(3.8f, 13.1f));
+
+            // D: коридор на восток с запертой дверью посередине
+            W(29.4f - 2f * h, 18.11f, 46f, 18.11f);
+            W(32.6f, 14.29f, 46f, 14.29f);
+            F("Floor_D", new Vector2(39.3f, 16.2f), new Vector2(13.4f, 3.8f));
+            Door doorC = CreateDoor(route, "Door_C", new Vector2(40f, 16.2f), door, new Vector2(39.4f, 17.5f));
+            MakeHackable(doorC, "ДВЕРЬ // ВЫХОД К ПЕРИМЕТРУ", unlock);
+
+            // E: зал с выходом на востоке
+            W(46f, 8f - h, 46f, 14.29f);
+            W(46f, 18.11f, 46f, 24f + h);
+            W(46f - h, 8f, 62f + h, 8f);
+            W(46f - h, 24f, 62f + h, 24f);
+            W(62f, 8f - h, 62f, 14.2f);
+            W(62f, 19f, 62f, 24f + h);
+            F("Floor_E", new Vector2(54f, 16f), new Vector2(16f, 16f));
+
+            // Снаружи — яркий свет: выход видно издалека
+            W(62f, 14.2f - h, 66.3f, 14.2f - h);
+            W(62f, 19f + h, 66.3f, 19f + h);
+            W(66f, 14.2f - 2f * h, 66f, 19f + 2f * h);
+            SpriteRenderer outside = F("Floor_Outside", new Vector2(64f, 16.6f), new Vector2(4f, 4.8f));
+            outside.sharedMaterial = s_unlit;
+            outside.color = new Color(0.9f, 1f, 0.95f);
+
+            var sign = new GameObject("ExitSign").AddComponent<TextMeshPro>();
+            sign.transform.SetParent(route);
+            sign.transform.position = new Vector2(60.2f, 20.3f);
+            sign.font = font;
+            sign.text = "ВЫХОД";
+            sign.fontSize = 9f;
+            sign.alignment = TextAlignmentOptions.Center;
+            sign.color = new Color(0.35f, 1f, 0.55f);
+            sign.rectTransform.sizeDelta = new Vector2(6f, 2f);
+            sign.GetComponent<MeshRenderer>().sortingOrder = 15;
+
+            // Укрытия
+            CreateProp("Crate", route, crate, new Vector2(27.2f, 2.6f));
+            CreateProp("Crate", route, crate, new Vector2(27.2f, -2.6f));
+            CreateProp("Console", route, SpriteFactory.Console(), new Vector2(33f, -3.9f));
+            CreateProp("Crate", route, crate, new Vector2(50f, 12f));
+            CreateProp("Crate", route, crate, new Vector2(50f, 20.2f));
+            CreateProp("Crate", route, crate, new Vector2(55.5f, 13f));
+            CreateProp("Crate", route, crate, new Vector2(55.5f, 19.4f));
+
+            // Охрана корпорации Е
+            SpawnEnemy(guardPrefab, route, new Vector2(31.5f, -2.6f), 180f, new Vector2(0f, 5.2f), 1.2f);
+            SpawnEnemy(guardPrefab, route, new Vector2(32.8f, 3.4f), 210f, Vector2.zero, 0f);
+            SpawnEnemy(dronePrefab, route, new Vector2(31f, 8.5f), 270f, new Vector2(0f, 6.5f), 2f);
+            SpawnEnemy(guardPrefab, route, new Vector2(44f, 16.2f), 180f, Vector2.zero, 0f);
+            SpawnEnemy(dronePrefab, route, new Vector2(51f, 21.5f), 270f, new Vector2(7f, 0f), 2.5f);
+            SpawnEnemy(guardPrefab, route, new Vector2(56.5f, 10f), 120f, Vector2.zero, 0f);
+
+            // Тот, кто стреляет в спину: появляется у входа в зал в самом конце
+            EnemyAI assassin = SpawnEnemy(guardPrefab, route, new Vector2(46.8f, 16.2f), 0f, Vector2.zero, 0f);
+            assassin.name = "Assassin";
+
+            // Свет: обычный и тревожный
+            AddLight(lights, "Route_A", new Vector2(18.6f, 0f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
+            AddLight(lights, "Route_B", new Vector2(29f, 0f), new Color(0.55f, 0.6f, 0.85f), 8f, 0.9f);
+            AddLight(lights, "Route_C", new Vector2(31f, 11.5f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
+            AddLight(lights, "Route_D1", new Vector2(36.5f, 16.2f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
+            AddLight(lights, "Route_D2", new Vector2(43.5f, 16.2f), new Color(0.5f, 0.55f, 0.8f), 5f, 0.7f);
+            AddLight(lights, "Route_E", new Vector2(54f, 16f), new Color(0.55f, 0.6f, 0.85f), 10f, 0.8f);
+            // Дневной свет снаружи заливает зал — выход видно ещё от входа
+            AddLight(lights, "Exit_Daylight", new Vector2(64.5f, 16.6f), new Color(0.95f, 1f, 0.95f), 18f, 4f).falloffIntensity = 0.3f;
+            AddLight(lights, "Exit_Doorway", new Vector2(61f, 16.6f), new Color(0.9f, 1f, 0.92f), 8f, 4f).falloffIntensity = 0.3f;
+            AddLight(lights, "Exit_Sign", new Vector2(60.2f, 20.3f), new Color(0.35f, 1f, 0.55f), 3f, 1.2f);
+
+            var alarms = new List<Light2D>
+            {
+                AddLight(lights, "Alarm_A", new Vector2(18.6f, 0f), new Color(1f, 0.1f, 0.15f), 7f, 1.8f),
+                AddLight(lights, "Alarm_B", new Vector2(29f, 0f), new Color(1f, 0.1f, 0.15f), 9f, 1.8f),
+                AddLight(lights, "Alarm_C", new Vector2(31f, 11.5f), new Color(1f, 0.1f, 0.15f), 6f, 1.6f),
+                AddLight(lights, "Alarm_D", new Vector2(40f, 16.2f), new Color(1f, 0.1f, 0.15f), 8f, 1.6f),
+                AddLight(lights, "Alarm_E", new Vector2(54f, 16f), new Color(1f, 0.1f, 0.15f), 11f, 1.6f),
+            };
+
+            var start = new GameObject("EscapeStart").transform;
+            start.SetParent(route);
+            start.position = new Vector2(15.4f, 0f);
+
+            return new EscapeRefs
+            {
+                Start = start,
+                FirstDoor = doorA,
+                Corridor = CreateZone(route, "Zone_Corridor", new Vector2(20f, 0f), new Vector2(2f, 3.2f)),
+                GuardRoom = CreateZone(route, "Zone_GuardRoom", new Vector2(25.6f, 0f), new Vector2(1.6f, 3.2f)),
+                DroneCorridor = CreateZone(route, "Zone_DroneCorridor", new Vector2(31f, 6.6f), new Vector2(3.2f, 1.4f)),
+                Hall = CreateZone(route, "Zone_Hall", new Vector2(47.6f, 16.2f), new Vector2(1.6f, 3.6f)),
+                Exit = CreateZone(route, "Zone_Exit", new Vector2(58.5f, 16.6f), new Vector2(1.6f, 4.8f)),
+                Assassin = assassin,
+                Alarms = alarms,
+            };
+        }
+
+        private static TriggerZone CreateZone(Transform parent, string name, Vector2 position, Vector2 size)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent);
+            go.transform.position = position;
+            BoxCollider2D col = go.AddComponent<BoxCollider2D>();
+            col.isTrigger = true;
+            col.size = size;
+            return go.AddComponent<TriggerZone>();
+        }
+
+        private static EnemyAI SpawnEnemy(GameObject prefab, Transform parent, Vector2 position, float facing, Vector2 patrol, float speed)
+        {
+            GameObject enemy = Spawn(prefab, parent, position);
+            enemy.transform.Find("Body").rotation = Quaternion.Euler(0f, 0f, facing);
+            EnemyAI ai = enemy.GetComponent<EnemyAI>();
+            Configure(ai, so =>
+            {
+                P(so, "_patrolOffset").vector2Value = patrol;
+                P(so, "_patrolSpeed").floatValue = speed;
+            });
+            return ai;
         }
 
         private static Vector2 HexVertex(int k)
@@ -323,18 +500,20 @@ namespace N89.EditorTools
             col.size = sr.size;
         }
 
-        private static Door CreateDoor(Transform parent, string name, Vector2 position, Sprite panelSprite, Vector2 lampPosition)
+        // angle 90 — вертикальная дверь, 0 — горизонтальная. Панель уезжает вдоль своей длины.
+        private static Door CreateDoor(Transform parent, string name, Vector2 position, Sprite panelSprite, Vector2 lampPosition,
+            float angle = 90f, float length = DoorLength)
         {
             var root = new GameObject(name) { layer = WallLayer };
             root.transform.SetParent(parent);
             root.transform.position = position;
-            root.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            root.transform.rotation = Quaternion.Euler(0f, 0f, angle);
             BoxCollider2D col = root.AddComponent<BoxCollider2D>();
-            col.size = new Vector2(DoorLength, WallThickness);
+            col.size = new Vector2(length, WallThickness);
 
             SpriteRenderer panel = CreateSprite("Panel", root.transform, panelSprite, Vector2.zero, 4);
             panel.drawMode = SpriteDrawMode.Tiled;
-            panel.size = new Vector2(DoorLength, WallThickness);
+            panel.size = new Vector2(length, WallThickness);
 
             SpriteRenderer lamp = CreateSprite(name + "_Lamp", parent, s_white, lampPosition, 12, false);
             Light2D lampLight = AddLight(lamp.transform, "Light", lampPosition, Color.red, 2.5f, 1.2f);
@@ -344,7 +523,7 @@ namespace N89.EditorTools
             {
                 P(so, "_collider").objectReferenceValue = col;
                 P(so, "_panel").objectReferenceValue = panel.transform;
-                P(so, "_openOffset").vector2Value = new Vector2(DoorLength, 0f);
+                P(so, "_openOffset").vector2Value = new Vector2(length, 0f);
                 P(so, "_statusLamp").objectReferenceValue = lamp;
                 P(so, "_statusLight").objectReferenceValue = lampLight;
             });
@@ -526,6 +705,66 @@ namespace N89.EditorTools
             return SavePrefab(root, "Turret");
         }
 
+        // Враг корпорации Е: видит, реагирует, стреляет; взламывается «Коротким замыканием»
+        private static GameObject EnemyPrefab(string name, string deviceName, Sprite sprite, int health, float cooldown, float reaction,
+            Bullet bullet, GameObject muzzleFx, GameObject deathFx, GameObject remains, QuickhackData shortCircuit, GameObject electricFx)
+        {
+            var root = new GameObject(name) { layer = EnemyLayer };
+            Rigidbody2D rb = root.AddComponent<Rigidbody2D>();
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            CircleCollider2D col = root.AddComponent<CircleCollider2D>();
+            col.radius = 0.38f;
+
+            SpriteRenderer body = CreateSprite("Body", root.transform, sprite, Vector2.zero, 10);
+            body.gameObject.layer = EnemyLayer;
+            Transform muzzle = new GameObject("Muzzle").transform;
+            muzzle.SetParent(body.transform, false);
+            muzzle.localPosition = new Vector3(0.6f, 0f, 0f);
+            AddLight(root.transform, "Light", Vector2.zero, new Color(1f, 0.45f, 0.15f), 1.6f, 0.6f);
+
+            Health hp = root.AddComponent<Health>();
+            Configure(hp, so =>
+            {
+                P(so, "_maxHealth").intValue = health;
+                P(so, "_deathFxPrefab").objectReferenceValue = deathFx;
+                P(so, "_remainsPrefab").objectReferenceValue = remains;
+                P(so, "_flashRenderer").objectReferenceValue = body;
+            });
+
+            Weapon weapon = root.AddComponent<Weapon>();
+            Configure(weapon, so =>
+            {
+                P(so, "_bulletPrefab").objectReferenceValue = bullet;
+                P(so, "_muzzle").objectReferenceValue = muzzle;
+                P(so, "_cooldown").floatValue = cooldown;
+                P(so, "_spreadDegrees").floatValue = 4f;
+                P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << PlayerLayer);
+                P(so, "_muzzleFxPrefab").objectReferenceValue = muzzleFx;
+            });
+
+            EnemyAI ai = root.AddComponent<EnemyAI>();
+            Configure(ai, so =>
+            {
+                P(so, "_body").objectReferenceValue = body.transform;
+                P(so, "_weapon").objectReferenceValue = weapon;
+                P(so, "_health").objectReferenceValue = hp;
+                P(so, "_reactionTime").floatValue = reaction;
+                P(so, "_sightBlockers").intValue = 1 << WallLayer;
+            });
+
+            HackableDevice hack = root.AddComponent<HackableDevice>();
+            Configure(hack, so =>
+            {
+                P(so, "_deviceName").stringValue = deviceName;
+                SetArray(so, "_quickhacks", shortCircuit);
+                P(so, "_collider").objectReferenceValue = col;
+                SetArray(so, "_highlightRenderers", body);
+                P(so, "_shortCircuitFxPrefab").objectReferenceValue = electricFx;
+            });
+
+            return SavePrefab(root, name);
+        }
+
         private static Bullet BulletPrefab(string name, Sprite sprite, float speed, GameObject impactFx)
         {
             var root = new GameObject(name);
@@ -674,6 +913,7 @@ namespace N89.EditorTools
             public ObjectivePanel Objective;
             public HackingHud HackingHud;
             public ScreenFader Fader;
+            public TutorialEndScreen EndScreen;
         }
 
         private static HudRefs BuildHud(HackingController hacking, TMP_FontAsset mono, TMP_FontAsset audiowide)
@@ -685,7 +925,13 @@ namespace N89.EditorTools
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
+            go.AddComponent<GraphicRaycaster>();
             var canvasRect = (RectTransform)go.transform;
+
+            // Для кнопки на итоговом экране
+            var eventSystem = new GameObject("EventSystem");
+            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            eventSystem.AddComponent<InputSystemUIInputModule>();
 
             // Режим сканирования
             Image scan = Img("ScanOverlay", canvasRect, new Color(0.15f, 0.9f, 1f, 0.12f));
@@ -823,7 +1069,43 @@ namespace N89.EditorTools
                 P(so, "_subtitle").objectReferenceValue = subtitle;
             });
 
-            return new HudRefs { Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader };
+            // Итоговый экран — поверх всего, включая затемнение
+            Image endPanel = Img("EndScreen", canvasRect, new Color(0.02f, 0f, 0.05f, 0.7f));
+            MainMenuSceneBuilder.Stretch(endPanel.rectTransform);
+            CanvasGroup endGroup = Group(endPanel.gameObject, 0f);
+            TextMeshProUGUI endTitle = Text("Title", endPanel.rectTransform, mono, "ТУТОРИАЛ ОКОНЧЕН", 72f, new Color(1f, 0.85f, 0.97f), TextAlignmentOptions.Center);
+            Anchor(endTitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 100f));
+            Image divider = Img("Divider", endPanel.rectTransform, Magenta);
+            Anchor(divider.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 115f), new Vector2(760f, 3f));
+            TextMeshProUGUI rating = Text("Rating", endPanel.rectTransform, mono, "РЕЙТИНГ:   <color=#8A8A99>НЕ ОЦЕНЕНО</color>", 38f, Color.white, TextAlignmentOptions.Center);
+            Anchor(rating.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 45f), new Vector2(1000f, 50f));
+            TextMeshProUGUI score = Text("Score", endPanel.rectTransform, mono, "ОЧКИ:   <color=#8A8A99>НЕ ОЦЕНЕНО</color>", 38f, Color.white, TextAlignmentOptions.Center);
+            Anchor(score.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -15f), new Vector2(1000f, 50f));
+
+            Image buttonImage = Img("Continue", endPanel.rectTransform, Color.white);
+            buttonImage.raycastTarget = true;
+            Anchor(buttonImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -170f), new Vector2(380f, 76f));
+            buttonImage.gameObject.AddComponent<Outline>().effectColor = Magenta;
+            Button button = buttonImage.gameObject.AddComponent<Button>();
+            button.targetGraphic = buttonImage;
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(0.12f, 0.04f, 0.16f, 0.95f);
+            colors.highlightedColor = new Color(0.75f, 0.15f, 0.6f, 1f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.pressedColor = new Color(0.5f, 0.1f, 0.4f, 1f);
+            button.colors = colors;
+            TextMeshProUGUI buttonLabel = Text("Label", buttonImage.rectTransform, mono, "ВПЕРЁД  >", 36f, Color.white, TextAlignmentOptions.Center);
+            MainMenuSceneBuilder.Stretch(buttonLabel.rectTransform);
+
+            TutorialEndScreen endScreen = endPanel.gameObject.AddComponent<TutorialEndScreen>();
+            Configure(endScreen, so =>
+            {
+                P(so, "_group").objectReferenceValue = endGroup;
+                P(so, "_continueButton").objectReferenceValue = button;
+                P(so, "_crosshair").objectReferenceValue = crosshairImage.gameObject;
+            });
+
+            return new HudRefs { Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen };
         }
 
         private static Image Img(string name, RectTransform parent, Color color)

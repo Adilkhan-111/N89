@@ -1,3 +1,4 @@
+using N89.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -117,6 +118,7 @@ namespace N89.UI
                 case MenuAction.NewGame:
                     if (Application.CanStreamedLevelBeLoaded(_newGameScene))
                     {
+                        Checkpoint.Clear();
                         SceneManager.LoadScene(_newGameScene);
                     }
                     else

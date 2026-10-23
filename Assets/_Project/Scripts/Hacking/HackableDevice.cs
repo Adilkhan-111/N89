@@ -22,6 +22,10 @@ namespace N89.Hacking
         private float _lastHighlight;
 
         public static IReadOnlyList<HackableDevice> All => s_all;
+
+        // Перезагрузка домена при входе в Play Mode выключена — чистим список вручную
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay() => s_all.Clear();
         public string DeviceName => _deviceName;
         public IReadOnlyList<QuickhackData> Quickhacks => _quickhacks;
         public Collider2D Collider => _collider;

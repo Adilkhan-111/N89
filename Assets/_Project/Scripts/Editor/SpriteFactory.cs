@@ -1,0 +1,326 @@
+using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
+
+namespace N89.EditorTools
+{
+    // Генерирует временный пиксель-арт для прототипа (PNG в Art/Sprites/Generated).
+    // Когда появится настоящий арт — просто заменить PNG с теми же именами.
+    internal static class SpriteFactory
+    {
+        public const int PixelsPerUnit = 32;
+        private const string Dir = "Assets/_Project/Art/Sprites/Generated";
+
+        private static readonly Color Outline = new Color(0.04f, 0.02f, 0.07f);
+        private static readonly Color Skin = new Color(0.86f, 0.68f, 0.56f);
+        private static readonly Color Gown = new Color(0.8f, 0.83f, 0.9f);
+        private static readonly Color Neon = new Color(0.3f, 1f, 1f);
+        private static readonly Color Red = new Color(1f, 0.18f, 0.28f);
+
+        public static Sprite Player() => Create("player", 32, 32, c =>
+        {
+            c.Line(new Vector2(14, 23), new Vector2(25, 17.5f), 2.4f, Skin);
+            c.Line(new Vector2(14, 9), new Vector2(25, 14.5f), 2.4f, Skin);
+            c.Rect(24, 15, 30, 17, new Color(0.14f, 0.14f, 0.18f));
+            c.Rect(24, 14, 26, 14, new Color(0.14f, 0.14f, 0.18f));
+            c.Ellipse(13.5f, 16, 5.5f, 10, Gown);
+            c.Rect(11, 8, 12, 24, new Color(0.65f, 0.68f, 0.76f));
+            c.Circle(15, 16, 5, Skin);
+            // Имплант на затылке — неоновая полоска
+            c.Rect(10, 15, 11, 17, Neon);
+            c.Outline(Outline);
+        });
+
+        public static Sprite Drone() => Create("drone", 32, 32, c =>
+        {
+            Color arm = new Color(0.16f, 0.16f, 0.2f);
+            Color rotor = new Color(0.34f, 0.35f, 0.42f);
+            Vector2 center = new Vector2(16, 16);
+            foreach (Vector2 p in new[] { new Vector2(7, 7), new Vector2(25, 7), new Vector2(7, 25), new Vector2(25, 25) })
+            {
+                c.Line(center, p, 2f, arm);
+                c.Circle(p.x, p.y, 3.8f, rotor);
+                c.Circle(p.x, p.y, 1.6f, arm);
+            }
+
+            c.Circle(16, 16, 8.5f, new Color(0.27f, 0.28f, 0.35f));
+            c.Ring(16, 16, 5.5f, 6.5f, new Color(0.17f, 0.17f, 0.22f));
+            c.Circle(14, 18.5f, 2.5f, new Color(0.45f, 0.46f, 0.55f, 0.7f));
+            c.Circle(21.5f, 16, 2.6f, Red);
+            c.Circle(22f, 16, 1.1f, new Color(1f, 0.75f, 0.75f));
+            c.Outline(Outline);
+        });
+
+        public static Sprite Target() => Create("target", 32, 32, c =>
+        {
+            Color red = new Color(0.85f, 0.12f, 0.2f);
+            Color white = new Color(0.92f, 0.9f, 0.92f);
+            c.Circle(16, 16, 13, red);
+            c.Circle(16, 16, 10, white);
+            c.Circle(16, 16, 7, red);
+            c.Circle(16, 16, 4, white);
+            c.Circle(16, 16, 1.8f, red);
+            c.Outline(Outline);
+        });
+
+        public static Sprite TurretBase() => Create("turret_base", 32, 32, c =>
+        {
+            c.Circle(16, 16, 12, new Color(0.18f, 0.18f, 0.22f));
+            c.Ring(16, 16, 9, 10, new Color(0.1f, 0.1f, 0.13f));
+            c.Circle(16, 16, 8, new Color(0.24f, 0.24f, 0.29f));
+            foreach (Vector2 p in new[] { new Vector2(16, 5.5f), new Vector2(16, 26.5f), new Vector2(5.5f, 16), new Vector2(26.5f, 16) })
+            {
+                c.Circle(p.x, p.y, 1.2f, new Color(0.4f, 0.4f, 0.45f));
+            }
+            c.Outline(Outline);
+        });
+
+        public static Sprite TurretHead() => Create("turret_head", 32, 32, c =>
+        {
+            c.Rect(16, 14, 31, 17, new Color(0.32f, 0.32f, 0.38f));
+            c.Rect(28, 13, 31, 18, new Color(0.2f, 0.2f, 0.25f));
+            c.Circle(16, 16, 6.5f, new Color(0.42f, 0.4f, 0.48f));
+            c.Circle(19, 16, 1.6f, Red);
+            c.Outline(Outline);
+        });
+
+        public static Sprite Bullet(string name, Color color) => Create(name, 12, 4, c =>
+        {
+            for (int x = 0; x < 12; x++)
+            {
+                Color col = color;
+                col.a = Mathf.Pow(x / 11f, 1.5f);
+                c.Rect(x, 1, x, 2, col);
+            }
+            c.Rect(9, 1, 11, 2, Color.white);
+        });
+
+        public static Sprite Wall() => Create("wall", 32, 20, c =>
+        {
+            c.Rect(0, 0, 31, 19, new Color(0.11f, 0.1f, 0.15f));
+            c.Rect(0, 0, 31, 1, new Color(0.05f, 0.04f, 0.07f));
+            c.Rect(0, 18, 31, 19, new Color(0.05f, 0.04f, 0.07f));
+            c.Rect(0, 2, 31, 2, new Color(0.5f, 0.18f, 0.7f));
+            c.Rect(0, 17, 31, 17, new Color(0.5f, 0.18f, 0.7f));
+            c.Rect(0, 3, 0, 16, new Color(0.07f, 0.06f, 0.1f));
+            c.Rect(16, 3, 16, 16, new Color(0.07f, 0.06f, 0.1f));
+            c.Rect(1, 15, 31, 15, new Color(0.16f, 0.15f, 0.22f));
+            foreach (int x in new[] { 4, 12, 20, 28 })
+            {
+                c.Rect(x, 6, x, 6, new Color(0.26f, 0.24f, 0.32f));
+                c.Rect(x, 12, x, 12, new Color(0.26f, 0.24f, 0.32f));
+            }
+        });
+
+        public static Sprite Glass() => Create("glass", 32, 20, c =>
+        {
+            c.Rect(0, 0, 31, 19, new Color(0.35f, 0.85f, 1f, 0.22f));
+            c.Rect(0, 0, 31, 1, new Color(0.55f, 0.95f, 1f, 0.85f));
+            c.Rect(0, 18, 31, 19, new Color(0.55f, 0.95f, 1f, 0.85f));
+            c.Line(new Vector2(6, 3), new Vector2(12, 16), 1.5f, new Color(1f, 1f, 1f, 0.35f));
+            c.Line(new Vector2(20, 3), new Vector2(23, 10), 1f, new Color(1f, 1f, 1f, 0.25f));
+        });
+
+        public static Sprite DoorPanel() => Create("door", 32, 20, c =>
+        {
+            c.Rect(0, 0, 31, 19, new Color(0.22f, 0.2f, 0.28f));
+            for (int x = 0; x < 32; x++)
+            for (int y = 0; y < 20; y++)
+            {
+                bool edge = y < 4 || y > 15;
+                if (edge)
+                {
+                    bool stripe = (x + y) / 3 % 2 == 0;
+                    c.Replace(x, y, stripe ? new Color(0.85f, 0.65f, 0.1f) : new Color(0.08f, 0.07f, 0.1f));
+                }
+            }
+            c.Rect(0, 9, 31, 10, new Color(0.14f, 0.12f, 0.18f));
+        });
+
+        public static Sprite LabFloor(float radiusUnits) => Create("floor_lab", 1024, 1024, c =>
+        {
+            float r = radiusUnits * PixelsPerUnit;
+            float apothem = r * 0.8660254f;
+            for (int y = 0; y < c.Height; y++)
+            for (int x = 0; x < c.Width; x++)
+            {
+                float px = x + 0.5f - c.Width / 2f;
+                float py = y + 0.5f - c.Height / 2f;
+                float hd = HexDistance(px, py);
+                if (hd > apothem)
+                {
+                    continue;
+                }
+
+                Color col = FloorTile(x, y);
+
+                // Концентрические шестиугольники — "разметка" лаборатории
+                foreach (float ring in new[] { 0.28f, 0.56f, 0.8f })
+                {
+                    if (Mathf.Abs(hd - apothem * ring) < 1.2f)
+                    {
+                        col = Color.Lerp(col, new Color(0.15f, 0.55f, 0.65f), 0.7f);
+                    }
+                }
+
+                // Полоса опасности вдоль стен
+                if (hd > apothem - 26f)
+                {
+                    bool stripe = Mathf.FloorToInt((px + py) / 12f) % 2 == 0;
+                    col = stripe ? new Color(0.45f, 0.36f, 0.08f) : new Color(0.07f, 0.06f, 0.08f);
+                }
+
+                c.Replace(x, y, col);
+            }
+        });
+
+        public static Sprite FloorTileSprite() => Create("floor_tile", 32, 32, c =>
+        {
+            for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+                c.Replace(x, y, FloorTile(x, y) * 0.8f + new Color(0, 0, 0, 0.2f));
+        });
+
+        public static Sprite Marker() => Create("marker", 32, 32, c =>
+        {
+            c.Ring(16, 16, 11, 13.5f, Neon);
+            c.Ring(16, 16, 6, 7, new Color(Neon.r, Neon.g, Neon.b, 0.5f));
+            c.Circle(16, 16, 2, Neon);
+        });
+
+        public static Sprite Capsule() => Create("capsule", 64, 96, c =>
+        {
+            c.RoundRect(4, 4, 59, 91, 14, new Color(0.2f, 0.22f, 0.3f));
+            c.RoundRect(10, 16, 53, 84, 10, new Color(0.08f, 0.09f, 0.13f));
+            c.RoundRect(14, 22, 49, 78, 8, new Color(0.25f, 0.75f, 0.85f, 0.45f));
+            c.Line(new Vector2(20, 30), new Vector2(30, 70), 2f, new Color(1f, 1f, 1f, 0.25f));
+            c.Rect(22, 6, 41, 10, new Color(0.12f, 0.12f, 0.16f));
+            c.Rect(26, 7, 28, 9, Neon);
+            c.Rect(35, 7, 37, 9, Red);
+            c.Outline(Outline);
+        });
+
+        public static Sprite Console() => Create("console", 32, 32, c =>
+        {
+            c.RoundRect(2, 4, 29, 27, 3, new Color(0.17f, 0.17f, 0.23f));
+            c.Rect(5, 13, 26, 24, new Color(0.06f, 0.35f, 0.4f));
+            c.Rect(7, 21, 20, 21, Neon);
+            c.Rect(7, 18, 24, 18, new Color(0.3f, 0.9f, 0.9f, 0.7f));
+            c.Rect(7, 15, 15, 15, new Color(1f, 0.3f, 0.8f, 0.8f));
+            c.Rect(5, 6, 26, 10, new Color(0.1f, 0.1f, 0.13f));
+            for (int x = 7; x < 26; x += 3)
+            {
+                c.Rect(x, 8, x, 8, new Color(0.4f, 0.4f, 0.5f));
+            }
+            c.Outline(Outline);
+        });
+
+        public static Sprite Crate() => Create("crate", 32, 32, c =>
+        {
+            Color strap = new Color(0.14f, 0.12f, 0.17f);
+            c.RoundRect(2, 2, 29, 29, 2, new Color(0.25f, 0.21f, 0.3f));
+            c.Line(new Vector2(4, 4), new Vector2(28, 28), 2f, strap);
+            c.Line(new Vector2(4, 28), new Vector2(28, 4), 2f, strap);
+            c.Rect(2, 2, 29, 3, strap);
+            c.Rect(2, 28, 29, 29, strap);
+            c.Rect(13, 13, 18, 18, new Color(0.85f, 0.65f, 0.1f));
+            c.Outline(Outline);
+        });
+
+        public static Sprite Scorch() => Create("scorch", 32, 32, c =>
+        {
+            var rng = new System.Random(89);
+            for (int y = 0; y < 32; y++)
+            for (int x = 0; x < 32; x++)
+            {
+                float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(16, 16));
+                float edge = 9f + (float)rng.NextDouble() * 4f;
+                if (d < edge)
+                {
+                    c.Replace(x, y, new Color(0.03f, 0.02f, 0.04f, Mathf.Lerp(0.8f, 0.3f, d / edge)));
+                }
+            }
+            for (int i = 0; i < 10; i++)
+            {
+                int x = rng.Next(5, 27);
+                int y = rng.Next(5, 27);
+                c.Rect(x, y, x + rng.Next(0, 2), y, new Color(0.35f, 0.35f, 0.42f));
+            }
+        });
+
+        public static Sprite White() => Create("white", 8, 8, c => c.Rect(0, 0, 7, 7, Color.white));
+
+        private static Color FloorTile(int x, int y)
+        {
+            int tx = x / 32;
+            int ty = y / 32;
+            int lx = x % 32;
+            int ly = y % 32;
+
+            float variation = Hash(tx, ty) * 0.025f;
+            Color col = new Color(0.1f + variation, 0.1f + variation, 0.14f + variation);
+            if (lx == 0 || ly == 0)
+            {
+                col = new Color(0.05f, 0.05f, 0.08f);
+            }
+            else if ((lx == 3 || lx == 28) && (ly == 3 || ly == 28))
+            {
+                col = new Color(0.17f, 0.17f, 0.22f);
+            }
+
+            // Грязь пятнами
+            float grime = Mathf.PerlinNoise(x * 0.015f + 3.1f, y * 0.015f + 7.7f);
+            col *= Mathf.Lerp(0.7f, 1.1f, grime);
+            col.a = 1f;
+            return col;
+        }
+
+        // "Шестиугольное расстояние" для pointy-top шестиугольника (возвращает апофему точки)
+        private static float HexDistance(float x, float y)
+        {
+            const float s = 0.8660254f;
+            return Mathf.Max(Mathf.Abs(x), Mathf.Max(Mathf.Abs(x * 0.5f + y * s), Mathf.Abs(-x * 0.5f + y * s)));
+        }
+
+        private static float Hash(int x, int y)
+        {
+            unchecked
+            {
+                int h = x * 374761393 + y * 668265263;
+                h = (h ^ (h >> 13)) * 1274126177;
+                return ((h ^ (h >> 16)) & 0xFFFF) / 65535f;
+            }
+        }
+
+        private static Sprite Create(string name, int width, int height, Action<PixelCanvas> draw)
+        {
+            MainMenuSceneBuilder.EnsureFolder(Dir);
+            var canvas = new PixelCanvas(width, height);
+            draw(canvas);
+
+            string path = $"{Dir}/{name}.png";
+            File.WriteAllBytes(path, canvas.EncodePng());
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
+
+            var importer = (TextureImporter)AssetImporter.GetAtPath(path);
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = PixelsPerUnit;
+            importer.filterMode = FilterMode.Point;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.maxTextureSize = 2048;
+
+            var settings = new TextureImporterSettings();
+            importer.ReadTextureSettings(settings);
+            settings.spriteMeshType = SpriteMeshType.FullRect;
+            settings.spriteAlignment = (int)SpriteAlignment.Center;
+            importer.SetTextureSettings(settings);
+            importer.SaveAndReimport();
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+    }
+}

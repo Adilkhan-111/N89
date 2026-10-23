@@ -265,7 +265,7 @@ namespace N89.EditorTools
             return profile;
         }
 
-        private static TMP_FontAsset GetOrCreateFontAsset(string fontName)
+        internal static TMP_FontAsset GetOrCreateFontAsset(string fontName)
         {
             string assetPath = $"{FontsDir}/{fontName} SDF.asset";
             var fontAsset = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(assetPath);
@@ -301,7 +301,7 @@ namespace N89.EditorTools
             return GetOrCreateMaterial(name, mat);
         }
 
-        private static Material GetOrCreateMaterial(string name, Material template)
+        internal static Material GetOrCreateMaterial(string name, Material template)
         {
             string path = $"{MaterialsDir}/{name}.mat";
             var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -326,7 +326,7 @@ namespace N89.EditorTools
             EditorBuildSettings.scenes = scenes.ToArray();
         }
 
-        private static TextMeshProUGUI CreateText(string name, RectTransform parent, TMP_FontAsset font, string value, float size, Color color)
+        internal static TextMeshProUGUI CreateText(string name, RectTransform parent, TMP_FontAsset font, string value, float size, Color color)
         {
             TextMeshProUGUI text = Create<TextMeshProUGUI>(name, parent);
             text.font = font;
@@ -339,13 +339,13 @@ namespace N89.EditorTools
             return text;
         }
 
-        private static T Create<T>(string name, RectTransform parent) where T : Component
+        internal static T Create<T>(string name, RectTransform parent) where T : Component
         {
             RectTransform rect = CreateRect(name, parent);
             return rect.gameObject.AddComponent<T>();
         }
 
-        private static RectTransform CreateRect(string name, RectTransform parent)
+        internal static RectTransform CreateRect(string name, RectTransform parent)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.layer = LayerMask.NameToLayer("UI");
@@ -354,7 +354,7 @@ namespace N89.EditorTools
             return rect;
         }
 
-        private static void Stretch(RectTransform rect)
+        internal static void Stretch(RectTransform rect)
         {
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
@@ -362,7 +362,7 @@ namespace N89.EditorTools
             rect.offsetMax = Vector2.zero;
         }
 
-        private static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (!AssetDatabase.IsValidFolder(path))
             {

@@ -23,6 +23,10 @@
 - Папка `Assets/Welcome/` — служебная часть шаблона, игровой код туда не класть.
 - Шрифты — `Assets/_Project/Art/Fonts/` (Monoton, Audiowide — OFL; Permanent Marker — Apache 2.0; лицензии лежат рядом). Кириллицы в них нет, поэтому тексты UI пока на английском.
 - Главное меню (`Assets/_Project/Scenes/MainMenu.unity`) пересобирается через меню редактора **N89 > Build Main Menu Scene** (`Scripts/Editor/MainMenuSceneBuilder.cs`). Пересборка затирает ручные правки сцены.
+- Туториал (`Assets/_Project/Scenes/Tutorial.unity`) — **N89 > Build Tutorial Scene** (`Scripts/Editor/TutorialSceneBuilder.cs`). Пересоздаёт сцену, префабы в `Prefabs/` и временные спрайты в `Art/Sprites/Generated/` (рисуются кодом в `SpriteFactory.cs`; настоящий арт — заменить PNG с теми же именами). Данные взломов (`ScriptableObjects/Quickhacks/`) создаются один раз и дальше тюнятся в инспекторе.
+- Реплики голоса и шаги туториала — в `Scripts/Tutorial/TutorialDirector.cs`.
+- Физические слои: 6 `Wall`, 7 `Glass` (блокирует пули, но не взлом), 8 `Player`, 9 `Enemy`. Гравитация 2D выключена.
+- Управление: WASD — ходьба, мышь — прицел, ЛКМ — стрельба, зажать TAB — сканирование (замедление), 1–3 — взлом цели под курсором, Enter — пропустить реплику, Esc — в меню.
 
 ## Сюжет (кратко)
 

@@ -20,6 +20,8 @@ namespace N89.Combat
         [SerializeField] private int _pellets = 1;
         [Tooltip("Дальность полёта пули в юнитах")]
         [SerializeField] private float _range = 30f;
+        [Tooltip("Патронов в магазине (патроны бесконечные, перезарядка — мини-игра на время)")]
+        [SerializeField] private int _magazineSize = 16;
 
         [Header("Полоски на экране выбора (1–5)")]
         [SerializeField, Range(1, 5)] private int _fireRateRating = 3;
@@ -35,6 +37,7 @@ namespace N89.Combat
         public float SpreadDegrees => _spreadDegrees;
         public int Pellets => _pellets;
         public float Range => _range;
+        public int MagazineSize => _magazineSize;
         public int[] Ratings => new[] { _fireRateRating, _powerRating, _accuracyRating, _rangeRating };
     }
 }

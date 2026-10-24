@@ -16,6 +16,9 @@ EditorBuildSettings:
     guid: 35063fc3fa524704da559aefc7c8254b
   - enabled: 1
     path: Assets/_Project/Scenes/Mission01.unity
+    guid: 24323b16885f58145a259a35f74be804
+  - enabled: 1
+    path: Assets/_Project/Mission01.unity
     guid: 3ddad920a538a734bb70b103c4c475d0
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity

@@ -509,13 +509,13 @@ namespace N89.EditorTools
             MainMenuSceneBuilder.EnsureFolder(WeaponsDir);
             return new[]
             {
-                CreateWeapon("Smg", "КИБЕР-ПП", ArtOr("Weapons/weapon_smg", SpriteFactory.IconSmg), SpriteFactory.HeroSmg(), 0.07f, 7f, 1, 14f, new[] { 5, 2, 2, 2 },
+                CreateWeapon("Smg", "КИБЕР-ПП", ArtOr("Weapons/weapon_smg", SpriteFactory.IconSmg), SpriteFactory.HeroSmg(), 0.07f, 7f, 1, 14f, 16, new[] { 5, 2, 2, 2 },
                     "Компактный пистолет-пулемёт с умным спуском. Стреляет быстрее всех и почти не дёргается в руках, " +
                     "но пули разлетаются веером и быстро теряют силу. Для тех, кто врывается в комнату первым."),
-                CreateWeapon("Rifle", "АВТОМАТ", ArtOr("Weapons/weapon_rifle", SpriteFactory.IconRifle), SpriteFactory.HeroRifle(), 0.13f, 2.5f, 1, 30f, new[] { 3, 3, 4, 5 },
+                CreateWeapon("Rifle", "АВТОМАТ", ArtOr("Weapons/weapon_rifle", SpriteFactory.IconRifle), SpriteFactory.HeroRifle(), 0.13f, 2.5f, 1, 30f, 25, new[] { 3, 3, 4, 5 },
                     "Штурмовая винтовка корпоративного образца. Ровная, точная очередь на любой дистанции. " +
                     "Золотая середина: не подведёт ни в узком коридоре, ни в большом зале."),
-                CreateWeapon("Shotgun", "ДРОБОВИК", ArtOr("Weapons/weapon_shotgun", SpriteFactory.IconShotgun), SpriteFactory.HeroShotgun(), 0.7f, 14f, 8, 8f, new[] { 1, 5, 1, 1 },
+                CreateWeapon("Shotgun", "ДРОБОВИК", ArtOr("Weapons/weapon_shotgun", SpriteFactory.IconShotgun), SpriteFactory.HeroShotgun(), 0.7f, 14f, 8, 8f, 6, new[] { 1, 5, 1, 1 },
                     "Помповое ружьё. Один выстрел — веер из восьми дробин, который сносит всех вблизи. " +
                     "Между выстрелами — пауза на перезарядку, а издалека дробь почти бесполезна."),
             };
@@ -558,7 +558,7 @@ namespace N89.EditorTools
 
         // Ассет создаётся один раз — дальше значения тюнят в инспекторе (как данные взломов)
         private static WeaponData CreateWeapon(string fileName, string displayName, Sprite icon, Sprite heroSprite, float cooldown, float spread,
-            int pellets, float range, int[] ratings, string description)
+            int pellets, float range, int magazine, int[] ratings, string description)
         {
             string path = $"{WeaponsDir}/{fileName}.asset";
             var weapon = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
@@ -581,6 +581,7 @@ namespace N89.EditorTools
                 P(so, "_spreadDegrees").floatValue = spread;
                 P(so, "_pellets").intValue = pellets;
                 P(so, "_range").floatValue = range;
+                P(so, "_magazineSize").intValue = magazine;
                 P(so, "_fireRateRating").intValue = ratings[0];
                 P(so, "_powerRating").intValue = ratings[1];
                 P(so, "_accuracyRating").intValue = ratings[2];

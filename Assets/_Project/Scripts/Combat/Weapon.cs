@@ -17,10 +17,22 @@ namespace N89.Combat
         [SerializeField] private float _range;
         [SerializeField] private LayerMask _hitMask;
         [SerializeField] private GameObject _muzzleFxPrefab;
+        [Tooltip("Патронов в магазине; 0 — без магазина (враги, турели). Патроны бесконечные, перезарядка — ActiveReload")]
+        [SerializeField] private int _magazineSize;
 
         private float _nextShotTime;
 
         public event Action Fired;
+
+        public int MagazineSize => _magazineSize;
+        public int Ammo { get; private set; }
+        // Пока идёт перезарядка, ЛКМ занята мини-игрой — оружие не стреляет
+        public bool Reloading { get; set; }
+
+        private void Awake()
+        {
+            Ammo = _magazineSize;
+        }
 
         public void Configure(WeaponData data)
         {
@@ -28,16 +40,27 @@ namespace N89.Combat
             _spreadDegrees = data.SpreadDegrees;
             _pellets = data.Pellets;
             _range = data.Range;
+            _magazineSize = data.MagazineSize;
+            Ammo = _magazineSize;
+        }
+
+        public void Refill()
+        {
+            Ammo = _magazineSize;
         }
 
         public bool TryFire(Vector2 direction)
         {
-            if (Time.time < _nextShotTime)
+            if (Time.time < _nextShotTime || Reloading || (_magazineSize > 0 && Ammo <= 0))
             {
                 return false;
             }
 
             _nextShotTime = Time.time + _cooldown;
+            if (_magazineSize > 0)
+            {
+                Ammo--;
+            }
 
             float angle = 0f;
             for (int i = 0; i < Mathf.Max(1, _pellets); i++)

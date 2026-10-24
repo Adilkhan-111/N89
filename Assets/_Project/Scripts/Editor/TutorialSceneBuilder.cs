@@ -87,7 +87,7 @@ namespace N89.EditorTools
             {
                 SpriteFactory.KidLegs("player_legs_idle", 0f), SpriteFactory.KidLegs("player_legs_left", 8f),
                 SpriteFactory.KidLegs("player_legs_pass", 1.5f), SpriteFactory.KidLegs("player_legs_right", -8f),
-            }, 0.6f, 0.26f, common);
+            }, 0.6f, 0.26f, common, 8);
             GameObject dronePrefab = DronePrefab(SpriteFactory.Drone(), explosion, remains);
             GameObject targetPrefab = TargetPrefab(SpriteFactory.Target(), explosion, remains);
             TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
@@ -229,6 +229,8 @@ namespace N89.EditorTools
                 P(so, "_subtitles").objectReferenceValue = hud.Subtitles;
                 P(so, "_objective").objectReferenceValue = hud.Objective;
                 P(so, "_hackingHud").objectReferenceValue = hud.HackingHud;
+                P(so, "_ammoHud").objectReferenceValue = hud.Ammo;
+                P(so, "_reload").objectReferenceValue = player.GetComponent<ActiveReload>();
                 P(so, "_fader").objectReferenceValue = hud.Fader;
                 P(so, "_endScreen").objectReferenceValue = hud.EndScreen;
                 SetArray(so, "_moveMarkers", markers);
@@ -674,8 +676,9 @@ namespace N89.EditorTools
 
         // Игрок со всеми механиками туториала: ходьба, прицел, стрельба, RAM и взлом.
         // legs — кадры ног: стоит, левый шаг, проход, правый шаг
+        // magazine — патронов в магазине (0 — без перезарядки; в миссиях магазин задаёт WeaponData)
         internal static GameObject PlayerPrefab(string name, Sprite sprite, Sprite[] legs, float legsDistancePerFrame, float radius,
-            CommonPrefabs common)
+            CommonPrefabs common, int magazine = 0)
         {
             Bullet bullet = common.PlayerBullet;
             GameObject muzzleFx = common.Muzzle;
@@ -716,6 +719,17 @@ namespace N89.EditorTools
                 P(so, "_spreadDegrees").floatValue = 3f;
                 P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << EnemyLayer);
                 P(so, "_muzzleFxPrefab").objectReferenceValue = muzzleFx;
+                P(so, "_magazineSize").intValue = magazine;
+            });
+
+            // Перезарядка-мини-игра; работает, только если у оружия есть магазин (в миссиях — из WeaponData)
+            ActiveReload reload = root.AddComponent<ActiveReload>();
+            Configure(reload, so =>
+            {
+                P(so, "_weapon").objectReferenceValue = weapon;
+                P(so, "_health").objectReferenceValue = health;
+                P(so, "_pixel").objectReferenceValue = s_white;
+                P(so, "_material").objectReferenceValue = s_unlit;
             });
 
             RamPool ram = root.AddComponent<RamPool>();
@@ -1066,6 +1080,7 @@ namespace N89.EditorTools
             public TutorialEndScreen EndScreen;
             public RectTransform LetterboxTop;
             public RectTransform LetterboxBottom;
+            public AmmoHud Ammo;
         }
 
         // Полный боевой HUD: RAM, взлом, задача, субтитры, перекрестие, затемнение и итоговый экран.
@@ -1162,6 +1177,8 @@ namespace N89.EditorTools
                 P(so, "_warningText").objectReferenceValue = warningText;
             });
 
+            AmmoHud ammoHud = BuildAmmo(canvasRect, hacking.GetComponent<Weapon>(), hacking.GetComponent<ActiveReload>());
+
             // Киношные полосы под субтитрами, чтобы не закрывать их
             BuildLetterbox(canvasRect, out RectTransform letterboxTop, out RectTransform letterboxBottom);
 
@@ -1235,8 +1252,40 @@ namespace N89.EditorTools
             return new HudRefs
             {
                 Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen,
-                LetterboxTop = letterboxTop, LetterboxBottom = letterboxBottom,
+                LetterboxTop = letterboxTop, LetterboxBottom = letterboxBottom, Ammo = ammoHud,
             };
+        }
+
+        // Патроны как в Hotline Miami: «16/16rnds» на чёрной плашке справа внизу, с тёмной тенью
+        private static AmmoHud BuildAmmo(RectTransform canvasRect, Weapon weapon, ActiveReload reload)
+        {
+            TMP_FontAsset marker = MainMenuSceneBuilder.GetOrCreateFontAsset("PermanentMarker-Regular");
+            Image box = Img("Ammo", canvasRect, new Color(0f, 0f, 0f, 0.85f));
+            Anchor(box.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-40f, 70f), new Vector2(330f, 84f));
+            CanvasGroup group = Group(box.gameObject, 0f);
+            // Полоска остатка патронов по низу плашки: тает с каждым выстрелом
+            Image track = Img("AmmoTrack", box.rectTransform, new Color(0.25f, 0.05f, 0.2f, 0.9f));
+            Anchor(track.rectTransform, new Vector2(0f, 0f), new Vector2(0f, 0f), Vector2.zero, new Vector2(330f, 8f));
+            Image edge = Img("AmmoBar", track.rectTransform, Magenta);
+            MainMenuSceneBuilder.Stretch(edge.rectTransform);
+            MakeFilled(edge);
+            TextMeshProUGUI shadow = Text("Shadow", box.rectTransform, marker, "16/16rnds", 54f, new Color(0.35f, 0.05f, 0.3f), TextAlignmentOptions.Center);
+            Anchor(shadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(4f, -4f), new Vector2(330f, 84f));
+            TextMeshProUGUI text = Text("Text", box.rectTransform, marker, "16/16rnds", 54f, new Color(1f, 0.72f, 0.9f), TextAlignmentOptions.Center);
+            Anchor(text.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(330f, 84f));
+
+            AmmoHud ammo = box.gameObject.AddComponent<AmmoHud>();
+            Configure(ammo, so =>
+            {
+                P(so, "_weapon").objectReferenceValue = weapon;
+                P(so, "_reload").objectReferenceValue = reload;
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_box").objectReferenceValue = box.rectTransform;
+                P(so, "_text").objectReferenceValue = text;
+                P(so, "_shadow").objectReferenceValue = shadow;
+                P(so, "_bar").objectReferenceValue = edge;
+            });
+            return ammo;
         }
 
         // Холст HUD 1920x1080 и EventSystem (для кнопок)

@@ -20,6 +20,7 @@ MonoBehaviour:
   _spreadDegrees: 14
   _pellets: 8
   _range: 8
+  _magazineSize: 6
   _fireRateRating: 1
   _powerRating: 5
   _accuracyRating: 1

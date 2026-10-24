@@ -15,7 +15,7 @@ using UnityEngine.SceneManagement;
 namespace N89.Tutorial
 {
     // Сценарий туториала за Номер 89.
-    // Часть 1 — калибровка в лаборатории: голос оператора учит ходить, стрелять и взламывать.
+    // Часть 1 — калибровка в лаборатории: голос оператора учит ходить, стрелять, перезаряжаться и взламывать.
     // Часть 2 — побег: 89 взламывает шлюз и бежит через коридоры охраны корпорации Е.
     // У самого выхода его убивают в спину, камера улетает вверх, показывается итоговый экран.
     public class TutorialDirector : MonoBehaviour
@@ -33,6 +33,8 @@ namespace N89.Tutorial
         [SerializeField] private SubtitleBox _subtitles;
         [SerializeField] private ObjectivePanel _objective;
         [SerializeField] private HackingHud _hackingHud;
+        [SerializeField] private AmmoHud _ammoHud;
+        [SerializeField] private ActiveReload _reload;
         [SerializeField] private ScreenFader _fader;
         [SerializeField] private TutorialEndScreen _endScreen;
 
@@ -89,6 +91,7 @@ namespace N89.Tutorial
             _player.CanShoot = false;
             _hacking.HackingEnabled = false;
             _hackingHud.RamVisible = false;
+            _ammoHud.Visible = false;
             _objective.Set(string.Empty);
 
             foreach (TriggerZone marker in _moveMarkers) marker.gameObject.SetActive(false);
@@ -147,10 +150,30 @@ namespace N89.Tutorial
         private IEnumerator ShootingStep()
         {
             yield return Say(Operator, "Мышь — прицел. Левая кнопка мыши — выстрел.");
+            _ammoHud.Visible = true;
+            yield return Say(Operator, "Патроны — справа внизу. Магазин опустеет — над тобой появится шкала перезарядки.");
+            yield return Say(Operator, "Бегунок ходит туда-обратно. Нажми левую кнопку мыши, когда он в зелёной зоне.");
             _player.CanShoot = true;
             SayAsync(Operator, "Уничтожь учебные мишени.");
             yield return WaitAllDead(_targets, "Уничтожь мишени");
             yield return Say(Operator, "Точность приемлемая.");
+            yield return ReloadStep();
+        }
+
+        // Досрочная перезарядка: R, не дожидаясь пустого магазина
+        private IEnumerator ReloadStep()
+        {
+            yield return Say(Operator, "Не жди, пока магазин опустеет. Клавиша R — перезарядка в любой момент.");
+            yield return Say(Operator, "Промах по зелёной зоне стоит времени. В бою это смерть.");
+            int reloads = 0;
+            void Count() => reloads++;
+            _reload.Reloaded += Count;
+            SayAsync(Operator, "Выстрели и перезарядись досрочно.");
+            _objective.Set("Перезарядись:  выстрели, [R], затем [ЛКМ] в зелёной зоне");
+            yield return new WaitUntil(() => reloads > 0);
+            _reload.Reloaded -= Count;
+            _objective.Set(string.Empty);
+            yield return Say(Operator, "Перезарядка в норме.");
         }
 
         private IEnumerator LookStep()
@@ -255,6 +278,7 @@ namespace N89.Tutorial
             _player.CanShoot = true;
             _hacking.HackingEnabled = true;
             _hackingHud.RamVisible = true;
+            _ammoHud.Visible = true;
 
             _hackDoor.Open();
             _exitGate.Open();
@@ -300,6 +324,7 @@ namespace N89.Tutorial
             _player.CanAim = false;
             _hacking.HackingEnabled = false;
             _hackingHud.RamVisible = false;
+            _ammoHud.Visible = false;
             _objective.Set(string.Empty);
             FreezeOtherEnemies();
             StartCoroutine(Letterbox(_letterboxHeight, 0.5f));

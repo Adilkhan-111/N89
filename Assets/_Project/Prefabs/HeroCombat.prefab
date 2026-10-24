@@ -143,7 +143,7 @@ MonoBehaviour:
   m_Light2DProvider:
     rid: -2
   m_SelectionSources:
-    rid: 2931020381448831089
+    rid: 2931020381448831290
   m_FalloffIntensity: 0.6
   m_Color: {r: 0.6, g: 0.9, b: 1, a: 1}
   m_Intensity: 0.6
@@ -189,7 +189,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 2931020381448831089
+    - rid: 2931020381448831290
       type: {class: Light2DProviderSources, ns: UnityEngine.Rendering.Universal, asm: Unity.RenderPipelines.Universal.2D.Runtime}
       data:
         m_SelectedHashCode: 3
@@ -211,6 +211,7 @@ GameObject:
   - component: {fileID: 7187322938235902753}
   - component: {fileID: 2719577896574672370}
   - component: {fileID: 4034783612068393948}
+  - component: {fileID: 2431033211093059984}
   - component: {fileID: 3178889127856103277}
   - component: {fileID: 8826670561495762716}
   - component: {fileID: 7417443983438473220}
@@ -365,6 +366,28 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 704
   _muzzleFxPrefab: {fileID: 1911857760021992321, guid: 125770db10588af469d6d66f1a87ca05, type: 3}
+  _magazineSize: 0
+--- !u!114 &2431033211093059984
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6494483261178490479}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d6ab6600c48a68d429a2f6be4110ed60, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::N89.Combat.ActiveReload
+  _weapon: {fileID: 4034783612068393948}
+  _health: {fileID: 2719577896574672370}
+  _pixel: {fileID: 21300000, guid: e7196958a4cf0c648ac3a4b613bfaaeb, type: 3}
+  _material: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
+  _offset: {x: 0, y: 0.85}
+  _width: 1.4
+  _sweepTime: 0.55
+  _zoneWidth: 0.2
+  _failPause: 0.5
 --- !u!114 &3178889127856103277
 MonoBehaviour:
   m_ObjectHideFlags: 0

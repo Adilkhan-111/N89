@@ -142,7 +142,7 @@ MonoBehaviour:
   m_Light2DProvider:
     rid: -2
   m_SelectionSources:
-    rid: 2931020381448831251
+    rid: 2931020381448831871
   m_FalloffIntensity: 0.6
   m_Color: {r: 1, g: 0.2, b: 0.3, a: 1}
   m_Intensity: 0.7
@@ -188,7 +188,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 2931020381448831251
+    - rid: 2931020381448831871
       type: {class: Light2DProviderSources, ns: UnityEngine.Rendering.Universal, asm: Unity.RenderPipelines.Universal.2D.Runtime}
       data:
         m_SelectedHashCode: 3
@@ -314,6 +314,7 @@ MonoBehaviour:
   _remainsPrefab: {fileID: 7488797080749299359, guid: c05bddf2f92979140beb5332cd053ee5, type: 3}
   _flashRenderer: {fileID: 6420115616475982700}
   _flashColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+  _corpseSprite: {fileID: 0}
 --- !u!114 &7979208262618231885
 MonoBehaviour:
   m_ObjectHideFlags: 0

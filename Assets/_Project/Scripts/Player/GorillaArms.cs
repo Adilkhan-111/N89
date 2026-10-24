@@ -11,7 +11,7 @@ namespace N89.Player
     // и отшвыривает тело далеко назад, до стены.
     // Зажать ПКМ — блок: руки закрывают от пуль, держит 3 попадания (каждое — треть шкалы), после третьего
     // блок ломается и восстанавливается 7 секунд. Неполный блок понемногу подзаряжается сам.
-    // Шкала блока — под героем. В блоке и в рывке оружие молчит.
+    // Шкала блока — под героем, под ней голубая полоса перезарядки рывка. В блоке и в рывке оружие молчит.
     public class GorillaArms : MonoBehaviour
     {
         [SerializeField] private PlayerController _player;
@@ -30,7 +30,8 @@ namespace N89.Player
         [SerializeField] private float _tapTime = 0.18f;
         [SerializeField] private float _dashDistance = 3.2f;
         [SerializeField] private float _dashDuration = 0.16f;
-        [SerializeField] private float _dashCooldown = 0.5f;
+        [Tooltip("Перезарядка рывка, секунд (шкала под блоком)")]
+        [SerializeField] private float _dashCooldown = 2.5f;
         [SerializeField] private float _strikeReach = 0.5f;
         [SerializeField] private float _strikeRadius = 0.55f;
         [SerializeField] private LayerMask _enemyMask;
@@ -68,6 +69,11 @@ namespace N89.Player
         private Transform _bar;
         private SpriteRenderer[] _segments;
         private SpriteRenderer _cooldownFill;
+        private SpriteRenderer _dashFill;
+        private float _barWidth;
+        private bool _dashWasReady = true;
+        private float _dashFlash;
+        private float _dashDenied;
 
         public bool IsBlocking => _blocking;
         public bool IsBroken => Time.time < _brokenUntil;
@@ -121,9 +127,10 @@ namespace N89.Player
                 bool wasTap = !_blocking && Time.unscaledTime - _pressStart < _tapTime;
                 _pressed = false;
                 SetBlocking(false);
-                if (wasTap && !_dashing && Time.time >= _nextDash)
+                if (wasTap && !_dashing)
                 {
-                    StartCoroutine(Dash());
+                    if (Time.time >= _nextDash) StartCoroutine(Dash());
+                    else _dashDenied = 1f;
                 }
             }
 
@@ -240,19 +247,20 @@ namespace N89.Player
         {
             if (_cameraFollow != null) _cameraFollow.Shake(0.45f, 0.18f);
 
-            // Тело — копия спрайта врага: отлетает, крутясь, до стены и остаётся лежать
+            // Труп врага отлетает, крутясь, до стены и остаётся лежать (на месте удара его не оставляем)
             Vector2 from = victim.transform.position;
             Transform victimBody = victim.transform.Find("Body");
             SpriteRenderer source = victimBody != null ? victimBody.GetComponent<SpriteRenderer>() : null;
             if (source != null)
             {
                 var corpse = new GameObject("Corpse").AddComponent<SpriteRenderer>();
-                corpse.sprite = source.sprite;
+                corpse.sprite = victim.CorpseSprite != null ? victim.CorpseSprite : source.sprite;
                 corpse.sharedMaterial = source.sharedMaterial;
-                corpse.sortingOrder = source.sortingOrder - 1;
-                corpse.color = new Color(0.7f, 0.6f, 0.65f);
-                corpse.transform.SetPositionAndRotation(from, victimBody.rotation);
+                corpse.sortingOrder = -60;
+                // Летит головой вперёд по направлению удара
+                corpse.transform.SetPositionAndRotation(from, Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg));
                 StartCoroutine(Fling(corpse.transform, from, dir));
+                victim.SpawnCorpse = false;
             }
 
             if (victim.TryGetComponent(out EnemyAI ai)) ai.enabled = false;
@@ -264,7 +272,8 @@ namespace N89.Player
             RaycastHit2D wall = Physics2D.CircleCast(from, 0.3f, dir, _flingDistance, _wallMask);
             float distance = wall ? Mathf.Max(0f, wall.distance - 0.05f) : _flingDistance;
             Vector2 to = from + dir * distance;
-            float spin = Random.Range(360f, 720f) * (Random.value < 0.5f ? -1f : 1f);
+            // Один оборот — и падает головой примерно туда, куда летел
+            float spin = 360f * (Random.value < 0.5f ? -1f : 1f) + Random.Range(-40f, 40f);
             float startAngle = corpse.eulerAngles.z;
             float nextBlood = 0f;
 
@@ -328,6 +337,34 @@ namespace N89.Player
             // Полоса перезарядки сломанного блока — растёт слева направо (размер и позицию задаёт UpdateBar)
             _cooldownFill = Piece("Cooldown", Vector2.zero, new Vector2(width, 0.07f), BrokenColor, 60);
             _cooldownFill.enabled = false;
+
+            // Под блоком — тонкая голубая полоса рывка: заполняется, пока рывок перезаряжается
+            _barWidth = width;
+            Piece("DashBack", new Vector2(0f, -0.11f), new Vector2(width + 0.08f, 0.07f), new Color(0f, 0f, 0f, 0.6f), 58);
+            _dashFill = Piece("DashFill", new Vector2(0f, -0.11f), new Vector2(width, 0.035f), DashColor, 59);
+        }
+
+        private static readonly Color DashColor = new Color(0.3f, 1f, 1f);
+
+        // Рывок: полоса растёт до полной; в момент готовности вспыхивает, тап в перезарядке — мигает красным
+        private void UpdateDashBar()
+        {
+            float k = _dashCooldown <= 0f ? 1f : 1f - Mathf.Clamp01((_nextDash - Time.time) / _dashCooldown);
+            bool ready = k >= 1f;
+            if (ready && !_dashWasReady) _dashFlash = 1f;
+            _dashWasReady = ready;
+
+            float dt = Time.unscaledDeltaTime;
+            _dashFlash = Mathf.MoveTowards(_dashFlash, 0f, 3f * dt);
+            _dashDenied = Mathf.MoveTowards(_dashDenied, 0f, 4f * dt);
+
+            Vector2 spriteSize = _pixel.bounds.size;
+            float w = Mathf.Max(0.001f, _barWidth * k);
+            _dashFill.transform.localScale = new Vector3(w / spriteSize.x, 0.035f / spriteSize.y, 1f);
+            _dashFill.transform.localPosition = new Vector3(-_barWidth * 0.5f + w * 0.5f, -0.11f, 0f);
+
+            Color color = ready ? Color.Lerp(DashColor, Color.white, _dashFlash) : DashColor * 0.55f + new Color(0f, 0f, 0f, 0.45f);
+            _dashFill.color = Color.Lerp(color, BrokenColor, _dashDenied);
         }
 
         private SpriteRenderer Piece(string name, Vector2 position, Vector2 size, Color color, int order)
@@ -351,6 +388,7 @@ namespace N89.Player
             _bar.gameObject.SetActive(visible);
             if (!visible) return;
 
+            UpdateDashBar();
             _flash = Mathf.MoveTowards(_flash, 0f, 4f * Time.unscaledDeltaTime);
             if (IsBroken)
             {

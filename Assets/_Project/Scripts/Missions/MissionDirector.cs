@@ -88,6 +88,13 @@ namespace N89.Missions
         [SerializeField] private string _menuScene = "MainMenu";
 
         private bool _over;
+        private bool _dead;
+        // Сцена перезапущена после смерти — заставку не показываем
+        private static bool s_restarted;
+
+        // Перезагрузка домена при входе в Play Mode выключена — сбрасываем вручную
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => s_restarted = false;
         private bool HasFloor2 => _floor2Enemies != null && _floor2Enemies.Length > 0 && _target != null;
 
         private IEnumerator Start()
@@ -107,14 +114,16 @@ namespace N89.Missions
             SetFloor2Active(false);
 
             bool fromCheckpoint = HasFloor2 && Checkpoint.Is(_checkpoint);
+            // После смерти — без заставки: сразу в бой
+            bool restarted = s_restarted;
+            s_restarted = false;
             if (fromCheckpoint)
             {
                 // Смерть на втором этаже: первый уже зачищен
                 foreach (Health enemy in _enemies) enemy.gameObject.SetActive(false);
                 MoveHero(_floor2Spawn.position, _floor2Facing);
-                yield return new WaitForSeconds(0.3f);
             }
-            else
+            else if (!restarted)
             {
                 yield return new WaitForSeconds(0.3f);
                 yield return _fader.ShowTitle(_title, _subtitle);
@@ -127,8 +136,8 @@ namespace N89.Missions
             {
                 UpdateObjective(_objectiveText, _enemies);
             }
-            yield return _fader.Fade(1f, 0f, fromCheckpoint ? 0.5f : 1f);
-            if (!fromCheckpoint && _banner != null && !string.IsNullOrEmpty(_implantTitle))
+            yield return _fader.Fade(1f, 0f, restarted ? 0.25f : 1f);
+            if (!fromCheckpoint && !restarted && _banner != null && !string.IsNullOrEmpty(_implantTitle))
             {
                 _banner.Show(_implantTitle, _implantHint, 3.5f);
             }
@@ -425,25 +434,41 @@ namespace N89.Missions
             }
 
             _over = true;
+            _dead = true;
             StartCoroutine(Restart());
         }
 
-        // Перемотка к началу уровня (или ко второму этажу, если до него дошли)
+        // Перемотка к началу уровня (или ко второму этажу, если до него дошли). R — сразу, не дожидаясь
         private IEnumerator Restart()
         {
             Time.timeScale = 1f;
             _hacking.HackingEnabled = false;
-            _objective.Set(string.Empty);
-            yield return new WaitForSeconds(0.8f);
-            yield return _fader.Fade(0f, 1f, 0.4f);
-            yield return _fader.ShowTitle("ЕЩЁ РАЗ", _deathLines[Random.Range(0, _deathLines.Length)]);
-            yield return new WaitForSecondsRealtime(0.9f);
+            _objective.Set("[R] — ЗАНОВО");
+            yield return new WaitForSeconds(0.6f);
+            yield return _fader.Fade(0f, 1f, 0.3f);
+            yield return _fader.ShowTitle("ЕЩЁ РАЗ", $"{_deathLines[Random.Range(0, _deathLines.Length)]}    [R]");
+            yield return new WaitForSecondsRealtime(0.6f);
+            Reload();
+        }
+
+        private void Reload()
+        {
+            s_restarted = true;
+            Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
         private void Update()
         {
             Keyboard kb = Keyboard.current;
+            // Быстрый рестарт: после смерти R перезапускает уровень мгновенно
+            if (_dead && kb != null && kb.rKey.wasPressedThisFrame)
+            {
+                _dead = false;
+                Reload();
+                return;
+            }
+
             if (kb != null && kb.escapeKey.wasPressedThisFrame)
             {
                 Time.timeScale = 1f;

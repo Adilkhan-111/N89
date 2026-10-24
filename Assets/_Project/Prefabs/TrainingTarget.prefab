@@ -180,3 +180,4 @@ MonoBehaviour:
   _remainsPrefab: {fileID: 7488797080749299359, guid: c05bddf2f92979140beb5332cd053ee5, type: 3}
   _flashRenderer: {fileID: 0}
   _flashColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+  _corpseSprite: {fileID: 0}

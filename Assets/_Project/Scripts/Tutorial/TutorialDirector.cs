@@ -84,6 +84,7 @@ namespace N89.Tutorial
 
         private bool _finale;
         private bool _dying;
+        private bool _restarting;
 
         private IEnumerator Start()
         {
@@ -372,6 +373,8 @@ namespace N89.Tutorial
             // Склейка на 89: попадание, стоп-кадр, вспышка
             _cameraFollow.CutTo(player);
             StartCoroutine(_cameraFollow.Zoom(_hitZoom, 0.2f));
+            // Тело 89 укладывает сама катсцена (PlayerFall)
+            _player.Health.SpawnCorpse = false;
             _player.Health.Kill();
             Time.timeScale = 0f;
             StartCoroutine(ImpactLine(hitPoint, shotDir));
@@ -570,6 +573,7 @@ namespace N89.Tutorial
             // В финале смертью управляет катсцена
             if (!_finale)
             {
+                _restarting = true;
                 StartCoroutine(RestartSequence());
             }
         }
@@ -584,7 +588,7 @@ namespace N89.Tutorial
             Time.timeScale = 1f;
 
             yield return _fader.Fade(0f, 1f, 0.5f);
-            yield return _fader.ShowTitle("ЕЩЁ РАЗ", "Перемотка...");
+            yield return _fader.ShowTitle("ЕЩЁ РАЗ", "Перемотка...    [R]");
             yield return new WaitForSecondsRealtime(0.4f);
             SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
@@ -612,8 +616,17 @@ namespace N89.Tutorial
 
         private void Update()
         {
-            // Esc — выйти в меню (удобно при тестах)
             Keyboard kb = Keyboard.current;
+            // Быстрый рестарт: после смерти R сразу перезапускает с чекпоинта
+            if (_restarting && kb != null && kb.rKey.wasPressedThisFrame)
+            {
+                _restarting = false;
+                Time.timeScale = 1f;
+                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+                return;
+            }
+
+            // Esc — выйти в меню (удобно при тестах)
             if (kb != null && kb.escapeKey.wasPressedThisFrame && !_finale)
             {
                 Time.timeScale = 1f;

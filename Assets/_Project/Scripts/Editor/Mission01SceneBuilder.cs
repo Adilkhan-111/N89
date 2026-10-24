@@ -63,10 +63,10 @@ namespace N89.EditorTools
             {
                 SpriteFactory.HeroLegs("hero_legs_idle", 0f), SpriteFactory.HeroLegs("hero_legs_left", 9f),
                 SpriteFactory.HeroLegs("hero_legs_pass", 2f), SpriteFactory.HeroLegs("hero_legs_right", -9f),
-            }, 0.65f, 0.32f, common);
+            }, 0.65f, 0.32f, common, 0, SpriteFactory.HeroDead());
             // Бандиты — люди с имплантами: истекают синей кровью, взламываются «Коротким замыканием»
             GameObject banditPrefab = EnemyPrefab("Bandit", "БАНДИТ", SpriteFactory.Bandit(), 1, 0.4f, 0.55f,
-                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true);
+                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.BanditDead());
 
             // --- Сцена ---
             Camera cam = CreateCamera();
@@ -76,9 +76,12 @@ namespace N89.EditorTools
             s_wall = SpriteFactory.GangWall();
             s_origin = Vector2.zero;
             Transform level = new GameObject("Level").transform;
+            BuildCity(level);
             BuildYard(level);
             BuildBase(level);
             BuildInterior(level);
+            BuildClutter(level);
+            BuildDoorsFloor1(level);
             // Отключение камеры дешевле замыкания — как взлом замка
             QuickhackData cameraOff = CreateQuickhack("CameraOff", "ОТКЛЮЧИТЬ КАМЕРУ", 4, 0.6f, QuickhackEffect.Disable);
             Transform enemiesRoot = new GameObject("Bandits").transform;
@@ -93,6 +96,7 @@ namespace N89.EditorTools
             s_origin = Floor2Origin;
             Transform floor2 = new GameObject("Floor2").transform;
             BuildFloor2(floor2);
+            BuildDoorsFloor2(floor2);
             Transform floor2Enemies = new GameObject("Bandits_Floor2").transform;
             BuildFloor2Cameras(floor2, cameraOff, common.Electric, floor2Enemies);
             Health[] enemies2 = SpawnFloor2Bandits(banditPrefab, floor2Enemies);
@@ -308,7 +312,7 @@ namespace N89.EditorTools
                 P(so, "_baseAngle").floatValue = angle;
                 P(so, "_sweepAngle").floatValue = sweep;
                 P(so, "_range").floatValue = range;
-                P(so, "_sightBlockers").intValue = 1 << WallLayer;
+                P(so, "_sightBlockers").intValue = (1 << WallLayer) | (1 << DoorLayer);
                 // Тревога поднимает только свой этаж
                 P(so, "_enemiesRoot").objectReferenceValue = enemies;
             });
@@ -325,18 +329,290 @@ namespace N89.EditorTools
         }
 
         // Двор вокруг здания: асфальт и забор — между E1 и E2 можно пройти снаружи
+        // Двор закрытой базы: сетка с колючкой, мешки с песком у входа, контейнер, генератор, бочки с огнём,
+        // прожекторы по углам, предупреждающие таблички и мусор
         private static void BuildYard(Transform parent)
         {
-            Transform fence = new GameObject("Yard").transform;
-            fence.SetParent(parent);
-            Vector2 min = new Vector2(-4f, -4.5f);
-            Vector2 max = new Vector2(W + 4f, H + 4f);
+            Transform yard = new GameObject("Yard").transform;
+            yard.SetParent(parent);
+            Vector2 min = YardMin;
+            Vector2 max = YardMax;
             float t = WallThickness * 0.5f / S;
-            Floor(fence, "Asphalt", SpriteFactory.Asphalt(), min * S, max * S, -101);
-            Wall(fence, "Fence_S", min.x - t, min.y, max.x + t, min.y);
-            Wall(fence, "Fence_N", min.x - t, max.y, max.x + t, max.y);
-            Wall(fence, "Fence_W", min.x, min.y - t, min.x, max.y + t);
-            Wall(fence, "Fence_E", max.x, min.y - t, max.x, max.y + t);
+            Floor(yard, "Asphalt", SpriteFactory.Asphalt(), min * S, max * S, -101);
+            Sprite fence = SpriteFactory.Fence();
+            FenceWall(yard, "Fence_S", min.x - t, min.y, max.x + t, min.y, fence);
+            FenceWall(yard, "Fence_N", min.x - t, max.y, max.x + t, max.y, fence);
+            FenceWall(yard, "Fence_W", min.x, min.y - t, min.x, max.y + t, fence);
+            FenceWall(yard, "Fence_E", max.x, min.y - t, max.x, max.y + t, fence);
+
+            // Укрепления у входа E1 — проход к двери между мешками
+            Sprite sandbags = SpriteFactory.Sandbags();
+            Prop(yard, "Sandbags_W", sandbags, new Vector2(0.3f, -3.2f), new Vector2(3.6f, -1.9f), 3, GlassLayer);
+            Prop(yard, "Sandbags_E", sandbags, new Vector2(7.4f, -3.2f), new Vector2(10.7f, -1.9f), 3, GlassLayer);
+            Prop(yard, "Sandbags_E2", sandbags, new Vector2(48.3f, 14.4f), new Vector2(49.6f, 20.6f), 3, GlassLayer, true, 90f);
+
+            Prop(yard, "Container", SpriteFactory.ShippingContainer(), new Vector2(-8.5f, 6f), new Vector2(-5f, 18f), 3, WallLayer);
+            Prop(yard, "Generator", SpriteFactory.Generator(), new Vector2(49.5f, 3f), new Vector2(53.5f, 6.2f), 3, GlassLayer);
+            Pulsing(Lamp(yard, "Generator_Lamp", 53.2f, 6f, new Color(1f, 0.2f, 0.2f), 2f, 0.9f), 5f, 0.1f, 0.9f);
+            Sprite crate = SpriteFactory.Crate();
+            Prop(yard, "Crate_1", crate, new Vector2(-7.5f, 30f), new Vector2(-5.5f, 32f), 3, WallLayer);
+            Prop(yard, "Crate_2", crate, new Vector2(-5.3f, 30.2f), new Vector2(-3.7f, 31.8f), 3, WallLayer);
+            Prop(yard, "Crate_3", crate, new Vector2(52f, 30f), new Vector2(54f, 32f), 3, WallLayer);
+
+            Sprite barrel = SpriteFactory.FireBarrel();
+            foreach (Vector2 p in new[] { new Vector2(-4f, 26f), new Vector2(51f, 25f), new Vector2(20f, -6.5f) })
+            {
+                FireBarrel(yard, barrel, p);
+            }
+
+            // Прожекторы по углам двора
+            Sprite flood = SpriteFactory.Floodlight();
+            Color floodColor = new Color(0.85f, 0.9f, 1f);
+            foreach (Vector2 p in new[] { new Vector2(-9f, -9f), new Vector2(55f, -9f), new Vector2(-9f, 36f), new Vector2(55f, 36f) })
+            {
+                Prop(yard, "Floodlight", flood, p - Vector2.one * 0.8f, p + Vector2.one * 0.8f, 6);
+                Lamp(yard, "Floodlight_Light", p.x, p.y, floodColor, 16f, 0.55f);
+            }
+
+            Sprite sign = SpriteFactory.WarningSign();
+            foreach (Vector2 p in new[] { new Vector2(14f, -10f), new Vector2(32f, -10f), new Vector2(20f, 37f), new Vector2(-10f, 20f), new Vector2(56f, 8f) })
+            {
+                Prop(yard, "Sign", sign, p - new Vector2(1f, 0.6f), p + new Vector2(1f, 0.6f), 6);
+            }
+
+            Sprite trash = SpriteFactory.TrashPile();
+            Sprite stain = SpriteFactory.OilStain();
+            foreach (Vector2 p in new[] { new Vector2(24f, -8f), new Vector2(48f, -8.3f), new Vector2(-7f, 22f), new Vector2(30f, 34f) })
+            {
+                Decor(yard, "Trash", trash, p, 2.6f);
+            }
+            foreach (Vector2 p in new[] { new Vector2(12f, -6f), new Vector2(51f, 11f), new Vector2(-6f, 2f), new Vector2(40f, 33f) })
+            {
+                Decor(yard, "Stain", stain, p, 3.5f);
+            }
+        }
+
+        private static readonly Vector2 YardMin = new Vector2(-10f, -10f);
+        private static readonly Vector2 YardMax = new Vector2(W + 10f, H + 10f);
+
+        private static void FenceWall(Transform parent, string name, float x1, float y1, float x2, float y2, Sprite sprite)
+        {
+            CreateWall(parent, name, V(x1, y1), V(x2, y2), sprite, WallLayer, 5);
+        }
+
+        // Бочка с огнём: невысокая (слой Glass), даёт тёплый мерцающий свет
+        private static void FireBarrel(Transform parent, Sprite sprite, Vector2 schema)
+        {
+            Prop(parent, "FireBarrel", sprite, schema - Vector2.one * 0.65f, schema + Vector2.one * 0.65f, 3, GlassLayer);
+            Pulsing(Lamp(parent, "FireBarrel_Light", schema.x, schema.y, new Color(1f, 0.55f, 0.2f), 6f, 0.9f), 9f, 0.6f, 1f);
+        }
+
+        // Декор на полу без коллайдера: центр и размер по ширине (юниты схемы). Поворот случайный в пределах
+        // maxAngle в обе стороны (граффити — чуть наклонено, чтобы читалось; мусор — как угодно)
+        private static void Decor(Transform parent, string name, Sprite sprite, Vector2 schema, float size, float maxAngle = 180f)
+        {
+            Vector2 bounds = sprite.bounds.size;
+            float aspect = bounds.y / bounds.x;
+            Vector2 half = new Vector2(size, size * aspect) * 0.5f;
+            SpriteRenderer sr = Prop(parent, name, sprite, schema - half, schema + half, -96);
+            sr.transform.rotation = Quaternion.Euler(0f, 0f, (Hash(schema) * 2f - 1f) * maxAngle);
+        }
+
+        private static float Hash(Vector2 p) => Mathf.Repeat(Mathf.Sin(p.x * 12.9898f + p.y * 78.233f) * 43758.5453f, 1f);
+
+        // ---------------------------------------------------------------- Грязь внутри
+
+        // Логово бандитов: мусор, бутылки, коробки из-под пиццы, окурки, пятна, граффити на полу, матрас.
+        // Всё — декор без коллайдеров, чтобы не мешать патрулям и проходам; кроме одной бочки с огнём
+        private static void BuildClutter(Transform parent)
+        {
+            Transform clutter = new GameObject("Clutter").transform;
+            clutter.SetParent(parent);
+            Sprite trash = SpriteFactory.TrashPile();
+            Sprite pizza = SpriteFactory.PizzaBox();
+            Sprite bottles = SpriteFactory.Bottles();
+            Sprite butts = SpriteFactory.Butts();
+            Sprite stain = SpriteFactory.OilStain();
+            Sprite tagMagenta = SpriteFactory.Graffiti("graffiti_magenta", new Color(1f, 0.25f, 0.8f, 0.85f));
+            Sprite tagToxic = SpriteFactory.Graffiti("graffiti_toxic", new Color(0.45f, 1f, 0.3f, 0.8f));
+
+            // Верхняя комната — здесь спят: матрас, бочка с огнём, коробки, бутылки
+            Decor(clutter, "Mattress", SpriteFactory.Mattress(), new Vector2(20.5f, 25.4f), 4.2f);
+            Decor(clutter, "Bottles", bottles, new Vector2(17.8f, 25.8f), 1.6f);
+            Decor(clutter, "Pizza", pizza, new Vector2(23.8f, 24.2f), 1.5f);
+            Decor(clutter, "Trash", trash, new Vector2(14.5f, 26f), 2.6f);
+            Decor(clutter, "Butts", butts, new Vector2(16.5f, 22.4f), 1f);
+            Decor(clutter, "Tag", tagToxic, new Vector2(21f, 22f), 4.5f, 15f);
+            FireBarrel(clutter, SpriteFactory.FireBarrel(), new Vector2(27.2f, 25.6f));
+
+            // Chill room — после вечеринки
+            Decor(clutter, "Bottles", bottles, new Vector2(35.2f, 23.3f), 1.6f);
+            Decor(clutter, "Bottles", bottles, new Vector2(39.6f, 24.6f), 1.4f);
+            Decor(clutter, "Pizza", pizza, new Vector2(37.5f, 23.4f), 1.5f);
+            Decor(clutter, "Pizza", pizza, new Vector2(42.2f, 25.6f), 1.4f);
+            Decor(clutter, "Stain", stain, new Vector2(40.5f, 24.2f), 2.6f);
+            Decor(clutter, "Butts", butts, new Vector2(34.4f, 25.8f), 1f);
+
+            // Коридор — граффити и окурки
+            Decor(clutter, "Tag", tagMagenta, new Vector2(8f, 17.6f), 5f, 15f);
+            Decor(clutter, "Tag", tagToxic, new Vector2(38f, 17.4f), 4.5f, 15f);
+            Decor(clutter, "Stain", stain, new Vector2(20f, 16.8f), 3f);
+            Decor(clutter, "Butts", butts, new Vector2(30.5f, 19.4f), 1f);
+            Decor(clutter, "Butts", butts, new Vector2(2f, 16f), 1f);
+
+            // Раздевалка у входа
+            Decor(clutter, "Trash", trash, new Vector2(8.6f, 5.6f), 2.4f);
+            Decor(clutter, "Stain", stain, new Vector2(4.5f, 4f), 3f);
+            Decor(clutter, "Butts", butts, new Vector2(2f, 5.6f), 1f);
+            Decor(clutter, "Bottles", bottles, new Vector2(8.8f, 13.4f), 1.4f);
+
+            // Большой зал — тег банды на весь пол, пятна
+            Decor(clutter, "Tag", tagMagenta, new Vector2(27.5f, 11.5f), 9f, 15f);
+            Decor(clutter, "Stain", stain, new Vector2(15f, 12.5f), 3.2f);
+            Decor(clutter, "Stain", stain, new Vector2(40f, 10.2f), 3f);
+            Decor(clutter, "Trash", trash, new Vector2(44.6f, 14f), 2f);
+
+            // Переговорная — окурки и бутылки у стола
+            Decor(clutter, "Butts", butts, new Vector2(12.2f, 7.2f), 1f);
+            Decor(clutter, "Bottles", bottles, new Vector2(26.8f, 1.2f), 1.4f);
+            Decor(clutter, "Pizza", pizza, new Vector2(11.6f, 1.3f), 1.4f);
+
+            // Качалка — гантели и пятно пота
+            Decor(clutter, "Dumbbells", SpriteFactory.Dumbbells(), new Vector2(36f, 6.4f), 1.8f);
+            Decor(clutter, "Dumbbells", SpriteFactory.Dumbbells(), new Vector2(41.5f, 3.8f), 1.6f);
+            Decor(clutter, "Stain", stain, new Vector2(39f, 1.6f), 2.4f);
+        }
+
+        // ---------------------------------------------------------------- Город за забором
+
+        // Крыши мегаблоков вокруг базы: кварталы по сетке, между ними тёмные улицы. На крышах вентблоки
+        // и неоновые вывески со светом. Чисто фон — без коллайдеров, за забором всё равно не пройти
+        private static void BuildCity(Transform parent)
+        {
+            Transform city = new GameObject("City").transform;
+            city.SetParent(parent);
+            var rng = new System.Random(89);
+
+            Vector2 fenceMin = YardMin * S - Vector2.one * 2f;
+            Vector2 fenceMax = YardMax * S + Vector2.one * 2f;
+            Vector2 areaMin = new Vector2(-36f, -32f);
+            Vector2 areaMax = new Vector2(56f, 50f);
+            Floor(city, "Streets", SpriteFactory.Asphalt(), areaMin, areaMax, -110);
+
+            Color[] tints = { new Color(0.14f, 0.14f, 0.17f), new Color(0.17f, 0.15f, 0.16f), new Color(0.12f, 0.15f, 0.17f), new Color(0.19f, 0.18f, 0.2f) };
+            var roofs = new Sprite[tints.Length];
+            for (int i = 0; i < tints.Length; i++) roofs[i] = SpriteFactory.RoofTile($"roof_{i}", tints[i]);
+            Sprite unit = SpriteFactory.RoofUnit();
+            Sprite neon = SpriteFactory.RoofNeon();
+            Color[] neonColors = { new Color(1f, 0.25f, 0.8f), new Color(0.3f, 1f, 1f), new Color(1f, 0.85f, 0.2f), new Color(0.45f, 1f, 0.3f), new Color(1f, 0.25f, 0.3f) };
+
+            const float cell = 10f;
+            for (float x = areaMin.x; x < areaMax.x; x += cell)
+            for (float y = areaMin.y; y < areaMax.y; y += cell)
+            {
+                // Квартал: отступ под улицу, случайный размер
+                float w = 6.5f + (float)rng.NextDouble() * 2.3f;
+                float h = 6.5f + (float)rng.NextDouble() * 2.3f;
+                Vector2 bMin = new Vector2(x + 1.2f, y + 1.2f);
+                Vector2 bMax = bMin + new Vector2(w, h);
+                if (bMax.x > areaMax.x) continue;
+                // Не налезать на двор базы
+                if (bMax.x > fenceMin.x && bMin.x < fenceMax.x && bMax.y > fenceMin.y && bMin.y < fenceMax.y) continue;
+
+                SpriteRenderer roof = CreateSprite("Roof", city, roofs[rng.Next(roofs.Length)], (bMin + bMax) * 0.5f, -108);
+                roof.drawMode = SpriteDrawMode.Tiled;
+                roof.size = bMax - bMin;
+
+                int units = 1 + rng.Next(3);
+                for (int i = 0; i < units; i++)
+                {
+                    Vector2 p = new Vector2(Mathf.Lerp(bMin.x + 1f, bMax.x - 1f, (float)rng.NextDouble()), Mathf.Lerp(bMin.y + 1f, bMax.y - 1f, (float)rng.NextDouble()));
+                    SpriteRenderer u = CreateSprite("Unit", city, unit, p, -107);
+                    u.transform.localScale = Vector3.one * 1.4f;
+                }
+
+                if (rng.NextDouble() < 0.6)
+                {
+                    Color color = neonColors[rng.Next(neonColors.Length)];
+                    Vector2 p = new Vector2((bMin.x + bMax.x) * 0.5f, bMax.y - 0.6f);
+                    SpriteRenderer sign = CreateSprite("Neon", city, neon, p, -106, false);
+                    sign.color = color;
+                    sign.transform.localScale = Vector3.one * 1.5f;
+                    Light2D glow = AddLight(city, "NeonLight", p, color, 4.5f, 0.9f);
+                    if (rng.NextDouble() < 0.35) Pulsing(glow, 2f + (float)rng.NextDouble() * 3f, 0.3f, 0.9f);
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------- Автодвери
+
+        // Раздвижная дверь в проёме: from..to — края проёма вдоль стены (юниты схемы), at — координата стены
+        private static void AutoDoorAt(Transform parent, string name, bool horizontal, float from, float to, float at)
+        {
+            Vector2 a = horizontal ? V(from, at) : V(at, from);
+            Vector2 b = horizontal ? V(to, at) : V(at, to);
+            float width = Vector2.Distance(a, b);
+            float thickness = WallThickness * 0.7f;
+
+            var root = new GameObject(name) { layer = DoorLayer };
+            root.transform.SetParent(parent);
+            root.transform.SetPositionAndRotation((a + b) * 0.5f, Quaternion.Euler(0f, 0f, horizontal ? 0f : 90f));
+            BoxCollider2D col = root.AddComponent<BoxCollider2D>();
+            col.size = new Vector2(width, thickness);
+
+            Sprite panel = SpriteFactory.DoorPanelSci();
+            SpriteRenderer Panel(string side, float x)
+            {
+                SpriteRenderer sr = CreateSprite(side, root.transform, panel, new Vector2(x, 0f), 4);
+                sr.drawMode = SpriteDrawMode.Tiled;
+                sr.size = new Vector2(width * 0.5f, thickness);
+                return sr;
+            }
+
+            SpriteRenderer left = Panel("Left", -width * 0.25f);
+            SpriteRenderer right = Panel("Right", width * 0.25f);
+            // Лампочки статуса на обоих концах проёма
+            SpriteRenderer ledA = CreateSprite("LedA", root.transform, SpriteFactory.White(), new Vector2(-width * 0.5f, 0f), 6, false);
+            SpriteRenderer ledB = CreateSprite("LedB", root.transform, SpriteFactory.White(), new Vector2(width * 0.5f, 0f), 6, false);
+            ledA.transform.localScale = ledB.transform.localScale = Vector3.one * 0.5f;
+            Light2D light = AddLight(root.transform, "Light", root.transform.position, new Color(1f, 0.25f, 0.2f), 1.4f, 0.6f);
+
+            AutoDoor door = root.AddComponent<AutoDoor>();
+            Configure(door, so =>
+            {
+                P(so, "_left").objectReferenceValue = left.transform;
+                P(so, "_right").objectReferenceValue = right.transform;
+                P(so, "_collider").objectReferenceValue = col;
+                P(so, "_light").objectReferenceValue = light;
+                SetArray(so, "_statusLeds", ledA, ledB);
+                P(so, "_slide").floatValue = width * 0.5f;
+                P(so, "_actors").intValue = (1 << PlayerLayer) | (1 << EnemyLayer);
+            });
+        }
+
+        private static void BuildDoorsFloor1(Transform parent)
+        {
+            Transform doors = new GameObject("Doors").transform;
+            doors.SetParent(parent);
+            AutoDoorAt(doors, "Door_TopRooms_Corridor", true, 24.8f, 28.7f, 20.25f);
+            AutoDoorAt(doors, "Door_Corridor_Hall", true, 26.2f, 30f, 15f);
+            AutoDoorAt(doors, "Door_Hall_Discussion", true, 21.7f, 25.1f, 8.2f);
+            AutoDoorAt(doors, "Door_Hall_Gym", true, 42.4f, 46f, 8.2f);
+            AutoDoorAt(doors, "Door_Stairs_TopRoom", false, 20.25f, 22.8f, 9.4f);
+            AutoDoorAt(doors, "Door_TopRoom_Chill", false, 24.2f, 27f, 32.2f);
+            AutoDoorAt(doors, "Door_Lockers_Hall", false, 8.3f, 11.2f, 10.3f);
+        }
+
+        private static void BuildDoorsFloor2(Transform parent)
+        {
+            Transform doors = new GameObject("Doors").transform;
+            doors.SetParent(parent);
+            AutoDoorAt(doors, "Door_Stairs_Hall", false, 21f, 23.8f, 7.9f);
+            AutoDoorAt(doors, "Door_Hall_Lounge", true, 12.1f, 14.8f, 19.9f);
+            AutoDoorAt(doors, "Door_Hall_Corridor_W", true, 23.75f, 26.5f, 19.9f);
+            AutoDoorAt(doors, "Door_Hall_Corridor_E", true, 34.4f, 37.3f, 19.9f);
+            AutoDoorAt(doors, "Door_Lounge_Office", false, 8.5f, 11.4f, 18.5f);
+            AutoDoorAt(doors, "Door_Corridor_Office", true, 32.6f, 35.6f, 11.6f);
         }
 
         // ---------------------------------------------------------------- Бандиты
@@ -549,7 +825,7 @@ namespace N89.EditorTools
                 P(so, "_pixel").objectReferenceValue = SpriteFactory.White();
                 P(so, "_material").objectReferenceValue = UnlitMaterial;
                 P(so, "_enemyMask").intValue = 1 << 9;
-                P(so, "_wallMask").intValue = (1 << WallLayer) | (1 << GlassLayer);
+                P(so, "_wallMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << DoorLayer);
                 P(so, "_bloodFxPrefab").objectReferenceValue = common.Blood;
                 P(so, "_bloodPoolPrefab").objectReferenceValue = common.BloodPool;
                 P(so, "_blockFxPrefab").objectReferenceValue = common.Sparks;

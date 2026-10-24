@@ -213,6 +213,7 @@ MonoBehaviour:
   _remainsPrefab: {fileID: 7488797080749299359, guid: c05bddf2f92979140beb5332cd053ee5, type: 3}
   _flashRenderer: {fileID: 4529921115713540295}
   _flashColor: {r: 1, g: 0.35, b: 0.35, a: 1}
+  _corpseSprite: {fileID: 0}
 --- !u!114 &4350661167918690473
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -233,7 +234,7 @@ MonoBehaviour:
   _range: 0
   _hitMask:
     serializedVersion: 2
-    m_Bits: 448
+    m_Bits: 1472
   _muzzleFxPrefab: {fileID: 1911857760021992321, guid: 125770db10588af469d6d66f1a87ca05, type: 3}
   _magazineSize: 0
 --- !u!114 &1197207573393906292
@@ -270,7 +271,7 @@ MonoBehaviour:
   _forgetTime: 3
   _sightBlockers:
     serializedVersion: 2
-    m_Bits: 64
+    m_Bits: 1088
   _turnSpeed: 620
   _fireAngle: 12
   _lookAroundAngle: 70
@@ -347,7 +348,7 @@ MonoBehaviour:
   m_Light2DProvider:
     rid: -2
   m_SelectionSources:
-    rid: 2931020381448831257
+    rid: 2931020381448831877
   m_FalloffIntensity: 0.6
   m_Color: {r: 1, g: 0.45, b: 0.15, a: 1}
   m_Intensity: 0.6
@@ -393,7 +394,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 2931020381448831257
+    - rid: 2931020381448831877
       type: {class: Light2DProviderSources, ns: UnityEngine.Rendering.Universal, asm: Unity.RenderPipelines.Universal.2D.Runtime}
       data:
         m_SelectedHashCode: 3

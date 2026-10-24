@@ -39,7 +39,9 @@ namespace N89.EditorTools
         internal const int WallLayer = 6;
         internal const int GlassLayer = 7;
         internal const int PlayerLayer = 8;
-        private const int EnemyLayer = 9;
+        internal const int EnemyLayer = 9;
+        // Автоматические двери (AutoDoor): закрывают обзор и ловят пули, но не мешают поиску пути
+        internal const int DoorLayer = 10;
 
         private static readonly Color Cyan = new Color(0.3f, 1f, 1f);
         private static readonly Color Magenta = new Color(1f, 0.25f, 0.8f);
@@ -87,13 +89,13 @@ namespace N89.EditorTools
             {
                 SpriteFactory.KidLegs("player_legs_idle", 0f), SpriteFactory.KidLegs("player_legs_left", 8f),
                 SpriteFactory.KidLegs("player_legs_pass", 1.5f), SpriteFactory.KidLegs("player_legs_right", -8f),
-            }, 0.6f, 0.26f, common, 8);
+            }, 0.6f, 0.26f, common, 8, SpriteFactory.PlayerDead());
             GameObject dronePrefab = DronePrefab(SpriteFactory.Drone(), explosion, remains);
             GameObject targetPrefab = TargetPrefab(SpriteFactory.Target(), explosion, remains);
             TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
             // Охрана — люди: истекают синей кровью. Дроны — техника: взрываются
             GameObject guardPrefab = EnemyPrefab("CorpGuard", "ОХРАНА // КОРПОРАЦИЯ Е", SpriteFactory.Guard(), 1, 0.45f, 0.5f,
-                turretBullet, muzzle, blood, bloodPool, shortCircuit, electric, true);
+                turretBullet, muzzle, blood, bloodPool, shortCircuit, electric, true, SpriteFactory.GuardDead());
             GameObject combatDronePrefab = EnemyPrefab("CombatDrone", "БОЕВОЙ ДРОН", SpriteFactory.CombatDrone(), 2, 0.7f, 0.5f,
                 turretBullet, muzzle, explosion, remains, shortCircuit, electric, false);
 
@@ -678,7 +680,7 @@ namespace N89.EditorTools
         // legs — кадры ног: стоит, левый шаг, проход, правый шаг
         // magazine — патронов в магазине (0 — без перезарядки; в миссиях магазин задаёт WeaponData)
         internal static GameObject PlayerPrefab(string name, Sprite sprite, Sprite[] legs, float legsDistancePerFrame, float radius,
-            CommonPrefabs common, int magazine = 0)
+            CommonPrefabs common, int magazine = 0, Sprite corpse = null)
         {
             Bullet bullet = common.PlayerBullet;
             GameObject muzzleFx = common.Muzzle;
@@ -708,6 +710,7 @@ namespace N89.EditorTools
                 P(so, "_destroyOnDeath").boolValue = false;
                 P(so, "_deathFxPrefab").objectReferenceValue = deathFx;
                 P(so, "_flashRenderer").objectReferenceValue = body;
+                P(so, "_corpseSprite").objectReferenceValue = corpse;
             });
 
             Weapon weapon = root.AddComponent<Weapon>();
@@ -717,7 +720,7 @@ namespace N89.EditorTools
                 P(so, "_muzzle").objectReferenceValue = muzzle;
                 P(so, "_cooldown").floatValue = 0.3f;
                 P(so, "_spreadDegrees").floatValue = 3f;
-                P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << EnemyLayer);
+                P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << DoorLayer) | (1 << EnemyLayer);
                 P(so, "_muzzleFxPrefab").objectReferenceValue = muzzleFx;
                 P(so, "_magazineSize").intValue = magazine;
             });
@@ -846,7 +849,7 @@ namespace N89.EditorTools
         // Враг корпорации Е: видит, реагирует, стреляет; взламывается «Коротким замыканием»
         internal static GameObject EnemyPrefab(string name, string deviceName, Sprite sprite, int health, float cooldown, float reaction,
             Bullet bullet, GameObject muzzleFx, GameObject deathFx, GameObject remains, QuickhackData shortCircuit, GameObject electricFx,
-            bool chases)
+            bool chases, Sprite corpse = null)
         {
             var root = new GameObject(name) { layer = EnemyLayer };
             Rigidbody2D rb = root.AddComponent<Rigidbody2D>();
@@ -868,6 +871,7 @@ namespace N89.EditorTools
                 P(so, "_deathFxPrefab").objectReferenceValue = deathFx;
                 P(so, "_remainsPrefab").objectReferenceValue = remains;
                 P(so, "_flashRenderer").objectReferenceValue = body;
+                P(so, "_corpseSprite").objectReferenceValue = corpse;
             });
 
             Weapon weapon = root.AddComponent<Weapon>();
@@ -877,7 +881,7 @@ namespace N89.EditorTools
                 P(so, "_muzzle").objectReferenceValue = muzzle;
                 P(so, "_cooldown").floatValue = cooldown;
                 P(so, "_spreadDegrees").floatValue = 4f;
-                P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << PlayerLayer);
+                P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << DoorLayer) | (1 << PlayerLayer);
                 P(so, "_muzzleFxPrefab").objectReferenceValue = muzzleFx;
             });
 
@@ -888,7 +892,7 @@ namespace N89.EditorTools
                 P(so, "_weapon").objectReferenceValue = weapon;
                 P(so, "_health").objectReferenceValue = hp;
                 P(so, "_reactionTime").floatValue = reaction;
-                P(so, "_sightBlockers").intValue = 1 << WallLayer;
+                P(so, "_sightBlockers").intValue = (1 << WallLayer) | (1 << DoorLayer);
                 P(so, "_moveBlockers").intValue = (1 << WallLayer) | (1 << GlassLayer);
                 P(so, "_bodyRadius").floatValue = col.radius;
                 // Охрана преследует и дольше ищет; дрон держит периметр, зато быстрее крутится
@@ -1538,6 +1542,7 @@ namespace N89.EditorTools
             layers.GetArrayElementAtIndex(GlassLayer).stringValue = "Glass";
             layers.GetArrayElementAtIndex(PlayerLayer).stringValue = "Player";
             layers.GetArrayElementAtIndex(EnemyLayer).stringValue = "Enemy";
+            layers.GetArrayElementAtIndex(DoorLayer).stringValue = "Door";
             tagManager.ApplyModifiedPropertiesWithoutUndo();
         }
 

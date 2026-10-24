@@ -640,7 +640,8 @@ namespace N89.EditorTools
             rb.freezeRotation = true;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            root.AddComponent<CircleCollider2D>().radius = 0.32f;
+            // 89 — ребёнок, поэтому хитбокс меньше, чем у охраны
+            root.AddComponent<CircleCollider2D>().radius = 0.26f;
 
             SpriteRenderer body = CreateSprite("Body", root.transform, sprite, Vector2.zero, 10);
             body.gameObject.layer = PlayerLayer;

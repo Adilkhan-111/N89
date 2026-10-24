@@ -13,49 +13,94 @@ namespace N89.EditorTools
         private const string Dir = "Assets/_Project/Art/Sprites/Generated";
 
         private static readonly Color Outline = new Color(0.04f, 0.02f, 0.07f);
-        private static readonly Color Skin = new Color(0.86f, 0.68f, 0.56f);
-        private static readonly Color Gown = new Color(0.8f, 0.83f, 0.9f);
         private static readonly Color Neon = new Color(0.3f, 1f, 1f);
         private static readonly Color Red = new Color(1f, 0.18f, 0.28f);
 
-        // Вид сверху, смотрит вправо (+x). Боевая стойка: левое плечо (сверху) выдвинуто вперёд,
-        // правое (снизу) отведено назад, пистолет в двух руках на линии прицела (y = 16).
+        // Номер 89 — ребёнок: седые торчащие волосы, тёмная кожа, серый комбинезон на молнии с ремнями
+        private static readonly Color KidSuit = new Color(0.38f, 0.39f, 0.43f);
+        private static readonly Color KidSuitShade = new Color(0.23f, 0.24f, 0.28f);
+        private static readonly Color KidStrap = new Color(0.15f, 0.15f, 0.18f);
+        private static readonly Color KidSkin = new Color(0.47f, 0.31f, 0.22f);
+        private static readonly Color KidSkinShade = new Color(0.35f, 0.22f, 0.16f);
+        private static readonly Color KidHair = new Color(0.96f, 0.97f, 0.99f);
+        private static readonly Color KidHairShade = new Color(0.68f, 0.71f, 0.76f);
+        private static readonly Color Gun = new Color(0.14f, 0.14f, 0.18f);
+        private static readonly Color GunLight = new Color(0.36f, 0.36f, 0.43f);
+
+        // Вид сверху, смотрит вправо (+x). Ребёнок заметно мельче охраны, а пистолет в его руках —
+        // большой и тяжёлый: держит двумя руками на линии прицела (y = 16).
         public static Sprite Player() => Create("player", 32, 32, c =>
         {
-            // Больничная роба, короткие волосы, неоновый имплант на затылке
-            DrawShooter(c, Gown, new Color(0.62f, 0.65f, 0.74f), Skin, new Color(0.72f, 0.55f, 0.45f),
-                new Color(0.16f, 0.11f, 0.16f), Skin, Neon, false);
+            Vector2 leftShoulder = new Vector2(13.5f, 21.5f);
+            Vector2 rightShoulder = new Vector2(9.5f, 10.5f);
+            Vector2 grip = new Vector2(20f, 16f);
+
+            // Большой пистолет: массивный затвор, подсветка, рукоять под ним
+            c.Rect(19, 14, 30, 17, Gun);
+            c.Rect(31, 15, 31, 16, Gun);
+            c.Rect(18, 12, 21, 13, Gun);
+            c.Rect(20, 17, 29, 17, GunLight);
+            c.Rect(23, 15, 27, 15, Neon);
+            // Правая (дальняя) рука тянется к рукояти наискосок
+            c.Line(rightShoulder, grip, 2.2f, KidSkinShade);
+            c.Line(rightShoulder, Vector2.Lerp(rightShoulder, grip, 0.4f), 3f, KidSuitShade);
+            // Узкие плечи в комбинезоне, ремни на спине
+            c.Line(leftShoulder, rightShoulder, 4.6f, KidSuit);
+            c.Line(leftShoulder + new Vector2(-1.3f, -0.3f), rightShoulder + new Vector2(-1.3f, -0.3f), 1.5f, KidSuitShade);
+            c.Line(new Vector2(12.5f, 21f), new Vector2(11f, 18.5f), 1f, KidStrap);
+            c.Line(new Vector2(9.5f, 11f), new Vector2(10.5f, 13.5f), 1f, KidStrap);
+            // Левая (ближняя) рука — от выдвинутого плеча вперёд, ладони на рукояти
+            c.Line(leftShoulder, grip + new Vector2(0f, 0.6f), 2.2f, KidSkin);
+            c.Line(leftShoulder, Vector2.Lerp(leftShoulder, grip, 0.4f), 3f, KidSuit);
+            // Высокий воротник и голова сверху: седая макушка с тенью, торчащие пряди сзади,
+            // уши по бокам и край лица спереди
+            c.Circle(11.8f, 16f, 3.5f, KidSuitShade);
+            c.Rect(12, 12, 12, 12, KidSkin);
+            c.Rect(12, 19, 12, 19, KidSkin);
+            c.Circle(11.5f, 15.8f, 3.1f, KidHairShade);
+            c.Circle(12f, 16.3f, 2.6f, KidHair);
+            c.Rect(8, 17, 8, 18, KidHair);
+            c.Rect(7, 16, 7, 16, KidHairShade);
+            c.Rect(8, 14, 8, 14, KidHairShade);
+            c.Rect(14, 15, 15, 16, KidSkin);
+            c.Rect(14, 17, 14, 17, KidHair);
+            c.Outline(Outline);
         });
 
-        // 89 лежит лицом вниз, вид сверху, головой вправо (+x): видно всё тело в робе, босые ноги,
-        // раскинутые руки, затылок с неоновым имплантом и выпавший пистолет
+        // 89 лежит лицом вниз, вид сверху, головой вправо (+x): маленькое тело в сером комбинезоне,
+        // раскинутые руки, седой затылок и выпавший большой пистолет
         public static Sprite PlayerDead() => Create("player_dead", 48, 32, c =>
         {
-            Color gownShade = new Color(0.62f, 0.65f, 0.74f);
-            Color skinShade = new Color(0.72f, 0.55f, 0.45f);
-            Color hair = new Color(0.16f, 0.11f, 0.16f);
+            Color boot = new Color(0.12f, 0.12f, 0.15f);
 
             // Ноги: одна прямая, другая согнута в колене
-            c.Line(new Vector2(17f, 13.5f), new Vector2(5f, 11f), 3.4f, gownShade);
-            c.Line(new Vector2(17f, 18.5f), new Vector2(10f, 22f), 3.4f, gownShade);
-            c.Line(new Vector2(10f, 22f), new Vector2(4f, 19.5f), 3.2f, gownShade);
-            c.Circle(3.5f, 11f, 1.8f, Skin);
-            c.Circle(3f, 19.5f, 1.8f, Skin);
-            // Корпус в робе
-            c.Line(new Vector2(16f, 16f), new Vector2(33f, 16f), 9.5f, Gown);
-            c.Line(new Vector2(16f, 12.5f), new Vector2(33f, 12.5f), 2.5f, gownShade);
+            c.Line(new Vector2(18f, 14.5f), new Vector2(10f, 12.5f), 2.6f, KidSuitShade);
+            c.Line(new Vector2(18f, 17.5f), new Vector2(13f, 20.5f), 2.6f, KidSuitShade);
+            c.Line(new Vector2(13f, 20.5f), new Vector2(9f, 19f), 2.4f, KidSuitShade);
+            c.Circle(9.3f, 12.3f, 1.5f, boot);
+            c.Circle(8.3f, 19f, 1.5f, boot);
+            // Корпус в комбинезоне, ремень на поясе
+            c.Line(new Vector2(17f, 16f), new Vector2(28f, 16f), 7f, KidSuit);
+            c.Line(new Vector2(17f, 13.5f), new Vector2(28f, 13.5f), 2f, KidSuitShade);
+            c.Rect(19, 13, 19, 19, KidStrap);
             // Руки: одна выброшена вперёд, другая подвёрнута вдоль тела
-            c.Line(new Vector2(31f, 21f), new Vector2(40f, 28f), 2.8f, Skin);
-            c.Line(new Vector2(31f, 21f), new Vector2(34f, 23.5f), 3.6f, Gown);
-            c.Line(new Vector2(31f, 11f), new Vector2(23f, 4.5f), 2.8f, skinShade);
-            c.Line(new Vector2(31f, 11f), new Vector2(28f, 8.5f), 3.6f, gownShade);
-            // Голова — затылок с имплантом (лицом в пол)
-            c.Circle(38.5f, 15.5f, 4.4f, hair);
-            c.Rect(35, 15, 36, 16, Neon);
-            // Выпавший пистолет
-            c.Rect(41, 5, 46, 6, new Color(0.14f, 0.14f, 0.18f));
-            c.Rect(41, 4, 42, 4, new Color(0.14f, 0.14f, 0.18f));
-            c.Rect(42, 6, 46, 6, new Color(0.42f, 0.42f, 0.5f));
+            c.Line(new Vector2(27f, 19.5f), new Vector2(33f, 24.5f), 2.2f, KidSkin);
+            c.Line(new Vector2(27f, 19.5f), new Vector2(29.5f, 21.5f), 3f, KidSuit);
+            c.Line(new Vector2(27f, 12.5f), new Vector2(21.5f, 8f), 2.2f, KidSkinShade);
+            c.Line(new Vector2(27f, 12.5f), new Vector2(24.5f, 10.5f), 3f, KidSuitShade);
+            // Голова — седой затылок с торчащими прядями (лицом в пол)
+            c.Circle(31f, 16f, 4f, KidSuitShade);
+            c.Rect(32, 12, 32, 12, KidSkin);
+            c.Rect(32, 20, 32, 20, KidSkin);
+            c.Circle(32f, 15.6f, 3.6f, KidHairShade);
+            c.Circle(32.5f, 16.3f, 3.1f, KidHair);
+            c.Rect(36, 17, 36, 17, KidHair);
+            c.Rect(36, 14, 36, 14, KidHairShade);
+            // Выпавший большой пистолет
+            c.Rect(37, 4, 46, 6, Gun);
+            c.Rect(37, 2, 39, 3, Gun);
+            c.Rect(38, 6, 45, 6, GunLight);
+            c.Rect(40, 5, 43, 5, Neon);
             c.Outline(Outline);
         });
 

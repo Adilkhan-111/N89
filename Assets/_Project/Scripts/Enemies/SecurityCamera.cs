@@ -33,6 +33,8 @@ namespace N89.Enemies
         [SerializeField] private float _calmDownTime = 2f;
         [SerializeField] private float _alarmInterval = 0.5f;
         [SerializeField] private LayerMask _sightBlockers;
+        [Tooltip("Кого поднимает тревога — враги внутри этого объекта (свой этаж). Пусто — все враги на сцене")]
+        [SerializeField] private Transform _enemiesRoot;
 
         [Header("Цвета")]
         [SerializeField] private Color _calmColor = new Color(0.25f, 1f, 0.35f, 0.14f);
@@ -171,9 +173,10 @@ namespace N89.Enemies
             return !Physics2D.Linecast(transform.position, _target.position, _sightBlockers);
         }
 
-        private static void RaiseAlarm()
+        private void RaiseAlarm()
         {
-            foreach (EnemyAI enemy in FindObjectsByType<EnemyAI>())
+            EnemyAI[] enemies = _enemiesRoot != null ? _enemiesRoot.GetComponentsInChildren<EnemyAI>() : FindObjectsByType<EnemyAI>();
+            foreach (EnemyAI enemy in enemies)
             {
                 if (enemy.isActiveAndEnabled)
                 {

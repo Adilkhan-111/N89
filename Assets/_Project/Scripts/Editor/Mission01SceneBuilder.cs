@@ -3,6 +3,7 @@ using N89.Enemies;
 using N89.Hacking;
 using N89.Missions;
 using N89.Player;
+using N89.UI;
 using N89.World;
 using TMPro;
 using UnityEditor;
@@ -10,6 +11,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using static N89.EditorTools.TutorialSceneBuilder;
 
 namespace N89.EditorTools
@@ -31,10 +33,15 @@ namespace N89.EditorTools
         private const float H = 27f;
         private const float PatrolSpeed = 1.4f;
 
-        // Точка схемы -> мир
-        private static Vector2 V(float x, float y) => new Vector2(x, y) * S;
+        // Второй этаж — копия здания по той же схеме, сдвинутая в мире вправо: камеры этажей не видят друг друга
+        private static readonly Vector2 Floor2Origin = new Vector2(60f, 0f);
+
+        // Точка схемы -> мир (s_origin — начало текущего этажа)
+        private static Vector2 V(float x, float y) => ToWorld(new Vector2(x, y));
+        private static Vector2 ToWorld(Vector2 schema) => schema * S + s_origin;
 
         private static Sprite s_wall;
+        private static Vector2 s_origin;
 
         [MenuItem("N89/Build Mission 01 Scene")]
         public static void Build()
@@ -44,6 +51,7 @@ namespace N89.EditorTools
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             LoadCommonAssets();
+            s_origin = Vector2.zero;
             TMP_FontAsset mono = MainMenuSceneBuilder.GetOrCreateFontAsset("RobotoMono-Regular");
             TMP_FontAsset audiowide = MainMenuSceneBuilder.GetOrCreateFontAsset("Audiowide-Regular");
 
@@ -66,16 +74,36 @@ namespace N89.EditorTools
             BuildLights();
 
             s_wall = SpriteFactory.GangWall();
+            s_origin = Vector2.zero;
             Transform level = new GameObject("Level").transform;
             BuildYard(level);
             BuildBase(level);
             BuildInterior(level);
             // Отключение камеры дешевле замыкания — как взлом замка
             QuickhackData cameraOff = CreateQuickhack("CameraOff", "ОТКЛЮЧИТЬ КАМЕРУ", 4, 0.6f, QuickhackEffect.Disable);
-            BuildCameras(level, cameraOff, common.Electric);
-
             Transform enemiesRoot = new GameObject("Bandits").transform;
+            BuildCameras(level, cameraOff, common.Electric, enemiesRoot);
             Health[] enemies = SpawnBandits(banditPrefab, enemiesRoot);
+            // Маркер у лестницы наверх — загорается, когда первый этаж зачищен
+            Light2D stairsMarker = AddLight(level, "StairsMarker", V(3.6f, 25.4f), new Color(0.3f, 1f, 1f), 2.5f, 1.2f);
+            Pulsing(stairsMarker, 3f, 0.4f, 1.4f);
+            Rect stairsZone = WorldRect(new Vector2(2.2f, 24f), new Vector2(5f, 26.9f));
+
+            // --- Второй этаж ---
+            s_origin = Floor2Origin;
+            Transform floor2 = new GameObject("Floor2").transform;
+            BuildFloor2(floor2);
+            Transform floor2Enemies = new GameObject("Bandits_Floor2").transform;
+            BuildFloor2Cameras(floor2, cameraOff, common.Electric, floor2Enemies);
+            Health[] enemies2 = SpawnFloor2Bandits(banditPrefab, floor2Enemies);
+            Transform floor2Spawn = new GameObject("Floor2Spawn").transform;
+            floor2Spawn.SetParent(floor2);
+            floor2Spawn.position = V(3.7f, 21.4f);
+            Transform target = BuildTarget(floor2, out SpriteRenderer targetBody);
+            Vector2 deskPoint = V(31.1f, 4.4f);
+            Rect officeZone = WorldRect(new Vector2(19.2f, 0.5f), new Vector2(45.5f, 11.1f));
+            Vector2 officeDoor = V(34.1f, 11.6f);
+            s_origin = Vector2.zero;
 
             Transform gameplay = new GameObject("Gameplay").transform;
             Vector2 start = V(5.5f, -2.5f);
@@ -94,6 +122,8 @@ namespace N89.EditorTools
 
             // --- UI и сценарий ---
             HudRefs hud = BuildHud(hero.GetComponent<HackingController>(), mono, audiowide, "МИССИЯ 1 ВЫПОЛНЕНА", "Interlude02");
+            Banner banner = BuildBanner(hud.Fader.transform, mono);
+            WaypointArrow waypoint = BuildWaypoint(hero.transform);
 
             MissionDirector director = new GameObject("MissionDirector").AddComponent<MissionDirector>();
             Configure(director, so =>
@@ -104,10 +134,34 @@ namespace N89.EditorTools
                 P(so, "_heroBody").objectReferenceValue = hero.transform.Find("Body").GetComponent<SpriteRenderer>();
                 SetArray(so, "_weapons", weapons);
                 SetArray(so, "_enemies", enemies);
+                P(so, "_cameraFollow").objectReferenceValue = follow;
+
+                P(so, "_objectiveText").stringValue = "Зачисти первый этаж";
+                SetArray(so, "_floor2Enemies", enemies2);
+                P(so, "_stairsZone").rectValue = stairsZone;
+                P(so, "_stairsMarker").objectReferenceValue = stairsMarker;
+                P(so, "_floor2Spawn").objectReferenceValue = floor2Spawn;
+                P(so, "_floor2Facing").floatValue = 0f;
+                P(so, "_officeZone").rectValue = officeZone;
+                P(so, "_officeDoor").vector2Value = officeDoor;
+                P(so, "_banner").objectReferenceValue = banner;
+                P(so, "_waypoint").objectReferenceValue = waypoint;
+
+                P(so, "_target").objectReferenceValue = target;
+                P(so, "_targetBody").objectReferenceValue = targetBody;
+                P(so, "_targetStanding").objectReferenceValue = SpriteFactory.TargetStanding();
+                P(so, "_targetDead").objectReferenceValue = SpriteFactory.TargetDead();
+                P(so, "_deskPoint").vector2Value = deskPoint;
+                P(so, "_bloodFxPrefab").objectReferenceValue = common.Blood;
+                P(so, "_bloodPoolPrefab").objectReferenceValue = common.BloodPool;
+
                 P(so, "_fader").objectReferenceValue = hud.Fader;
                 P(so, "_objective").objectReferenceValue = hud.Objective;
                 P(so, "_hackingHud").objectReferenceValue = hud.HackingHud;
                 P(so, "_endScreen").objectReferenceValue = hud.EndScreen;
+                P(so, "_subtitles").objectReferenceValue = hud.Subtitles;
+                P(so, "_letterboxTop").objectReferenceValue = hud.LetterboxTop;
+                P(so, "_letterboxBottom").objectReferenceValue = hud.LetterboxBottom;
             });
 
             ValidateQuickhacks();
@@ -204,22 +258,22 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Камеры
 
         // Камеры наблюдения — чёрные точки на схеме: позиция (юниты схемы), куда смотрит, на сколько водит, дальность (мир)
-        private static void BuildCameras(Transform parent, QuickhackData cameraOff, GameObject sparksFx)
+        private static void BuildCameras(Transform parent, QuickhackData cameraOff, GameObject sparksFx, Transform enemies)
         {
             Transform root = new GameObject("Cameras").transform;
             root.SetParent(parent);
             Sprite head = SpriteFactory.SecurityCamera();
             Sprite mount = SpriteFactory.CameraMount();
 
-            SecurityCam(root, "Camera_TopRoom", new Vector2(10.3f, 26.3f), -25f, 40f, 8f, head, mount, cameraOff, sparksFx);
-            SecurityCam(root, "Camera_Chill", new Vector2(45.2f, 26.3f), 215f, 35f, 7f, head, mount, cameraOff, sparksFx);
-            SecurityCam(root, "Camera_Corridor", new Vector2(0.7f, 19.6f), -8f, 20f, 11f, head, mount, cameraOff, sparksFx);
-            SecurityCam(root, "Camera_Lockers", new Vector2(9.6f, 14.4f), 225f, 35f, 7f, head, mount, cameraOff, sparksFx);
-            SecurityCam(root, "Camera_Hall", new Vector2(45.2f, 14.4f), 195f, 25f, 11f, head, mount, cameraOff, sparksFx);
+            SecurityCam(root, "Camera_TopRoom", new Vector2(10.3f, 26.3f), -25f, 40f, 8f, head, mount, cameraOff, sparksFx, enemies);
+            SecurityCam(root, "Camera_Chill", new Vector2(45.2f, 26.3f), 215f, 35f, 7f, head, mount, cameraOff, sparksFx, enemies);
+            SecurityCam(root, "Camera_Corridor", new Vector2(0.7f, 19.6f), -8f, 20f, 11f, head, mount, cameraOff, sparksFx, enemies);
+            SecurityCam(root, "Camera_Lockers", new Vector2(9.6f, 14.4f), 225f, 35f, 7f, head, mount, cameraOff, sparksFx, enemies);
+            SecurityCam(root, "Camera_Hall", new Vector2(45.2f, 14.4f), 195f, 25f, 11f, head, mount, cameraOff, sparksFx, enemies);
         }
 
         private static void SecurityCam(Transform parent, string name, Vector2 schemaPosition, float angle, float sweep, float range,
-            Sprite headSprite, Sprite mountSprite, QuickhackData cameraOff, GameObject sparksFx)
+            Sprite headSprite, Sprite mountSprite, QuickhackData cameraOff, GameObject sparksFx, Transform enemies)
         {
             var root = new GameObject(name);
             root.transform.SetParent(parent);
@@ -253,6 +307,8 @@ namespace N89.EditorTools
                 P(so, "_sweepAngle").floatValue = sweep;
                 P(so, "_range").floatValue = range;
                 P(so, "_sightBlockers").intValue = 1 << WallLayer;
+                // Тревога поднимает только свой этаж
+                P(so, "_enemiesRoot").objectReferenceValue = enemies;
             });
 
             HackableDevice device = root.AddComponent<HackableDevice>();
@@ -289,14 +345,14 @@ namespace N89.EditorTools
 
             void Stand(Vector2 position, float facing)
             {
-                bandits.Add(SpawnEnemy(prefab, parent, position * S, facing, Vector2.zero, 0f).GetComponent<Health>());
+                bandits.Add(SpawnEnemy(prefab, parent, ToWorld(position), facing, Vector2.zero, 0f).GetComponent<Health>());
             }
 
             void Loop(Vector2 position, float facing, params Vector2[] perimeter)
             {
                 for (int i = 0; i < perimeter.Length; i++)
                     perimeter[i] *= S;
-                bandits.Add(SpawnPerimeter(prefab, parent, position * S, facing, PatrolSpeed, perimeter).GetComponent<Health>());
+                bandits.Add(SpawnPerimeter(prefab, parent, ToWorld(position), facing, PatrolSpeed, perimeter).GetComponent<Health>());
             }
 
             // Вход E1: двое смотрят вглубь комнаты — к ним можно подойти со спины
@@ -329,6 +385,216 @@ namespace N89.EditorTools
             Stand(new Vector2(44f, 1.4f), 90f);
 
             return bandits.ToArray();
+        }
+
+        // ---------------------------------------------------------------- Второй этаж
+
+        // Второй этаж по схеме «2 floor»: та же коробка 46 x 27 без выходов наружу.
+        // Сверху слева — лестница, вдоль верха — длинный зал, слева внизу — гостиная, справа — коридор
+        // с двумя камерами и под ним кабинет главаря (цель миссии). Строится при s_origin = Floor2Origin
+        private static void BuildFloor2(Transform parent)
+        {
+            Transform walls = new GameObject("Walls").transform;
+            walls.SetParent(parent);
+            Transform interior = new GameObject("Interior").transform;
+            interior.SetParent(parent);
+            float t = WallThickness * 0.5f / S;
+
+            Floor(parent, "Floor", SpriteFactory.ConcreteFloor(), V(0f, 0f), V(W, H), -100);
+            Floor(interior, "Floor_Lounge", SpriteFactory.Carpet(), V(0f, 0f), V(18.5f, 19.9f), -99);
+            Floor(interior, "Floor_Office", SpriteFactory.WoodFloor(), V(18.5f, 0f), V(W, 11.6f), -99);
+
+            // Внешние стены — сплошные
+            Wall(walls, "Outer_Bottom", -t, 0f, W + t, 0f);
+            Wall(walls, "Outer_Top", -t, H, W + t, H);
+            Wall(walls, "Outer_Left", 0f, -t, 0f, H + t);
+            Wall(walls, "Outer_Right", W, -t, W, H + t);
+
+            // Лестничная клетка: глухой блок слева, стена справа с проёмом в зал
+            Block(walls, "Stairwell", new Vector2(0f, 19.9f), new Vector2(2.6f, H));
+            Wall(walls, "V1_S", 7.9f, 19.9f, 7.9f, 21f);
+            Wall(walls, "V1_N", 7.9f, 23.8f, 7.9f, H);
+            // Зал / нижняя часть (y 19.9): три проёма — в гостиную и два в коридор
+            Wall(walls, "H1_A", 0f, 19.9f, 12.1f, 19.9f);
+            Wall(walls, "H1_B", 14.8f, 19.9f, 23.75f, 19.9f);
+            Wall(walls, "H1_C", 26.5f, 19.9f, 34.4f, 19.9f);
+            Wall(walls, "H1_D", 37.3f, 19.9f, W, 19.9f);
+            // Гостиная / правая часть (x 18.5): проём в кабинет
+            Wall(walls, "V2_S", 18.5f, 0f, 18.5f, 8.5f);
+            Wall(walls, "V2_N", 18.5f, 11.4f, 18.5f, 19.9f);
+            // Коридор / кабинет (y 11.6): проём в кабинет
+            Wall(walls, "H2_W", 18.5f, 11.6f, 32.6f, 11.6f);
+            Wall(walls, "H2_E", 35.6f, 11.6f, W, 11.6f);
+
+            // Лестница вниз — два пролёта
+            Sprite stairs = SpriteFactory.Stairs();
+            Prop(interior, "Stairs_Upper", stairs, new Vector2(2.7f, 24.2f), new Vector2(4.7f, 26.7f), -98);
+            Prop(interior, "Stairs_Lower", stairs, new Vector2(2.7f, 20.2f), new Vector2(4.7f, 22.9f), -98);
+
+            // Зал: ящики в углу у лестницы
+            Sprite crate = SpriteFactory.Crate();
+            Prop(interior, "Crate_1", crate, new Vector2(8.3f, 25f), new Vector2(9.6f, 26.6f), 3, WallLayer);
+            Prop(interior, "Crate_2", crate, new Vector2(9.7f, 25.3f), new Vector2(10.7f, 26.5f), 3, WallLayer);
+            Prop(interior, "Crate_3", crate, new Vector2(8.3f, 23.8f), new Vector2(9.4f, 24.9f), 3, WallLayer);
+
+            // Гостиная: ковёр, столик, диваны по сторонам, барная стойка у правой стены
+            Prop(interior, "Rug", SpriteFactory.Rug(), new Vector2(3.95f, 3.3f), new Vector2(15.1f, 12f), -97);
+            Prop(interior, "CoffeeTable", SpriteFactory.CoffeeTable(), new Vector2(7.2f, 3.5f), new Vector2(12.3f, 6.6f), 3, GlassLayer);
+            Sprite sofa = SpriteFactory.GangSofa();
+            Prop(interior, "Sofa_Bottom", sofa, new Vector2(4.4f, 0.6f), new Vector2(14.8f, 2.6f), 3, GlassLayer);
+            Prop(interior, "Sofa_Left", sofa, new Vector2(0.5f, 11.8f), new Vector2(3f, 18.5f), 3, GlassLayer, true, -90f);
+            Prop(interior, "Bar", SpriteFactory.BarCounter(), new Vector2(16.4f, 12f), new Vector2(18.1f, 18.3f), 3, GlassLayer);
+
+            // Кабинет: стол главаря, кресло, шкафы по стенам
+            Prop(interior, "BossDesk", SpriteFactory.BossDesk(), new Vector2(28f, 3.1f), new Vector2(34.2f, 5.5f), 3, GlassLayer);
+            Prop(interior, "BossChair", SpriteFactory.OfficeChair(), new Vector2(29.7f, 1.1f), new Vector2(31.9f, 3f), 2);
+            Sprite shelf = SpriteFactory.Shelf();
+            Block(walls, "Shelf_TopRight", new Vector2(36.9f, 10.2f), new Vector2(45.3f, 10.95f), shelf);
+            Block(walls, "Shelf_Left", new Vector2(18.9f, 0.67f), new Vector2(19.9f, 8.3f), shelf);
+            Block(walls, "Shelf_BottomLeft", new Vector2(21.8f, 0.5f), new Vector2(28.6f, 1.25f), shelf);
+            Block(walls, "Shelf_BottomRight", new Vector2(35.4f, 0.5f), new Vector2(45.2f, 1.2f), shelf);
+
+            // Свет второго этажа
+            Transform lights = new GameObject("Lights").transform;
+            lights.SetParent(parent);
+            Color warm = new Color(1f, 0.7f, 0.4f);
+            Color magenta = new Color(1f, 0.25f, 0.75f);
+            Color red = new Color(1f, 0.2f, 0.25f);
+            Lamp(lights, "Stairs", 5f, 23.4f, warm, 5f, 0.7f);
+            // Лампы над постами в зале (на схеме — конусы света)
+            Lamp(lights, "Hall_Lamp_1", 18.5f, 23f, warm, 7f, 0.8f);
+            Lamp(lights, "Hall_Lamp_2", 30.4f, 23f, warm, 7f, 0.8f);
+            Lamp(lights, "Hall_Right", 42f, 23.5f, red, 7f, 0.5f);
+            Pulsing(Lamp(lights, "Lounge", 9f, 9f, magenta, 12f, 0.6f), 0.7f, 0.4f, 0.7f);
+            Pulsing(Lamp(lights, "Corridor", 32f, 15.7f, red, 10f, 0.6f), 1.2f, 0.35f, 0.7f);
+            Lamp(lights, "Office", 31f, 6f, warm, 9f, 0.8f);
+            Lamp(lights, "Office_Monitor", 31f, 4.4f, new Color(0.3f, 1f, 0.6f), 2.5f, 0.8f);
+        }
+
+        private static void BuildFloor2Cameras(Transform parent, QuickhackData cameraOff, GameObject sparksFx, Transform enemies)
+        {
+            Transform root = new GameObject("Cameras").transform;
+            root.SetParent(parent);
+            Sprite head = SpriteFactory.SecurityCamera();
+            Sprite mount = SpriteFactory.CameraMount();
+            // Две камеры по углам коридора над кабинетом
+            SecurityCam(root, "Camera_Corridor_W", new Vector2(19.4f, 19.2f), -25f, 30f, 10f, head, mount, cameraOff, sparksFx, enemies);
+            SecurityCam(root, "Camera_Corridor_E", new Vector2(45.1f, 19.2f), 205f, 30f, 10f, head, mount, cameraOff, sparksFx, enemies);
+        }
+
+        // Охрана второго этажа: 14 бандитов, из них трое патрулируют. Цель среди них не считается.
+        // У лестницы никого нет — герой появляется в пустой клетке и сам решает, куда идти;
+        // ближайшие к выходу из клетки стоят спиной или далеко
+        private static Health[] SpawnFloor2Bandits(GameObject prefab, Transform parent)
+        {
+            var bandits = new System.Collections.Generic.List<Health>();
+
+            void Stand(Vector2 position, float facing)
+            {
+                bandits.Add(SpawnEnemy(prefab, parent, ToWorld(position), facing, Vector2.zero, 0f).GetComponent<Health>());
+            }
+
+            void Loop(Vector2 position, float facing, params Vector2[] perimeter)
+            {
+                for (int i = 0; i < perimeter.Length; i++)
+                    perimeter[i] *= S;
+                bandits.Add(SpawnPerimeter(prefab, parent, ToWorld(position), facing, PatrolSpeed, perimeter).GetComponent<Health>());
+            }
+
+            // Зал: один спиной к лестнице, патруль вдоль зала, один под лампой, двое у дальней стены смотрят вдоль зала
+            Stand(new Vector2(16.5f, 25.5f), 0f);
+            Loop(new Vector2(22f, 21.4f), 0f, new Vector2(18f, 0f), new Vector2(18f, 4.1f), new Vector2(0f, 4.1f));
+            Stand(new Vector2(30.4f, 23.4f), 90f);
+            Stand(new Vector2(44.6f, 25.6f), 180f);
+            Stand(new Vector2(44.3f, 21.4f), 180f);
+
+            // Гостиная: один у дивана, один у столика, патруль по кругу вокруг ковра
+            Stand(new Vector2(7.5f, 13f), -45f);
+            Stand(new Vector2(16f, 6f), 135f);
+            Loop(new Vector2(5f, 9f), 0f, new Vector2(10f, 0f), new Vector2(10f, 7f), new Vector2(0f, 7f));
+
+            // Коридор над кабинетом: патруль по периметру и часовой у двери кабинета
+            Loop(new Vector2(21f, 13.2f), 0f, new Vector2(22.5f, 0f), new Vector2(22.5f, 5f), new Vector2(0f, 5f));
+            Stand(new Vector2(33.5f, 15.5f), -90f);
+
+            // Кабинет: четверо телохранителей главаря — у обеих дверей и по сторонам стола
+            Stand(new Vector2(43.5f, 9f), 180f);
+            Stand(new Vector2(24f, 9.5f), -45f);
+            Stand(new Vector2(21.2f, 2.4f), 45f);
+            Stand(new Vector2(39f, 4f), 135f);
+
+            return bandits.ToArray();
+        }
+
+        // ---------------------------------------------------------------- Подсказки «куда идти»
+
+        // Крупная надпись по центру экрана — под затемнением, чтобы на смене этажа не висела поверх чёрного
+        private static Banner BuildBanner(Transform fader, TMP_FontAsset mono)
+        {
+            RectTransform canvas = (RectTransform)fader.parent;
+            Color cyan = new Color(0.3f, 1f, 1f);
+            Image box = Img("Banner", canvas, new Color(0f, 0f, 0f, 0.75f));
+            box.transform.SetSiblingIndex(fader.GetSiblingIndex());
+            Anchor(box.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 190f), new Vector2(1100f, 150f));
+            CanvasGroup group = Group(box.gameObject, 0f);
+            Image edgeTop = Img("EdgeTop", box.rectTransform, cyan);
+            Anchor(edgeTop.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), Vector2.zero, new Vector2(1100f, 4f));
+            Image edgeBottom = Img("EdgeBottom", box.rectTransform, cyan);
+            Anchor(edgeBottom.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), Vector2.zero, new Vector2(1100f, 4f));
+            TextMeshProUGUI title = Text("Title", box.rectTransform, mono, string.Empty, 56f, Color.white, TextAlignmentOptions.Center);
+            Anchor(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 28f), new Vector2(1060f, 66f));
+            TextMeshProUGUI subtitle = Text("Subtitle", box.rectTransform, mono, string.Empty, 36f, cyan, TextAlignmentOptions.Center);
+            Anchor(subtitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -34f), new Vector2(1060f, 50f));
+
+            Banner banner = box.gameObject.AddComponent<Banner>();
+            Configure(banner, so =>
+            {
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_box").objectReferenceValue = box.rectTransform;
+                P(so, "_title").objectReferenceValue = title;
+                P(so, "_subtitle").objectReferenceValue = subtitle;
+            });
+            return banner;
+        }
+
+        // Стрелка у героя к следующей цели и маркер над самой целью
+        private static WaypointArrow BuildWaypoint(Transform hero)
+        {
+            var root = new GameObject("Waypoint");
+            Sprite arrowSprite = SpriteFactory.WaypointArrow();
+            SpriteRenderer arrow = CreateSprite("Arrow", root.transform, arrowSprite, Vector2.zero, 70, false);
+            arrow.transform.localScale = Vector3.one * 1.3f;
+            SpriteRenderer beacon = CreateSprite("Beacon", root.transform, arrowSprite, Vector2.zero, 70, false);
+            beacon.transform.localScale = Vector3.one * 1.8f;
+
+            WaypointArrow waypoint = root.AddComponent<WaypointArrow>();
+            Configure(waypoint, so =>
+            {
+                P(so, "_follow").objectReferenceValue = hero;
+                P(so, "_arrow").objectReferenceValue = arrow;
+                P(so, "_beacon").objectReferenceValue = beacon;
+            });
+            return waypoint;
+        }
+
+        // Главарь сидит в кресле за столом лицом к двери. Не враг: не стреляет и пулей не убивается
+        // (коллайдер на слое Glass — мешает пройти и ловит пули, как мебель). Умирает в катсцене
+        private static Transform BuildTarget(Transform parent, out SpriteRenderer body)
+        {
+            var root = new GameObject("Target") { layer = GlassLayer };
+            root.transform.SetParent(parent);
+            root.transform.position = V(30.8f, 2.05f);
+            root.AddComponent<CircleCollider2D>().radius = 0.36f;
+            body = CreateSprite("Body", root.transform, SpriteFactory.TargetSitting(), Vector2.zero, 10, true, 90f);
+            return root.transform;
+        }
+
+        // Прямоугольник схемы -> мир (для зон в сценарии)
+        private static Rect WorldRect(Vector2 min, Vector2 max)
+        {
+            Vector2 a = ToWorld(min);
+            Vector2 b = ToWorld(max);
+            return Rect.MinMaxRect(a.x, a.y, b.x, b.y);
         }
 
         // ---------------------------------------------------------------- Свет
@@ -384,8 +650,8 @@ namespace N89.EditorTools
         // Глухой блок (лестница, шкафчики): плитка по всей площади и коллайдер. По умолчанию — плитка стены
         private static void Block(Transform parent, string name, Vector2 min, Vector2 max, Sprite sprite = null)
         {
-            min *= S;
-            max *= S;
+            min = ToWorld(min);
+            max = ToWorld(max);
             SpriteRenderer sr = CreateSprite(name, parent, sprite != null ? sprite : s_wall, (min + max) * 0.5f, 5);
             sr.drawMode = SpriteDrawMode.Tiled;
             sr.size = max - min;
@@ -394,14 +660,20 @@ namespace N89.EditorTools
         }
 
         // Предмет интерьера: спрайт растягивается на прямоугольник схемы. layer < 0 — без коллайдера (декор)
+        // angle — поворот спрайта (±90 — лёжа на боку: ширина спрайта идёт по высоте прямоугольника)
         private static SpriteRenderer Prop(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order,
-            int layer = -1, bool lit = true)
+            int layer = -1, bool lit = true, float angle = 0f)
         {
-            min *= S;
-            max *= S;
-            SpriteRenderer sr = CreateSprite(name, parent, sprite, (min + max) * 0.5f, order, lit);
+            min = ToWorld(min);
+            max = ToWorld(max);
+            SpriteRenderer sr = CreateSprite(name, parent, sprite, (min + max) * 0.5f, order, lit, angle);
             Vector2 size = sprite.bounds.size;
-            sr.transform.localScale = new Vector3((max.x - min.x) / size.x, (max.y - min.y) / size.y, 1f);
+            Vector2 rect = max - min;
+            if (Mathf.Abs(Mathf.DeltaAngle(angle, 90f)) < 1f || Mathf.Abs(Mathf.DeltaAngle(angle, -90f)) < 1f)
+            {
+                rect = new Vector2(rect.y, rect.x);
+            }
+            sr.transform.localScale = new Vector3(rect.x / size.x, rect.y / size.y, 1f);
             if (layer >= 0)
             {
                 sr.gameObject.layer = layer;
@@ -414,8 +686,8 @@ namespace N89.EditorTools
         // Невидимое препятствие (часть предмета, о которую можно споткнуться)
         private static void Solid(Transform parent, string name, Vector2 min, Vector2 max, int layer)
         {
-            min *= S;
-            max *= S;
+            min = ToWorld(min);
+            max = ToWorld(max);
             var go = new GameObject(name) { layer = layer };
             go.transform.SetParent(parent);
             go.transform.position = (min + max) * 0.5f;

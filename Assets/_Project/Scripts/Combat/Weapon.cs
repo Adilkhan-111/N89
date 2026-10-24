@@ -62,6 +62,18 @@ namespace N89.Combat
                 Ammo--;
             }
 
+            Shoot(direction);
+            return true;
+        }
+
+        // Выстрел для катсцены: без кулдауна, магазина и блокировок
+        public void ForceFire(Vector2 direction)
+        {
+            Shoot(direction);
+        }
+
+        private void Shoot(Vector2 direction)
+        {
             float angle = 0f;
             for (int i = 0; i < Mathf.Max(1, _pellets); i++)
             {
@@ -79,7 +91,6 @@ namespace N89.Combat
             }
 
             Fired?.Invoke();
-            return true;
         }
     }
 }

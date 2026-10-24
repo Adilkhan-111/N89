@@ -262,5 +262,158 @@ namespace N89.EditorTools
             c.Circle(4.5f, 4.5f, 2f, new Color(0.4f, 0.4f, 0.45f));
             c.Outline(Outline);
         });
+
+        // Стрелка-указатель «куда идти»: жирный шеврон остриём вправо (+x)
+        public static Sprite WaypointArrow() => Create("waypoint_arrow", 20, 20, c =>
+        {
+            Color glow = new Color(0.3f, 1f, 1f, 0.45f);
+            c.Line(new Vector2(4f, 17f), new Vector2(15f, 10f), 5f, glow);
+            c.Line(new Vector2(4f, 3f), new Vector2(15f, 10f), 5f, glow);
+            c.Line(new Vector2(5f, 16f), new Vector2(14.5f, 10f), 3f, Neon);
+            c.Line(new Vector2(5f, 4f), new Vector2(14.5f, 10f), 3f, Neon);
+            c.Line(new Vector2(6f, 15f), new Vector2(13.5f, 10f), 1f, Color.white);
+            c.Line(new Vector2(6f, 5f), new Vector2(13.5f, 10f), 1f, Color.white);
+        });
+
+        // ---------------------------------------------------------------- Второй этаж и цель
+
+        private static readonly Color BossSuit = new Color(0.86f, 0.84f, 0.8f);
+        private static readonly Color BossSuitShade = new Color(0.62f, 0.6f, 0.58f);
+        private static readonly Color BossSkin = new Color(0.72f, 0.52f, 0.4f);
+        private static readonly Color BossHair = new Color(0.08f, 0.07f, 0.06f);
+        private static readonly Color Gold = new Color(1f, 0.8f, 0.2f);
+
+        // Главарь банды — цель миссии: белый пиджак, золотая цепь, зализанные чёрные волосы.
+        // Вид сверху, смотрит вправо (+x). Сидит: локти на подлокотниках, руки перед собой
+        public static Sprite TargetSitting() => Create("target_sitting", 32, 32, c =>
+        {
+            c.Line(new Vector2(12f, 23f), new Vector2(12f, 9f), 8f, BossSuit);
+            c.Line(new Vector2(9.5f, 23f), new Vector2(9.5f, 9f), 2f, BossSuitShade);
+            // Руки лежат перед собой, кисти сцеплены
+            c.Line(new Vector2(13f, 23.5f), new Vector2(21f, 19f), 2.6f, BossSuit);
+            c.Line(new Vector2(13f, 8.5f), new Vector2(21f, 13f), 2.6f, BossSuitShade);
+            c.Circle(22f, 16f, 2.6f, BossSkin);
+            // Цепь на груди
+            c.Line(new Vector2(15f, 20f), new Vector2(17f, 16f), 1f, Gold);
+            c.Line(new Vector2(17f, 16f), new Vector2(15f, 12f), 1f, Gold);
+            DrawBossHead(c, 12f);
+            c.Outline(Outline);
+        });
+
+        // Встал: руки подняты ладонями вперёд — просит не стрелять
+        public static Sprite TargetStanding() => Create("target_standing", 32, 32, c =>
+        {
+            c.Line(new Vector2(12f, 23f), new Vector2(12f, 9f), 8f, BossSuit);
+            c.Line(new Vector2(9.5f, 23f), new Vector2(9.5f, 9f), 2f, BossSuitShade);
+            c.Line(new Vector2(13f, 24f), new Vector2(22f, 26f), 2.6f, BossSuit);
+            c.Line(new Vector2(13f, 8f), new Vector2(22f, 6f), 2.6f, BossSuitShade);
+            c.Circle(24f, 26.5f, 2.2f, BossSkin);
+            c.Circle(24f, 5.5f, 2.2f, BossSkin);
+            c.Line(new Vector2(15f, 20f), new Vector2(17f, 16f), 1f, Gold);
+            c.Line(new Vector2(17f, 16f), new Vector2(15f, 12f), 1f, Gold);
+            DrawBossHead(c, 12f);
+            c.Outline(Outline);
+        });
+
+        // Убит: рухнул лицом на стол, руки раскинуты, голова — к дальнему краю (+x)
+        // Ноги (слева, -x) свисают со стола к креслу — поэтому спрайт шире, а тело сдвинуто вправо
+        public static Sprite TargetDead() => Create("target_dead", 64, 32, c =>
+        {
+            const float o = 16f;
+            // Ноги в белых брюках костюма, чёрные лакированные туфли; одна чуть согнута
+            Color shoe = new Color(0.05f, 0.04f, 0.04f);
+            c.Line(new Vector2(o + 11f, 19f), new Vector2(o - 3f, 21f), 4.2f, BossSuitShade);
+            c.Line(new Vector2(o - 3f, 21f), new Vector2(o - 11f, 24f), 3.8f, BossSuitShade);
+            c.Line(new Vector2(o + 11f, 13f), new Vector2(o - 12f, 10f), 4.2f, BossSuitShade);
+            c.Line(new Vector2(o + 10f, 19.5f), new Vector2(o - 3f, 21.5f), 1f, BossSuit);
+            c.Line(new Vector2(o + 10f, 13.5f), new Vector2(o - 11f, 10.5f), 1f, BossSuit);
+            c.Ellipse(o - 13f, 24.8f, 2.6f, 2f, shoe);
+            c.Ellipse(o - 14f, 9.6f, 2.6f, 2f, shoe);
+            c.Line(new Vector2(o + 10f, 16f), new Vector2(o + 28f, 16f), 9f, BossSuit);
+            c.Line(new Vector2(o + 10f, 12.5f), new Vector2(o + 28f, 12.5f), 2f, BossSuitShade);
+            // Раскинутые руки
+            c.Line(new Vector2(o + 26f, 20f), new Vector2(o + 34f, 28f), 2.6f, BossSuit);
+            c.Circle(o + 35f, 29f, 2f, BossSkin);
+            c.Line(new Vector2(o + 26f, 12f), new Vector2(o + 36f, 5f), 2.6f, BossSuitShade);
+            c.Circle(o + 37f, 4.5f, 2f, BossSkin);
+            // Выходное отверстие на спине — синяя кровь
+            c.Circle(o + 18f, 17f, 2.2f, new Color(0.12f, 0.35f, 0.95f));
+            c.Circle(o + 18.5f, 17.5f, 1f, new Color(0.03f, 0.1f, 0.5f));
+            // Затылок
+            c.Circle(o + 33f, 16f, 4.2f, BossHair);
+            c.Rect((int)o + 35, 18, (int)o + 36, 18, new Color(0.25f, 0.22f, 0.2f));
+            c.Line(new Vector2(o + 29f, 13f), new Vector2(o + 30f, 19f), 1f, Gold);
+            c.Outline(Outline);
+        });
+
+        private static void DrawBossHead(PixelCanvas c, float x)
+        {
+            c.Circle(x, 16f, 4.3f, BossHair);
+            c.Rect((int)x + 3, 14, (int)x + 4, 18, BossSkin);
+            // Блик зализанных волос
+            c.Line(new Vector2(x - 2.5f, 17.5f), new Vector2(x + 1.5f, 18.5f), 1f, new Color(0.3f, 0.28f, 0.26f));
+        }
+
+        // Кожаное офисное кресло, спинкой вниз (-y) — сидящий смотрит вверх, на стол
+        public static Sprite OfficeChair() => Create("office_chair", 24, 24, c =>
+        {
+            c.RoundRect(3, 5, 20, 21, 4, new Color(0.12f, 0.1f, 0.1f));
+            c.RoundRect(2, 1, 21, 7, 3, new Color(0.08f, 0.07f, 0.07f));
+            c.Rect(1, 9, 3, 19, new Color(0.18f, 0.16f, 0.16f));
+            c.Rect(20, 9, 22, 19, new Color(0.18f, 0.16f, 0.16f));
+            c.Outline(Outline);
+        });
+
+        // Стол главаря: тёмное дерево, монитор у дальнего (верхнего) края, телефон, деньги, пистолет
+        public static Sprite BossDesk() => Create("boss_desk", 150, 58, c =>
+        {
+            c.RoundRect(1, 1, 148, 56, 5, new Color(0.06f, 0.04f, 0.03f));
+            c.RoundRect(3, 3, 146, 54, 4, new Color(0.2f, 0.12f, 0.08f));
+            c.Rect(3, 51, 146, 52, Gold * 0.8f);
+            // Монитор экраном к креслу
+            c.Rect(52, 40, 98, 49, new Color(0.08f, 0.08f, 0.1f));
+            c.Rect(54, 41, 96, 43, new Color(0.3f, 1f, 0.6f));
+            c.Rect(70, 36, 80, 39, new Color(0.15f, 0.15f, 0.18f));
+            // Клавиатура
+            c.Rect(58, 20, 92, 27, new Color(0.12f, 0.12f, 0.15f));
+            for (int x = 60; x < 91; x += 3) c.Rect(x, 22, x + 1, 25, new Color(0.25f, 0.25f, 0.3f));
+            // Телефон
+            c.RoundRect(112, 28, 126, 46, 3, new Color(0.85f, 0.85f, 0.88f));
+            c.Rect(115, 32, 123, 41, new Color(0.15f, 0.15f, 0.18f));
+            // Деньги и пистолет
+            c.Rect(16, 30, 36, 40, new Color(0.25f, 0.55f, 0.3f));
+            c.Rect(18, 33, 38, 43, new Color(0.3f, 0.62f, 0.34f));
+            c.Rect(20, 12, 36, 15, Gun);
+            c.Rect(20, 8, 23, 12, Gun);
+            c.Outline(Outline);
+        });
+
+        // Шкаф с папками и книгами (тайлится), вид сверху
+        public static Sprite Shelf() => Create("shelf", 24, 20, c =>
+        {
+            c.Rect(0, 0, 23, 19, new Color(0.1f, 0.07f, 0.05f));
+            c.Rect(1, 1, 22, 18, new Color(0.22f, 0.14f, 0.09f));
+            Color[] spines = { new Color(0.55f, 0.12f, 0.15f), new Color(0.15f, 0.3f, 0.55f), new Color(0.8f, 0.7f, 0.3f), new Color(0.2f, 0.45f, 0.25f) };
+            for (int x = 2, i = 0; x < 21; x += 3, i++)
+            {
+                c.Rect(x, 3, x + 1, 16, spines[(i * 3 + x) % spines.Length]);
+            }
+        });
+
+        // Барная стойка в гостиной (вертикальная): столешница, бутылки, стаканы
+        public static Sprite BarCounter() => Create("bar_counter", 28, 96, c =>
+        {
+            c.RoundRect(1, 1, 26, 94, 3, new Color(0.05f, 0.04f, 0.06f));
+            c.RoundRect(3, 3, 24, 92, 2, new Color(0.18f, 0.1f, 0.2f));
+            c.Rect(22, 4, 23, 91, Magenta);
+            Color[] bottles = { new Color(0.3f, 0.8f, 0.4f), new Color(0.8f, 0.5f, 0.2f), new Color(0.6f, 0.85f, 1f), Red };
+            for (int i = 0; i < 6; i++)
+            {
+                int y = 10 + i * 14;
+                c.Circle(10f, y, 2.4f, bottles[i % bottles.Length]);
+                c.Circle(16f, y + 5, 1.6f, new Color(0.85f, 0.9f, 0.95f, 0.8f));
+            }
+            c.Outline(Outline);
+        });
     }
 }

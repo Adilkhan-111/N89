@@ -890,6 +890,9 @@ namespace N89.EditorTools
                 P(so, "_collider").objectReferenceValue = col;
                 SetArray(so, "_highlightRenderers", body);
                 P(so, "_shortCircuitFxPrefab").objectReferenceValue = electricFx;
+                // Преследуют только люди (охрана, бандиты): от замыкания они бьются в судорогах, дроны гибнут сразу
+                P(so, "_isHuman").boolValue = chases;
+                P(so, "_glitchMaterial").objectReferenceValue = s_unlit;
             });
 
             return SavePrefab(root, name);

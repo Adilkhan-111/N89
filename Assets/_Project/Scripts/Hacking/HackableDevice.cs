@@ -17,6 +17,12 @@ namespace N89.Hacking
         [SerializeField] private SpriteRenderer[] _highlightRenderers;
         [SerializeField] private Color _scanColor = new Color(1f, 0.85f, 0.25f);
         [SerializeField] private GameObject _shortCircuitFxPrefab;
+        [Tooltip("Человек с имплантами: «Короткое замыкание» не убивает, а оглушает — судороги с помехами (Malfunction), потом идёт к игроку")]
+        [SerializeField] private bool _isHuman;
+        [Tooltip("Сколько секунд (реального времени) длится оглушение")]
+        [SerializeField] private float _malfunctionTime = 2f;
+        [Tooltip("Материал для помех и разрядов (Sprite-Unlit-Default — светятся в темноте)")]
+        [SerializeField] private Material _glitchMaterial;
 
         private Color[] _baseColors;
         private float _lastHighlight;
@@ -65,7 +71,8 @@ namespace N89.Hacking
                     return door != null && !door.IsOpen;
                 case QuickhackEffect.ShortCircuit:
                     Health health = GetComponent<Health>();
-                    return health != null && !health.IsDead;
+                    Malfunction malfunction = GetComponent<Malfunction>();
+                    return health != null && !health.IsDead && (malfunction == null || !malfunction.IsActive);
                 default:
                     return true;
             }
@@ -96,7 +103,21 @@ namespace N89.Hacking
                     {
                         Instantiate(_shortCircuitFxPrefab, transform.position, Quaternion.identity);
                     }
-                    GetComponent<Health>()?.TakeDamage(hack.Damage);
+
+                    if (_isHuman && _highlightRenderers.Length > 0)
+                    {
+                        Malfunction malfunction = GetComponent<Malfunction>();
+                        if (malfunction == null)
+                        {
+                            malfunction = gameObject.AddComponent<Malfunction>();
+                        }
+
+                        malfunction.Begin(_malfunctionTime, _highlightRenderers[0], _glitchMaterial, _shortCircuitFxPrefab);
+                    }
+                    else
+                    {
+                        GetComponent<Health>()?.TakeDamage(hack.Damage);
+                    }
                     break;
             }
 
@@ -105,6 +126,13 @@ namespace N89.Hacking
 
         public void SetHighlight(bool scanning, bool hovered)
         {
+            // Во время судорог цветом тела управляют помехи
+            Malfunction malfunction = _isHuman ? GetComponent<Malfunction>() : null;
+            if (malfunction != null && malfunction.IsActive)
+            {
+                return;
+            }
+
             float pulse = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f);
             float amount = !scanning ? 0f : hovered ? 0.85f : 0.35f + 0.25f * pulse;
             // Вне сканирования не трогаем цвет каждый кадр, чтобы не перебивать вспышку урона

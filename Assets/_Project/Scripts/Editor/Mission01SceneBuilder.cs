@@ -15,7 +15,9 @@ using static N89.EditorTools.TutorialSceneBuilder;
 namespace N89.EditorTools
 {
     // Собирает миссию 1 — логово банды по схеме: голые стены и бандиты, интерьера пока нет.
-    // Схема переведена в юниты (1 юнит = 24 px схемы): здание 46 x 27, левый нижний угол — (0, 0).
+    // Координаты ниже — в юнитах схемы (1 юнит схемы = 24 px): здание 46 x 27, левый нижний угол — (0, 0).
+    // В мир они переводятся умножением на S, чтобы комнаты были тесными, как в Hotline Miami
+    // (персонажи и толщина стен не масштабируются — при смене S проверить проходы и посты у стен).
     // E1 — проём снизу слева (герой стартует перед ним), E2 — проём справа в коридоре. Вокруг здания — двор.
     // Стоящие бандиты — закорючки на схеме, патрульные — пунктирные петли (обходят по кругу).
     // Запуск: N89 > Build Mission 01 Scene.
@@ -24,9 +26,13 @@ namespace N89.EditorTools
         public const string SceneName = "Mission01";
         private const string ScenePath = "Assets/_Project/Scenes/" + SceneName + ".unity";
 
+        private const float S = 0.6f;
         private const float W = 46f;
         private const float H = 27f;
-        private const float PatrolSpeed = 1.6f;
+        private const float PatrolSpeed = 1.4f;
+
+        // Точка схемы -> мир
+        private static Vector2 V(float x, float y) => new Vector2(x, y) * S;
 
         private static Sprite s_wall;
 
@@ -68,7 +74,7 @@ namespace N89.EditorTools
             Health[] enemies = SpawnBandits(banditPrefab, enemiesRoot);
 
             Transform gameplay = new GameObject("Gameplay").transform;
-            Vector2 start = new Vector2(5.5f, -2.5f);
+            Vector2 start = V(5.5f, -2.5f);
             GameObject hero = Spawn(heroPrefab, gameplay, start);
             hero.transform.Find("Body").rotation = Quaternion.Euler(0f, 0f, 90f);
             hero.transform.Find("Legs").rotation = Quaternion.Euler(0f, 0f, 90f);
@@ -113,17 +119,17 @@ namespace N89.EditorTools
         {
             Transform walls = new GameObject("Walls").transform;
             walls.SetParent(parent);
-            float t = WallThickness * 0.5f;
+            float t = WallThickness * 0.5f / S;
 
-            Floor(parent, "Floor", SpriteFactory.ConcreteFloor(), Vector2.zero, new Vector2(W, H), -100);
+            Floor(parent, "Floor", SpriteFactory.ConcreteFloor(), Vector2.zero, V(W, H), -100);
 
-            // Внешние стены: E1 — проём снизу (x 4..7), E2 — проём справа в коридоре (y 16.2..18.5)
+            // Внешние стены: E1 — проём снизу (x 4..7), E2 — проём справа в коридоре (y 16..19)
             Wall(walls, "Outer_Bottom_W", -t, 0f, 4f, 0f);
             Wall(walls, "Outer_Bottom_E", 7f, 0f, W + t, 0f);
             Wall(walls, "Outer_Top", -t, H, W + t, H);
             Wall(walls, "Outer_Left", 0f, -t, 0f, H + t);
-            Wall(walls, "Outer_Right_S", W, -t, W, 16.2f);
-            Wall(walls, "Outer_Right_N", W, 18.5f, W, H + t);
+            Wall(walls, "Outer_Right_S", W, -t, W, 16f);
+            Wall(walls, "Outer_Right_N", W, 19f, W, H + t);
 
             // Верхние комнаты / коридор (y 20.25), проём в середине
             Wall(walls, "H1_W", 0f, 20.25f, 24.8f, 20.25f);
@@ -154,8 +160,8 @@ namespace N89.EditorTools
             Block(walls, "Rack_2", new Vector2(2.7f, 7.6f), new Vector2(3.9f, 14.9f));
             Block(walls, "Rack_3", new Vector2(5.4f, 7.6f), new Vector2(6.5f, 14.9f));
 
-            // Нижняя средняя комната: большой стол посередине
-            Block(walls, "Table", new Vector2(13.8f, 2.2f), new Vector2(24.3f, 6.25f));
+            // Нижняя средняя комната: большой стол посередине (вокруг него проходят патрульные)
+            Block(walls, "Table", new Vector2(13.8f, 2.6f), new Vector2(24.3f, 5.8f));
         }
 
         // Двор вокруг здания: асфальт и забор — между E1 и E2 можно пройти снаружи
@@ -165,8 +171,8 @@ namespace N89.EditorTools
             fence.SetParent(parent);
             Vector2 min = new Vector2(-4f, -4.5f);
             Vector2 max = new Vector2(W + 4f, H + 4f);
-            float t = WallThickness * 0.5f;
-            Floor(fence, "Asphalt", SpriteFactory.Asphalt(), min, max, -101);
+            float t = WallThickness * 0.5f / S;
+            Floor(fence, "Asphalt", SpriteFactory.Asphalt(), min * S, max * S, -101);
             Wall(fence, "Fence_S", min.x - t, min.y, max.x + t, min.y);
             Wall(fence, "Fence_N", min.x - t, max.y, max.x + t, max.y);
             Wall(fence, "Fence_W", min.x, min.y - t, min.x, max.y + t);
@@ -181,35 +187,37 @@ namespace N89.EditorTools
 
             void Stand(Vector2 position, float facing)
             {
-                bandits.Add(SpawnEnemy(prefab, parent, position, facing, Vector2.zero, 0f).GetComponent<Health>());
+                bandits.Add(SpawnEnemy(prefab, parent, position * S, facing, Vector2.zero, 0f).GetComponent<Health>());
             }
 
             void Loop(Vector2 position, float facing, params Vector2[] perimeter)
             {
-                bandits.Add(SpawnPerimeter(prefab, parent, position, facing, PatrolSpeed, perimeter).GetComponent<Health>());
+                for (int i = 0; i < perimeter.Length; i++)
+                    perimeter[i] *= S;
+                bandits.Add(SpawnPerimeter(prefab, parent, position * S, facing, PatrolSpeed, perimeter).GetComponent<Health>());
             }
 
             // Вход E1: двое смотрят вглубь комнаты — к ним можно подойти со спины
-            Stand(new Vector2(1.9f, 1.2f), 60f);
-            Stand(new Vector2(8.5f, 1.2f), 120f);
+            Stand(new Vector2(1.9f, 1.5f), 60f);
+            Stand(new Vector2(8.5f, 1.5f), 120f);
 
             // Лестничная, вторая и правая верхние комнаты
-            Stand(new Vector2(7.5f, 25.9f), -90f);
-            Stand(new Vector2(10.6f, 24.7f), -45f);
-            Stand(new Vector2(30.6f, 21.4f), 180f);
-            Stand(new Vector2(43.1f, 21.6f), 180f);
+            Stand(new Vector2(7.5f, 25.4f), -90f);
+            Stand(new Vector2(11f, 24.7f), -45f);
+            Stand(new Vector2(30.6f, 22f), 180f);
+            Stand(new Vector2(43.1f, 22f), 180f);
 
             // Коридор: две петли — левая и правая половины
-            Loop(new Vector2(1f, 19.4f), 0f, new Vector2(23.4f, 0f), new Vector2(23.4f, -3f), new Vector2(0f, -3f));
-            Loop(new Vector2(44.8f, 19.3f), 180f, new Vector2(-15.5f, 0f), new Vector2(-15.5f, -3f), new Vector2(0f, -3f));
+            Loop(new Vector2(1.5f, 18.9f), 0f, new Vector2(23.4f, 0f), new Vector2(23.4f, -2.5f), new Vector2(0f, -2.5f));
+            Loop(new Vector2(44.3f, 18.9f), 180f, new Vector2(-15.5f, 0f), new Vector2(-15.5f, -2.5f), new Vector2(0f, -2.5f));
 
             // Большой зал: двое на одной петле, с противоположных углов
-            Loop(new Vector2(11.3f, 14.1f), 0f, new Vector2(33f, 0f), new Vector2(33f, -5f), new Vector2(0f, -5f));
-            Loop(new Vector2(44.3f, 9.1f), 180f, new Vector2(-33f, 0f), new Vector2(-33f, 5f), new Vector2(0f, 5f));
+            Loop(new Vector2(11.6f, 13.7f), 0f, new Vector2(32.7f, 0f), new Vector2(32.7f, -4.1f), new Vector2(0f, -4.1f));
+            Loop(new Vector2(44.3f, 9.6f), 180f, new Vector2(-32.7f, 0f), new Vector2(-32.7f, 4.1f), new Vector2(0f, 4.1f));
 
             // Нижняя средняя комната: двое обходят стол, у стола — часовой лицом к стене
-            Loop(new Vector2(28.6f, 7.3f), 180f, new Vector2(-17.4f, 0f), new Vector2(-17.4f, -6.4f), new Vector2(0f, -6.4f));
-            Loop(new Vector2(11.2f, 0.9f), 0f, new Vector2(17.4f, 0f), new Vector2(17.4f, 6.4f), new Vector2(0f, 6.4f));
+            Loop(new Vector2(28.2f, 6.75f), 180f, new Vector2(-16.6f, 0f), new Vector2(-16.6f, -5.17f), new Vector2(0f, -5.17f));
+            Loop(new Vector2(11.6f, 1.58f), 0f, new Vector2(16.6f, 0f), new Vector2(16.6f, 5.17f), new Vector2(0f, 5.17f));
             Stand(new Vector2(25.4f, 4.2f), 0f);
 
             // Нижняя правая комната: четверо, смотрят на вход сверху справа
@@ -238,33 +246,41 @@ namespace N89.EditorTools
             Color magenta = new Color(1f, 0.25f, 0.75f);
             Color cyan = new Color(0.3f, 1f, 1f);
 
-            AddLight(lights, "Stairs", new Vector2(5.5f, 24f), warm, 5f, 0.8f);
-            AddLight(lights, "Room_Top", new Vector2(20.8f, 23.6f), warm, 9f, 0.7f);
-            AddLight(lights, "Room_TopRight", new Vector2(39f, 23.6f), toxic, 7f, 0.6f);
-            Pulsing(AddLight(lights, "Corridor_W", new Vector2(12f, 17.6f), red, 8f, 0.6f), 1.2f, 0.35f, 0.7f);
-            Pulsing(AddLight(lights, "Corridor_E", new Vector2(37f, 17.6f), red, 8f, 0.6f), 1.2f, 0.35f, 0.7f);
-            AddLight(lights, "Room_Left", new Vector2(5f, 7.5f), warm, 7f, 0.7f);
-            Pulsing(AddLight(lights, "Hall", new Vector2(27f, 11.6f), magenta, 12f, 0.6f), 0.8f, 0.45f, 0.7f);
-            AddLight(lights, "Room_Table", new Vector2(20f, 4.2f), warm, 8f, 0.8f);
-            AddLight(lights, "Room_BottomRight", new Vector2(37.7f, 4.1f), toxic, 7f, 0.7f);
+            Lamp(lights, "Stairs", 5.5f, 24f, warm, 5f, 0.8f);
+            Lamp(lights, "Room_Top", 20.8f, 23.6f, warm, 9f, 0.7f);
+            Lamp(lights, "Room_TopRight", 39f, 23.6f, toxic, 7f, 0.6f);
+            Pulsing(Lamp(lights, "Corridor_W", 12f, 17.6f, red, 8f, 0.6f), 1.2f, 0.35f, 0.7f);
+            Pulsing(Lamp(lights, "Corridor_E", 37f, 17.6f, red, 8f, 0.6f), 1.2f, 0.35f, 0.7f);
+            Lamp(lights, "Room_Left", 5f, 7.5f, warm, 7f, 0.7f);
+            Pulsing(Lamp(lights, "Hall", 27f, 11.6f, magenta, 12f, 0.6f), 0.8f, 0.45f, 0.7f);
+            Lamp(lights, "Room_Table", 20f, 4.2f, warm, 8f, 0.8f);
+            Lamp(lights, "Room_BottomRight", 37.7f, 4.1f, toxic, 7f, 0.7f);
 
             // Фонари во дворе у входов
-            AddLight(lights, "Street_E1", new Vector2(5.5f, -2.8f), cyan, 5f, 0.6f);
-            AddLight(lights, "Street_E2", new Vector2(48f, 17.3f), cyan, 5f, 0.6f);
-            AddLight(lights, "Street_NW", new Vector2(-2f, 29f), magenta, 6f, 0.4f);
-            AddLight(lights, "Street_SE", new Vector2(48f, -2.5f), magenta, 6f, 0.4f);
+            Lamp(lights, "Street_E1", 5.5f, -2.8f, cyan, 5f, 0.6f);
+            Lamp(lights, "Street_E2", 48f, 17.5f, cyan, 5f, 0.6f);
+            Lamp(lights, "Street_NW", -2f, 29f, magenta, 6f, 0.4f);
+            Lamp(lights, "Street_SE", 48f, -2.5f, magenta, 6f, 0.4f);
         }
 
         // ---------------------------------------------------------------- Помощники
 
+        // Помощники ниже принимают координаты схемы и сами переводят их в мир
+        private static Light2D Lamp(Transform parent, string name, float x, float y, Color color, float radius, float intensity)
+        {
+            return AddLight(parent, name, V(x, y), color, radius * S, intensity);
+        }
+
         private static void Wall(Transform parent, string name, float x1, float y1, float x2, float y2)
         {
-            CreateWall(parent, name, new Vector2(x1, y1), new Vector2(x2, y2), s_wall, WallLayer, 5);
+            CreateWall(parent, name, V(x1, y1), V(x2, y2), s_wall, WallLayer, 5);
         }
 
         // Глухой блок (стеллаж, лестница, стол): плитка стены по всей площади и коллайдер
         private static void Block(Transform parent, string name, Vector2 min, Vector2 max)
         {
+            min *= S;
+            max *= S;
             SpriteRenderer sr = CreateSprite(name, parent, s_wall, (min + max) * 0.5f, 5);
             sr.drawMode = SpriteDrawMode.Tiled;
             sr.size = max - min;

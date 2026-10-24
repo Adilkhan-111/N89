@@ -8,12 +8,12 @@ namespace N89.Enemies
     // Враг корпорации Е (охранник или боевой дрон): патрулирует, замечает игрока
     // (дальность + угол обзора + линия видимости), после короткой реакции разворачивается и стреляет.
     // Слышит выстрелы рядом.
-    // Охранник преследует: идёт туда, где видел/слышал игрока, осматривается, потом по своему следу
-    // возвращается на пост. Дрон с поста не уходит — облетает свой периметр и на углах сканирует.
+    // Охранник преследует: идёт туда, где видел/слышал игрока (в обход стен, по NavGrid), осматривается,
+    // потом возвращается на пост. Дрон с поста не уходит — облетает свой периметр и на углах сканирует.
     public class EnemyAI : MonoBehaviour
     {
         private const float ArriveDistance = 0.25f;
-        private const float TrailStep = 0.6f;
+        private const float RepathInterval = 0.5f;
 
         [SerializeField] private Transform _body;
         [SerializeField] private Weapon _weapon;
@@ -31,7 +31,7 @@ namespace N89.Enemies
         [Header("Chase")]
         [Tooltip("Преследовать игрока. Выключено — стоит/летает на своём посту и стреляет оттуда")]
         [SerializeField] private bool _chases = true;
-        [SerializeField] private float _chaseSpeed = 3.2f;
+        [SerializeField] private float _chaseSpeed = 6f;
         [Tooltip("Если видит игрока — подходит не ближе этого")]
         [SerializeField] private float _stopDistance = 3f;
         [SerializeField] private float _bodyRadius = 0.38f;
@@ -53,7 +53,12 @@ namespace N89.Enemies
         [Tooltip("Насколько поворачивает голову, осматриваясь")]
         [SerializeField] private float _lookAroundAngle = 70f;
 
-        private readonly List<Vector2> _trail = new List<Vector2>();
+        private readonly List<Vector2> _path = new List<Vector2>();
+        private Vector2 _pathGoal;
+        private float _repathAt;
+        private Vector2 _steer;
+        private bool _leftPost;
+        private Vector2 _post;
         private Transform _target;
         private Health _targetHealth;
         private Vector2[] _route;
@@ -98,6 +103,15 @@ namespace N89.Enemies
             SetTarget(player);
             _reactionTime = reactionTime;
             Alert(player.transform.position);
+        }
+
+        // Узнал, где игрок (например, очнулся после взлома), — идёт туда
+        public void Provoke()
+        {
+            if (_target != null && !_targetHealth.IsDead)
+            {
+                Alert(_target.position);
+            }
         }
 
         private void BuildRoute(Vector2 start)
@@ -171,7 +185,7 @@ namespace N89.Enemies
             {
                 Combat(sees);
             }
-            else if (_trail.Count > 0)
+            else if (_leftPost)
             {
                 ReturnToPost();
             }
@@ -200,15 +214,20 @@ namespace N89.Enemies
             float distance = Vector2.Distance(pos, _lastSeen);
             float keep = sees ? _stopDistance : ArriveDistance;
 
-            bool aimed = FaceTowards(_lastSeen);
-            Shoot(sees, aimed);
-
             if (distance > keep)
             {
+                if (!_leftPost)
+                {
+                    _leftPost = true;
+                    _post = pos;
+                }
+
                 // Стреляет на ходу, но пока целится — идёт медленнее
                 float speed = sees ? _chaseSpeed * 0.6f : _chaseSpeed;
-                float moved = MoveTowards(_lastSeen, speed);
-                RecordTrail(pos);
+                float moved = Navigate(_lastSeen, speed);
+
+                // Видит — целится в игрока, не видит — смотрит, куда идёт (за угол)
+                Shoot(sees, FaceTowards(sees ? _lastSeen : _steer));
 
                 // Упёрся в стену (дверь закрылась и т.п.) — дальше не пройти, ищет отсюда
                 _stuckTime = moved < speed * Time.deltaTime * 0.2f ? _stuckTime + Time.deltaTime : 0f;
@@ -217,9 +236,13 @@ namespace N89.Enemies
                     StartSearching();
                 }
             }
-            else if (!sees)
+            else
             {
-                StartSearching();
+                Shoot(sees, FaceTowards(_lastSeen));
+                if (!sees)
+                {
+                    StartSearching();
+                }
             }
         }
 
@@ -237,22 +260,18 @@ namespace N89.Enemies
             _lookBase = _body.eulerAngles.z;
         }
 
+        // Возвращается туда, откуда начал преследование, тоже в обход стен
         private void ReturnToPost()
         {
-            Vector2 point = _trail[_trail.Count - 1];
-            MoveTowards(point, _patrolSpeed > 0f ? Mathf.Max(_patrolSpeed, 1.5f) : 1.5f);
-            FaceMovement(point);
-            if (Vector2.Distance(transform.position, point) < ArriveDistance)
+            float speed = Mathf.Max(_patrolSpeed, 1.5f);
+            float moved = Navigate(_post, speed);
+            FaceMovement(_steer);
+            _stuckTime = moved < speed * Time.deltaTime * 0.2f ? _stuckTime + Time.deltaTime : 0f;
+            if (Vector2.Distance(transform.position, _post) < ArriveDistance || _stuckTime > 3f)
             {
-                _trail.RemoveAt(_trail.Count - 1);
-            }
-        }
-
-        private void RecordTrail(Vector2 from)
-        {
-            if (_trail.Count == 0 || Vector2.Distance(_trail[_trail.Count - 1], from) > TrailStep)
-            {
-                _trail.Add(from);
+                _leftPost = false;
+                _stuckTime = 0f;
+                _path.Clear();
             }
         }
 
@@ -318,8 +337,8 @@ namespace N89.Enemies
             }
 
             Vector2 point = _route[_routeIndex];
-            MoveTowards(point, _patrolSpeed);
-            FaceMovement(point);
+            Navigate(point, _patrolSpeed);
+            FaceMovement(_steer);
             if (Vector2.Distance(transform.position, point) >= ArriveDistance)
             {
                 return;
@@ -339,6 +358,43 @@ namespace N89.Enemies
                 if (_routeIndex + _routeStep < 0 || _routeIndex + _routeStep >= _route.Length) _routeStep = -_routeStep;
                 _routeIndex += _routeStep;
             }
+        }
+
+        // Идёт к точке: напрямую, если путь свободен, иначе по пути из NavGrid (пересчёт раз в полсекунды
+        // или когда цель сдвинулась). Возвращает, сколько реально прошёл; _steer — куда шагает сейчас
+        private float Navigate(Vector2 goal, float speed)
+        {
+            Vector2 pos = transform.position;
+            if (IsClear(pos, goal))
+            {
+                _path.Clear();
+                _steer = goal;
+                return MoveTowards(goal, speed);
+            }
+
+            if (_path.Count == 0 || (goal - _pathGoal).sqrMagnitude > 0.25f || Time.time >= _repathAt)
+            {
+                NavGrid.FindPath(pos, goal, _bodyRadius, _moveBlockers, _path);
+                _pathGoal = goal;
+                _repathAt = Time.time + RepathInterval;
+            }
+
+            // Срезает углы: дошёл до точки или следующая уже видна — текущую пропускает
+            while (_path.Count > 1 && ((_path[0] - pos).sqrMagnitude < ArriveDistance * ArriveDistance || IsClear(pos, _path[1])))
+            {
+                _path.RemoveAt(0);
+            }
+
+            // Пути нет — идёт напрямую (упрётся — сработает «застрял»)
+            _steer = _path.Count > 0 ? _path[0] : goal;
+            return MoveTowards(_steer, speed);
+        }
+
+        private bool IsClear(Vector2 from, Vector2 to)
+        {
+            Vector2 delta = to - from;
+            float length = delta.magnitude;
+            return length < 0.001f || !Physics2D.CircleCast(from, _bodyRadius, delta / length, length, _moveBlockers);
         }
 
         // Движение со скольжением вдоль стен. Возвращает, сколько реально прошёл

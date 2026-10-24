@@ -293,6 +293,9 @@ MonoBehaviour:
   - {fileID: 4529921115713540295}
   _scanColor: {r: 1, g: 0.85, b: 0.25, a: 1}
   _shortCircuitFxPrefab: {fileID: 7872353404572959113, guid: 968f8be9ffcae8e4788e8507239422b2, type: 3}
+  _isHuman: 0
+  _malfunctionTime: 2
+  _glitchMaterial: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
 --- !u!1 &7440777119574318480
 GameObject:
   m_ObjectHideFlags: 0

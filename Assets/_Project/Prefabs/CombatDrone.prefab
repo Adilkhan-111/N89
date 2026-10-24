@@ -229,6 +229,8 @@ MonoBehaviour:
   _muzzle: {fileID: 6014757808294405979}
   _cooldown: 0.7
   _spreadDegrees: 4
+  _pellets: 1
+  _range: 0
   _hitMask:
     serializedVersion: 2
     m_Bits: 448
@@ -341,7 +343,7 @@ MonoBehaviour:
   m_Light2DProvider:
     rid: -2
   m_SelectionSources:
-    rid: 2931020375141909150
+    rid: 2931020375141909219
   m_FalloffIntensity: 0.6
   m_Color: {r: 1, g: 0.45, b: 0.15, a: 1}
   m_Intensity: 0.6
@@ -387,7 +389,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 2931020375141909150
+    - rid: 2931020375141909219
       type: {class: Light2DProviderSources, ns: UnityEngine.Rendering.Universal, asm: Unity.RenderPipelines.Universal.2D.Runtime}
       data:
         m_SelectedHashCode: 3

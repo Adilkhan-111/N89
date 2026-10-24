@@ -10,7 +10,8 @@ namespace N89.Interlude
 {
     // Интерлюдия перед миссией 1: квартира героя (кличка — Рэй). Он спит на диване, ворочается,
     // просыпается, садится и встаёт — дальше игрок свободно ходит по квартире.
-    // Цель — зайти в ванную; там босс присылает брифинг в мессенджер. Потом цель — арсенал.
+    // Цель — зайти в ванную; там босс присылает брифинг в мессенджер. Потом цель — арсенал:
+    // у витрины открывается выбор оружия и импланта на миссию.
     // Продолжение — дальше по сценарию.
     public class InterludeDirector : MonoBehaviour
     {
@@ -35,6 +36,11 @@ namespace N89.Interlude
         [SerializeField] private string _bathroomObjective = "Зайди в ванную";
         [SerializeField] private string _arsenalObjective = "Иди в арсенал";
         [SerializeField] private TriggerZone _arsenalZone;
+
+        [Header("Арсенал")]
+        [SerializeField] private ArsenalPanel _arsenal;
+        [Tooltip("Перед какой миссией эта интерлюдия: от номера зависит доступный имплант")]
+        [SerializeField] private int _mission = 1;
 
         [Header("Брифинг от босса")]
         [SerializeField] private TriggerZone _bathroomZone;
@@ -126,8 +132,27 @@ namespace N89.Interlude
 
             _objective.Set(_arsenalObjective);
             yield return new WaitUntil(() => _arsenalZone.PlayerInside);
+            _objective.Set(string.Empty);
+            yield return ChooseLoadout(rb);
 
-            // Дальше — арсенал (будет описано позже)
+            // Дальше — продолжение интерлюдии (будет описано позже)
+        }
+
+        // Выбор оружия и импланта на миссию; выбор сохраняется в Loadout
+        private IEnumerator ChooseLoadout(Rigidbody2D rb)
+        {
+            _hero.CanMove = false;
+            _hero.CanAim = false;
+            rb.linearVelocity = Vector2.zero;
+            _crosshair.SetActive(false);
+            Cursor.visible = true;
+
+            yield return _arsenal.Show(_mission);
+
+            Cursor.visible = false;
+            _hero.CanMove = true;
+            _hero.CanAim = true;
+            _crosshair.SetActive(true);
         }
 
         // Босс пишет в мессенджер: панель закрывает зал, камера сдвигается, чтобы ванная была справа.

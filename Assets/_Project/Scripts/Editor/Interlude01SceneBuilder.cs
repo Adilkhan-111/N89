@@ -1,3 +1,5 @@
+using N89.Combat;
+using N89.Implants;
 using N89.Interlude;
 using N89.Player;
 using N89.UI;
@@ -8,6 +10,8 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using Button = UnityEngine.UI.Button;
+using Graphic = UnityEngine.UI.Graphic;
 using Image = UnityEngine.UI.Image;
 using LayoutElement = UnityEngine.UI.LayoutElement;
 using Outline = UnityEngine.UI.Outline;
@@ -107,6 +111,7 @@ namespace N89.EditorTools
             ObjectivePanel objective = BuildObjective(canvasRect, mono);
             BuildLetterbox(canvasRect, out RectTransform letterboxTop, out RectTransform letterboxBottom);
             MessengerPanel messenger = BuildMessenger(canvasRect, mono);
+            ArsenalPanel arsenal = BuildArsenal(canvasRect, mono, CreateWeapons(), CreateImplants());
             Crosshair crosshair = BuildCrosshair(canvasRect, null, null);
             BuildHint(canvasRect, mono, "WASD — ходьба    SHIFT — осмотреться    ESC — меню");
             ScreenFader fader = BuildFader(canvasRect, mono, new Color(1f, 0.85f, 0.97f));
@@ -130,6 +135,7 @@ namespace N89.EditorTools
                 P(so, "_messenger").objectReferenceValue = messenger;
                 P(so, "_messageCamPoint").objectReferenceValue = messageCamPoint;
                 P(so, "_arsenalZone").objectReferenceValue = arsenalZone;
+                P(so, "_arsenal").objectReferenceValue = arsenal;
                 P(so, "_letterboxTop").objectReferenceValue = letterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = letterboxBottom;
             });
@@ -400,6 +406,308 @@ namespace N89.EditorTools
             bubble.gameObject.SetActive(false);
             attachment.gameObject.SetActive(false);
             return messenger;
+        }
+
+        // ---------------------------------------------------------------- Арсенал
+
+        private const string WeaponsDir = "Assets/_Project/ScriptableObjects/Weapons";
+        private const string ImplantsDir = "Assets/_Project/ScriptableObjects/Implants";
+
+        private static WeaponData[] CreateWeapons()
+        {
+            MainMenuSceneBuilder.EnsureFolder(WeaponsDir);
+            return new[]
+            {
+                CreateWeapon("Smg", "КИБЕР-ПП", ArtOr("Weapons/weapon_smg", SpriteFactory.IconSmg), 0.07f, 7f, 1, 14f, new[] { 5, 2, 2, 2 },
+                    "Компактный пистолет-пулемёт с умным спуском. Стреляет быстрее всех и почти не дёргается в руках, " +
+                    "но пули разлетаются веером и быстро теряют силу. Для тех, кто врывается в комнату первым."),
+                CreateWeapon("Rifle", "АВТОМАТ", ArtOr("Weapons/weapon_rifle", SpriteFactory.IconRifle), 0.13f, 2.5f, 1, 30f, new[] { 3, 3, 4, 5 },
+                    "Штурмовая винтовка корпоративного образца. Ровная, точная очередь на любой дистанции. " +
+                    "Золотая середина: не подведёт ни в узком коридоре, ни в большом зале."),
+                CreateWeapon("Shotgun", "ДРОБОВИК", ArtOr("Weapons/weapon_shotgun", SpriteFactory.IconShotgun), 0.7f, 14f, 8, 8f, new[] { 1, 5, 1, 1 },
+                    "Помповое ружьё. Один выстрел — веер из восьми дробин, который сносит всех вблизи. " +
+                    "Между выстрелами — пауза на перезарядку, а издалека дробь почти бесполезна."),
+            };
+        }
+
+        private static ImplantData[] CreateImplants()
+        {
+            MainMenuSceneBuilder.EnsureFolder(ImplantsDir);
+            const string key = "<color=#FFE04D>";
+            return new[]
+            {
+                CreateImplant("GorillaArms", "РУКИ ГОРИЛЛЫ", ArtOr("Implants/implant_gorilla_arms", SpriteFactory.IconGorillaArms), 1,
+                    "Кибернетические руки с гидравлическим приводом.\n\n" +
+                    $"{key}[ПКМ] — РЫВОК.</color> Короткий бросок вперёд с ударом в конце. Удар дробит цель и отшвыривает её далеко назад.\n\n" +
+                    $"{key}[Зажать ПКМ] — БЛОК.</color> Руки закрывают тебя от пуль. Блок держит 3 попадания — шкала над героем " +
+                    "показывает запас. После третьего блок ломается и восстанавливается 7 секунд."),
+                CreateImplant("Mission2Implant", "ЗАСЕКРЕЧЕНО", ArtOr("Implants/implant_mission2", () => SpriteFactory.IconLockedImplant("implant_mission2")), 2,
+                    "Данные об импланте засекречены. Станет доступен перед миссией 2."),
+                CreateImplant("Mission3Implant", "ЗАСЕКРЕЧЕНО", ArtOr("Implants/implant_mission3", () => SpriteFactory.IconLockedImplant("implant_mission3")), 3,
+                    "Данные об импланте засекречены. Станет доступен перед миссией 3."),
+            };
+        }
+
+        // Импортированный арт важнее временного: если PNG лежит в Art/Sprites/<path>.png — берём его,
+        // иначе рисуем заглушку кодом
+        private static Sprite ArtOr(string importedPath, System.Func<Sprite> placeholder)
+        {
+            var sprite = AssetDatabase.LoadAssetAtPath<Sprite>($"Assets/_Project/Art/Sprites/{importedPath}.png");
+            return sprite != null ? sprite : placeholder();
+        }
+
+        // У уже созданного ассета меняем только иконку-заглушку (из Generated) — иконку, поставленную вручную, не трогаем
+        private static void UpdatePlaceholderIcon(Object asset, Sprite current, Sprite icon)
+        {
+            if (current != null && !AssetDatabase.GetAssetPath(current).Contains("/Generated/")) return;
+            if (current == icon) return;
+            Configure(asset, so => P(so, "_icon").objectReferenceValue = icon);
+            EditorUtility.SetDirty(asset);
+        }
+
+        // Ассет создаётся один раз — дальше значения тюнят в инспекторе (как данные взломов)
+        private static WeaponData CreateWeapon(string fileName, string displayName, Sprite icon, float cooldown, float spread,
+            int pellets, float range, int[] ratings, string description)
+        {
+            string path = $"{WeaponsDir}/{fileName}.asset";
+            var weapon = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
+            if (weapon != null)
+            {
+                UpdatePlaceholderIcon(weapon, weapon.Icon, icon);
+                return weapon;
+            }
+
+            weapon = ScriptableObject.CreateInstance<WeaponData>();
+            AssetDatabase.CreateAsset(weapon, path);
+            Configure(weapon, so =>
+            {
+                P(so, "_displayName").stringValue = displayName;
+                P(so, "_description").stringValue = description;
+                P(so, "_icon").objectReferenceValue = icon;
+                P(so, "_cooldown").floatValue = cooldown;
+                P(so, "_spreadDegrees").floatValue = spread;
+                P(so, "_pellets").intValue = pellets;
+                P(so, "_range").floatValue = range;
+                P(so, "_fireRateRating").intValue = ratings[0];
+                P(so, "_powerRating").intValue = ratings[1];
+                P(so, "_accuracyRating").intValue = ratings[2];
+                P(so, "_rangeRating").intValue = ratings[3];
+            });
+            return weapon;
+        }
+
+        private static ImplantData CreateImplant(string fileName, string displayName, Sprite icon, int mission, string description)
+        {
+            string path = $"{ImplantsDir}/{fileName}.asset";
+            var implant = AssetDatabase.LoadAssetAtPath<ImplantData>(path);
+            if (implant != null)
+            {
+                UpdatePlaceholderIcon(implant, implant.Icon, icon);
+                return implant;
+            }
+
+            implant = ScriptableObject.CreateInstance<ImplantData>();
+            AssetDatabase.CreateAsset(implant, path);
+            Configure(implant, so =>
+            {
+                P(so, "_displayName").stringValue = displayName;
+                P(so, "_description").stringValue = description;
+                P(so, "_icon").objectReferenceValue = icon;
+                P(so, "_mission").intValue = mission;
+            });
+            return implant;
+        }
+
+        // Экран арсенала: полупрозрачный фон, два барабана с "рыбьим глазом" по центру,
+        // слева описание оружия, справа — импланта, внизу ENTER
+        private static ArsenalPanel BuildArsenal(RectTransform canvasRect, TMP_FontAsset mono, WeaponData[] weapons, ImplantData[] implants)
+        {
+            Color red = new Color(1f, 0.33f, 0.33f);
+            Color yellow = new Color(0.98f, 0.86f, 0.38f);
+            Color cyan = new Color(0.3f, 1f, 1f);
+            Vector2 center = new Vector2(0.5f, 0.5f);
+
+            RectTransform root = MainMenuSceneBuilder.CreateRect("Arsenal", canvasRect);
+            MainMenuSceneBuilder.Stretch(root);
+            CanvasGroup group = Group(root.gameObject, 0f);
+            MainMenuSceneBuilder.Stretch(Img("Dim", root, new Color(0.02f, 0f, 0.05f, 0.62f)).rectTransform);
+
+            TextMeshProUGUI title = Text("Title", root, mono, "АРСЕНАЛ", 40f, yellow, TextAlignmentOptions.Center);
+            Anchor(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(1000f, 56f));
+            Anchor(Img("TitleLine", root, red).rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -100f), new Vector2(1500f, 2f));
+
+            DrumSelector weaponDrum = BuildDrum(root, mono, "WeaponDrum", new Vector2(-200f, 20f), weapons.Length,
+                out Button weaponUp, out Button weaponDown);
+            DrumSelector implantDrum = BuildDrum(root, mono, "ImplantDrum", new Vector2(200f, 20f), implants.Length,
+                out Button implantUp, out Button implantDown);
+
+            // Описание оружия (слева) с полосками характеристик
+            RectTransform weaponPanel = DescriptionPanel(root, "WeaponInfo", new Vector2(-660f, 20f), red);
+            PanelText(weaponPanel, mono, "Header", "ОРУЖИЕ", 18f, red, new Vector2(30f, -24f), 30f);
+            TextMeshProUGUI weaponName = PanelText(weaponPanel, mono, "Name", string.Empty, 36f, yellow, new Vector2(30f, -56f), 50f);
+            Anchor(Img("Line", weaponPanel, red).rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -116f), new Vector2(420f, 1f));
+            TextMeshProUGUI weaponDescription = PanelText(weaponPanel, mono, "Description", string.Empty, 22f, Color.white, new Vector2(30f, -134f), 300f);
+            var statLabels = new TextMeshProUGUI[4];
+            var statSegments = new Image[20];
+            for (int row = 0; row < 4; row++)
+            {
+                float y = -470f - row * 44f;
+                statLabels[row] = PanelText(weaponPanel, mono, $"Stat{row}", string.Empty, 18f, new Color(0.85f, 0.85f, 0.9f), new Vector2(30f, y), 30f);
+                for (int i = 0; i < 5; i++)
+                {
+                    Image segment = Img($"Seg{row}_{i}", weaponPanel, cyan);
+                    Anchor(segment.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(270f + i * 36f, y - 8f), new Vector2(30f, 14f));
+                    statSegments[row * 5 + i] = segment;
+                }
+            }
+
+            // Описание импланта (справа)
+            RectTransform implantPanel = DescriptionPanel(root, "ImplantInfo", new Vector2(660f, 20f), cyan);
+            PanelText(implantPanel, mono, "Header", "КИБЕРИМПЛАНТ", 18f, cyan, new Vector2(30f, -24f), 30f);
+            TextMeshProUGUI implantName = PanelText(implantPanel, mono, "Name", string.Empty, 36f, yellow, new Vector2(30f, -56f), 50f);
+            TextMeshProUGUI implantStatus = PanelText(implantPanel, mono, "Status", string.Empty, 18f, cyan, new Vector2(30f, -108f), 28f);
+            Anchor(Img("Line", implantPanel, cyan).rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(30f, -142f), new Vector2(420f, 1f));
+            TextMeshProUGUI implantDescription = PanelText(implantPanel, mono, "Description", string.Empty, 21f, Color.white, new Vector2(30f, -160f), 520f);
+
+            // Линии от панелей к барабанам, как на схеме
+            ConnectorLine(root, new Vector2(-420f, 300f), new Vector2(-335f, 200f), red);
+            ConnectorLine(root, new Vector2(-420f, -260f), new Vector2(-335f, -160f), red);
+            ConnectorLine(root, new Vector2(420f, 300f), new Vector2(335f, 200f), cyan);
+            ConnectorLine(root, new Vector2(420f, -260f), new Vector2(335f, -160f), cyan);
+
+            // ENTER, предупреждение и подсказка по управлению — от низа экрана, чтобы не наезжать при любом соотношении сторон
+            Vector2 bottom = new Vector2(0.5f, 0f);
+            TextMeshProUGUI warning = Text("Warning", root, mono, string.Empty, 24f, red, TextAlignmentOptions.Center);
+            Anchor(warning.rectTransform, bottom, bottom, new Vector2(0f, 176f), new Vector2(1200f, 34f));
+            warning.alpha = 0f;
+
+            Image confirmImage = Img("Confirm", root, new Color(0.08f, 0.04f, 0.02f, 1f));
+            confirmImage.raycastTarget = true;
+            Anchor(confirmImage.rectTransform, bottom, bottom, new Vector2(0f, 64f), new Vector2(340f, 58f));
+            confirmImage.gameObject.AddComponent<Outline>().effectColor = yellow;
+            Button confirm = confirmImage.gameObject.AddComponent<Button>();
+            confirm.targetGraphic = confirmImage;
+            MainMenuSceneBuilder.Stretch(Text("Label", confirmImage.rectTransform, mono, "ENTER   ПОДТВЕРДИТЬ", 24f, yellow, TextAlignmentOptions.Center).rectTransform);
+
+            TextMeshProUGUI controls = Text("Controls", root, mono, "W/S, колесо — крутить    A/D, мышь — выбрать барабан    ENTER — подтвердить",
+                16f, new Color(1f, 1f, 1f, 0.45f), TextAlignmentOptions.Center);
+            Anchor(controls.rectTransform, bottom, bottom, new Vector2(0f, 128f), new Vector2(1400f, 26f));
+
+            ArsenalPanel arsenal = root.gameObject.AddComponent<ArsenalPanel>();
+            Configure(arsenal, so =>
+            {
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_title").objectReferenceValue = title;
+                P(so, "_weaponDrum").objectReferenceValue = weaponDrum;
+                P(so, "_implantDrum").objectReferenceValue = implantDrum;
+                SetArray(so, "_weapons", weapons);
+                SetArray(so, "_implants", implants);
+                P(so, "_weaponName").objectReferenceValue = weaponName;
+                P(so, "_weaponDescription").objectReferenceValue = weaponDescription;
+                SetArray(so, "_statSegments", statSegments);
+                SetArray(so, "_statLabels", statLabels);
+                P(so, "_implantName").objectReferenceValue = implantName;
+                P(so, "_implantStatus").objectReferenceValue = implantStatus;
+                P(so, "_implantDescription").objectReferenceValue = implantDescription;
+                P(so, "_warning").objectReferenceValue = warning;
+                P(so, "_confirm").objectReferenceValue = confirm;
+                P(so, "_weaponUp").objectReferenceValue = weaponUp;
+                P(so, "_weaponDown").objectReferenceValue = weaponDown;
+                P(so, "_implantUp").objectReferenceValue = implantUp;
+                P(so, "_implantDown").objectReferenceValue = implantDown;
+            });
+            return arsenal;
+        }
+
+        // Барабан: эллипс-рамка, окно выбора по центру, стрелки ▲▼ и элементы (иконка + подпись)
+        private static DrumSelector BuildDrum(RectTransform parent, TMP_FontAsset mono, string name, Vector2 position, int count,
+            out Button up, out Button down)
+        {
+            Vector2 center = new Vector2(0.5f, 0.5f);
+            RectTransform drum = MainMenuSceneBuilder.CreateRect(name, parent);
+            Anchor(drum, center, center, position, new Vector2(300f, 760f));
+
+            Image frame = Img("Frame", drum, Color.white);
+            frame.sprite = SpriteFactory.DrumFrame();
+            MainMenuSceneBuilder.Stretch(frame.rectTransform);
+
+            Image windowTop = Img("WindowTop", drum, Color.white);
+            Anchor(windowTop.rectTransform, center, center, new Vector2(0f, 98f), new Vector2(250f, 2f));
+            Image windowBottom = Img("WindowBottom", drum, Color.white);
+            Anchor(windowBottom.rectTransform, center, center, new Vector2(0f, -98f), new Vector2(250f, 2f));
+
+            Sprite arrow = SpriteFactory.ArrowUp();
+            up = ArrowButton(drum, arrow, "Up", new Vector2(0f, 300f), 0f);
+            down = ArrowButton(drum, arrow, "Down", new Vector2(0f, -300f), 180f);
+
+            var items = new RectTransform[count];
+            for (int i = 0; i < count; i++)
+            {
+                RectTransform item = MainMenuSceneBuilder.CreateRect($"Item{i}", drum);
+                Anchor(item, center, center, Vector2.zero, new Vector2(260f, 170f));
+                item.gameObject.AddComponent<CanvasGroup>();
+                Image icon = Img("Icon", item, Color.white);
+                icon.preserveAspect = true;
+                Anchor(icon.rectTransform, center, center, new Vector2(0f, 18f), new Vector2(240f, 112f));
+                TextMeshProUGUI label = Text("Name", item, mono, string.Empty, 22f, Color.white, TextAlignmentOptions.Center);
+                Anchor(label.rectTransform, center, center, new Vector2(0f, -62f), new Vector2(260f, 30f));
+                items[i] = item;
+            }
+
+            Graphic upArrow = up.targetGraphic;
+            Graphic downArrow = down.targetGraphic;
+            DrumSelector selector = drum.gameObject.AddComponent<DrumSelector>();
+            Configure(selector, so =>
+            {
+                SetArray(so, "_items", items);
+                P(so, "_frame").objectReferenceValue = frame;
+                SetArray(so, "_accents", windowTop, windowBottom, upArrow, downArrow);
+            });
+            return selector;
+        }
+
+        private static Button ArrowButton(RectTransform parent, Sprite sprite, string name, Vector2 position, float angle)
+        {
+            Image image = Img(name, parent, Color.white);
+            image.sprite = sprite;
+            image.raycastTarget = true;
+            Anchor(image.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), position, new Vector2(48f, 30f));
+            image.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
+            Button button = image.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            return button;
+        }
+
+        private static RectTransform DescriptionPanel(RectTransform parent, string name, Vector2 position, Color edge)
+        {
+            Image panel = Img(name, parent, new Color(0.06f, 0.02f, 0.05f, 1f));
+            Anchor(panel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), position, new Vector2(480f, 700f));
+            panel.color = new Color(0.06f, 0.02f, 0.05f, 0.85f);
+            Image border = Img("Border", panel.rectTransform, edge);
+            border.rectTransform.anchorMin = new Vector2(0f, 1f);
+            border.rectTransform.anchorMax = new Vector2(1f, 1f);
+            border.rectTransform.pivot = new Vector2(0.5f, 1f);
+            border.rectTransform.sizeDelta = new Vector2(0f, 4f);
+            return panel.rectTransform;
+        }
+
+        private static TextMeshProUGUI PanelText(RectTransform panel, TMP_FontAsset mono, string name, string value, float size, Color color,
+            Vector2 position, float height)
+        {
+            TextMeshProUGUI text = Text(name, panel, mono, value, size, color, TextAlignmentOptions.TopLeft);
+            Anchor(text.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), position, new Vector2(420f, height));
+            text.textWrappingMode = TextWrappingModes.Normal;
+            text.richText = true;
+            return text;
+        }
+
+        // Тонкая линия между двумя точками (координаты от центра экрана)
+        private static void ConnectorLine(RectTransform parent, Vector2 a, Vector2 b, Color color)
+        {
+            Image line = Img("Connector", parent, new Color(color.r, color.g, color.b, 0.7f));
+            Vector2 d = b - a;
+            Anchor(line.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), (a + b) * 0.5f, new Vector2(d.magnitude, 2f));
+            line.rectTransform.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg);
         }
 
         // ---------------------------------------------------------------- Префаб

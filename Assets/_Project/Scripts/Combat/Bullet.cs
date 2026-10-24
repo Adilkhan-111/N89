@@ -15,12 +15,13 @@ namespace N89.Combat
         private Transform _owner;
         private float _dieAt;
 
-        public void Launch(Vector2 direction, LayerMask hitMask, Transform owner)
+        // range > 0 — пуля пролетает не дальше range юнитов (дробь, ПП), иначе живёт _lifetime секунд
+        public void Launch(Vector2 direction, LayerMask hitMask, Transform owner, float range = 0f)
         {
             _direction = direction.normalized;
             _hitMask = hitMask;
             _owner = owner;
-            _dieAt = Time.time + _lifetime;
+            _dieAt = Time.time + (range > 0f ? range / _speed : _lifetime);
         }
 
         private void Update()

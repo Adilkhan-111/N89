@@ -1,0 +1,847 @@
+fileFormatVersion: 2
+guid: dbba92a9d661c394a839d6eb8f096593
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1446762328306251568
+    second: weapon_smg_0
+  - first:
+      213: -5728453740127625209
+    second: weapon_smg_1
+  - first:
+      213: -7126568538303776895
+    second: weapon_smg_2
+  - first:
+      213: -5632582604696059660
+    second: weapon_smg_3
+  - first:
+      213: 3092038611905268728
+    second: weapon_smg_4
+  - first:
+      213: -6408649102935099623
+    second: weapon_smg_5
+  - first:
+      213: 2322709510074803451
+    second: weapon_smg_6
+  - first:
+      213: -4619592548926351832
+    second: weapon_smg_7
+  - first:
+      213: 5496498050678690691
+    second: weapon_smg_8
+  - first:
+      213: 8604755699259377574
+    second: weapon_smg_9
+  - first:
+      213: 3778196640250374974
+    second: weapon_smg_10
+  - first:
+      213: -4758897171339194161
+    second: weapon_smg_11
+  - first:
+      213: 2845608362707172373
+    second: weapon_smg_12
+  - first:
+      213: 2257521939102385235
+    second: weapon_smg_13
+  - first:
+      213: -1667948931837080344
+    second: weapon_smg_14
+  - first:
+      213: -3452480251282033181
+    second: weapon_smg_15
+  - first:
+      213: -1721136983143870071
+    second: weapon_smg_16
+  - first:
+      213: 4848275960081171
+    second: weapon_smg_17
+  - first:
+      213: 4953340467800638065
+    second: weapon_smg_18
+  - first:
+      213: -6974468644357622959
+    second: weapon_smg_19
+  - first:
+      213: 8776209920446771651
+    second: weapon_smg_20
+  - first:
+      213: -3143173677886456099
+    second: weapon_smg_21
+  - first:
+      213: -741562795522631504
+    second: weapon_smg_22
+  - first:
+      213: -3124975071549588472
+    second: weapon_smg_23
+  - first:
+      213: 3856878548793931719
+    second: weapon_smg_24
+  - first:
+      213: 8896396609976228142
+    second: weapon_smg_25
+  - first:
+      213: -5022567095398706747
+    second: weapon_smg_26
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: weapon_smg_0
+      rect:
+        serializedVersion: 2
+        x: 3
+        y: 147
+        width: 90
+        height: 216
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0377c1d1caee31410800000000000000
+      internalID: 1446762328306251568
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_1
+      rect:
+        serializedVersion: 2
+        x: 82
+        y: 291
+        width: 44
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7006f6b8ca17080b0800000000000000
+      internalID: -5728453740127625209
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_2
+      rect:
+        serializedVersion: 2
+        x: 92
+        y: 268
+        width: 29
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 187bdee2ca7591d90800000000000000
+      internalID: -7126568538303776895
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_3
+      rect:
+        serializedVersion: 2
+        x: 125
+        y: 121
+        width: 858
+        height: 329
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4f00c07b6fb05d1b0800000000000000
+      internalID: -5632582604696059660
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_4
+      rect:
+        serializedVersion: 2
+        x: 982
+        y: 270
+        width: 76
+        height: 62
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8fbc7663cb029ea20800000000000000
+      internalID: 3092038611905268728
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_5
+      rect:
+        serializedVersion: 2
+        x: 719
+        y: 115
+        width: 74
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9177d696897ef07a0800000000000000
+      internalID: -6408649102935099623
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_6
+      rect:
+        serializedVersion: 2
+        x: 796
+        y: 81
+        width: 11
+        height: 66
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bf42e604efbeb3020800000000000000
+      internalID: 2322709510074803451
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_7
+      rect:
+        serializedVersion: 2
+        x: 806
+        y: 39
+        width: 8
+        height: 87
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 826143a6d09e3efb0800000000000000
+      internalID: -4619592548926351832
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_8
+      rect:
+        serializedVersion: 2
+        x: 828
+        y: 113
+        width: 18
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 383945bfadb774c40800000000000000
+      internalID: 5496498050678690691
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_9
+      rect:
+        serializedVersion: 2
+        x: 719
+        y: 86
+        width: 8
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6a78f51f7bb3a6770800000000000000
+      internalID: 8604755699259377574
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_10
+      rect:
+        serializedVersion: 2
+        x: 737
+        y: 87
+        width: 56
+        height: 23
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e3ba2b993d9de6430800000000000000
+      internalID: 3778196640250374974
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_11
+      rect:
+        serializedVersion: 2
+        x: 828
+        y: 81
+        width: 18
+        height: 29
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc057b38c3005fdb0800000000000000
+      internalID: -4758897171339194161
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_12
+      rect:
+        serializedVersion: 2
+        x: 842
+        y: 90
+        width: 8
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 51cba0daab1ad7720800000000000000
+      internalID: 2845608362707172373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_13
+      rect:
+        serializedVersion: 2
+        x: 738
+        y: 74
+        width: 17
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35449d42e34545f10800000000000000
+      internalID: 2257521939102385235
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_14
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 71
+        width: 7
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8eccb5e98414ad8e0800000000000000
+      internalID: -1667948931837080344
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_15
+      rect:
+        serializedVersion: 2
+        x: 799
+        y: 55
+        width: 6
+        height: 30
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3e57844e0835610d0800000000000000
+      internalID: -3452480251282033181
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_16
+      rect:
+        serializedVersion: 2
+        x: 828
+        y: 48
+        width: 22
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9811ce5680b4d18e0800000000000000
+      internalID: -1721136983143870071
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_17
+      rect:
+        serializedVersion: 2
+        x: 718
+        y: 24
+        width: 9
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 31baf563b79311000800000000000000
+      internalID: 4848275960081171
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_18
+      rect:
+        serializedVersion: 2
+        x: 726
+        y: 60
+        width: 66
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 17203da59eccdb440800000000000000
+      internalID: 4953340467800638065
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_19
+      rect:
+        serializedVersion: 2
+        x: 784
+        y: 51
+        width: 11
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 153b6f368b5b53f90800000000000000
+      internalID: -6974468644357622959
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_20
+      rect:
+        serializedVersion: 2
+        x: 823
+        y: 40
+        width: 27
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3c13d7e9c6c5bc970800000000000000
+      internalID: 8776209920446771651
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_21
+      rect:
+        serializedVersion: 2
+        x: 737
+        y: 45
+        width: 8
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dde383671343164d0800000000000000
+      internalID: -3143173677886456099
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_22
+      rect:
+        serializedVersion: 2
+        x: 737
+        y: 34
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0b85a32019075b5f0800000000000000
+      internalID: -741562795522631504
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_23
+      rect:
+        serializedVersion: 2
+        x: 738
+        y: 37
+        width: 39
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 80cf550babbd1a4d0800000000000000
+      internalID: -3124975071549588472
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_24
+      rect:
+        serializedVersion: 2
+        x: 785
+        y: 41
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7c7bfa20b92668530800000000000000
+      internalID: 3856878548793931719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_25
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 39
+        width: 12
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e295f96e499567b70800000000000000
+      internalID: 8896396609976228142
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: weapon_smg_26
+      rect:
+        serializedVersion: 2
+        x: 723
+        y: 3
+        width: 127
+        height: 38
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c1d13266d14c4ab0800000000000000
+      internalID: -5022567095398706747
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      weapon_smg_0: 1446762328306251568
+      weapon_smg_1: -5728453740127625209
+      weapon_smg_10: 3778196640250374974
+      weapon_smg_11: -4758897171339194161
+      weapon_smg_12: 2845608362707172373
+      weapon_smg_13: 2257521939102385235
+      weapon_smg_14: -1667948931837080344
+      weapon_smg_15: -3452480251282033181
+      weapon_smg_16: -1721136983143870071
+      weapon_smg_17: 4848275960081171
+      weapon_smg_18: 4953340467800638065
+      weapon_smg_19: -6974468644357622959
+      weapon_smg_2: -7126568538303776895
+      weapon_smg_20: 8776209920446771651
+      weapon_smg_21: -3143173677886456099
+      weapon_smg_22: -741562795522631504
+      weapon_smg_23: -3124975071549588472
+      weapon_smg_24: 3856878548793931719
+      weapon_smg_25: 8896396609976228142
+      weapon_smg_26: -5022567095398706747
+      weapon_smg_3: -5632582604696059660
+      weapon_smg_4: 3092038611905268728
+      weapon_smg_5: -6408649102935099623
+      weapon_smg_6: 2322709510074803451
+      weapon_smg_7: -4619592548926351832
+      weapon_smg_8: 5496498050678690691
+      weapon_smg_9: 8604755699259377574
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

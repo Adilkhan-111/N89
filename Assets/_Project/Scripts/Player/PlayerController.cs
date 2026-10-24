@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 namespace N89.Player
 {
     // Top-down управление: WASD — движение, мышь — прицел, ЛКМ — стрельба.
+    // Оружие и здоровье необязательны: дома (в интерлюдиях) герой ходит и целится, но не стреляет.
     [RequireComponent(typeof(Rigidbody2D))]
     public class PlayerController : MonoBehaviour
     {
@@ -42,13 +43,13 @@ namespace N89.Player
             _rb = GetComponent<Rigidbody2D>();
             _hacking = GetComponent<HackingController>();
             _camera = Camera.main;
-            _health.Died += OnDied;
-            _weapon.Fired += OnFired;
+            if (_health != null) _health.Died += OnDied;
+            if (_weapon != null) _weapon.Fired += OnFired;
         }
 
         private void Update()
         {
-            if (_health.IsDead)
+            if (_health != null && _health.IsDead)
             {
                 return;
             }
@@ -78,7 +79,7 @@ namespace N89.Player
                 }
 
                 bool hackingBlocks = _hacking != null && _hacking.BlocksShooting;
-                if (CanShoot && !hackingBlocks && mouse.leftButton.isPressed)
+                if (_weapon != null && CanShoot && !hackingBlocks && mouse.leftButton.isPressed)
                 {
                     _weapon.TryFire(aim);
                 }

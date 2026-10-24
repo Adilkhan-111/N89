@@ -32,13 +32,13 @@ namespace N89.EditorTools
         private const string ScenePath = Root + "/Scenes/Tutorial.unity";
 
         private const float LabRadius = 15f;
-        private const float WallThickness = 0.625f;
+        internal const float WallThickness = 0.625f;
         private const float DoorLength = 3.2f;
         private const int RamSlots = 15;
 
-        private const int WallLayer = 6;
+        internal const int WallLayer = 6;
         private const int GlassLayer = 7;
-        private const int PlayerLayer = 8;
+        internal const int PlayerLayer = 8;
         private const int EnemyLayer = 9;
 
         private static readonly Color Cyan = new Color(0.3f, 1f, 1f);
@@ -63,10 +63,7 @@ namespace N89.EditorTools
             // Сцену создаём ДО загрузки ассетов: NewScene выгружает из памяти ассеты, на которые ещё
             // ничего не ссылается (например, QuickhackData), и в сцену записались бы пустые ссылки.
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-            s_lit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
-            s_unlit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
-            s_white = SpriteFactory.White();
+            LoadCommonAssets();
 
             TMP_FontAsset mono = MainMenuSceneBuilder.GetOrCreateFontAsset("RobotoMono-Regular");
             TMP_FontAsset audiowide = MainMenuSceneBuilder.GetOrCreateFontAsset("Audiowide-Regular");
@@ -102,7 +99,7 @@ namespace N89.EditorTools
 
             // --- Сцена ---
             Camera cam = CreateCamera();
-            CreateVolume();
+            CreateVolume("TutorialVolume");
 
             Transform lights = new GameObject("Lights").transform;
             Light2D globalLight = new GameObject("Global Light").AddComponent<Light2D>();
@@ -512,7 +509,7 @@ namespace N89.EditorTools
             };
         }
 
-        private static TriggerZone CreateZone(Transform parent, string name, Vector2 position, Vector2 size)
+        internal static TriggerZone CreateZone(Transform parent, string name, Vector2 position, Vector2 size)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent);
@@ -557,7 +554,7 @@ namespace N89.EditorTools
             return new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * LabRadius;
         }
 
-        private static void CreateWall(Transform parent, string name, Vector2 a, Vector2 b, Sprite sprite, int layer, int order, bool lit = true)
+        internal static void CreateWall(Transform parent, string name, Vector2 a, Vector2 b, Sprite sprite, int layer, int order, bool lit = true)
         {
             Vector2 d = b - a;
             float angle = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
@@ -916,14 +913,14 @@ namespace N89.EditorTools
             return SavePrefab(root, name);
         }
 
-        private static GameObject SavePrefab(GameObject root, string name)
+        internal static GameObject SavePrefab(GameObject root, string name)
         {
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabsDir}/{name}.prefab");
             Object.DestroyImmediate(root);
             return prefab;
         }
 
-        private static GameObject Spawn(GameObject prefab, Transform parent, Vector2 position)
+        internal static GameObject Spawn(GameObject prefab, Transform parent, Vector2 position)
         {
             var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
             go.transform.position = position;
@@ -1003,20 +1000,7 @@ namespace N89.EditorTools
 
         private static HudRefs BuildHud(HackingController hacking, TMP_FontAsset mono, TMP_FontAsset audiowide)
         {
-            var go = new GameObject("HUD", typeof(RectTransform)) { layer = LayerMask.NameToLayer("UI") };
-            Canvas canvas = go.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            CanvasScaler scaler = go.AddComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920f, 1080f);
-            scaler.matchWidthOrHeight = 0.5f;
-            go.AddComponent<GraphicRaycaster>();
-            var canvasRect = (RectTransform)go.transform;
-
-            // Для кнопки на итоговом экране
-            var eventSystem = new GameObject("EventSystem");
-            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            eventSystem.AddComponent<InputSystemUIInputModule>();
+            RectTransform canvasRect = BuildCanvas();
 
             // Режим сканирования
             Image scan = Img("ScanOverlay", canvasRect, new Color(0.15f, 0.9f, 1f, 0.12f));
@@ -1025,19 +1009,7 @@ namespace N89.EditorTools
             TextMeshProUGUI scanLabel = Text("Label", scan.rectTransform, mono, "РЕЖИМ СКАНИРОВАНИЯ", 26f, Cyan, TextAlignmentOptions.Center);
             Anchor(scanLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(800f, 40f));
 
-            // Задача
-            RectTransform objective = Anchor(MainMenuSceneBuilder.CreateRect("Objective", canvasRect), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -36f), new Vector2(1000f, 90f));
-            CanvasGroup objectiveGroup = Group(objective.gameObject, 0f);
-            TextMeshProUGUI objectiveHeader = Text("Header", objective, mono, "ЗАДАЧА", 20f, Magenta, TextAlignmentOptions.TopLeft);
-            Anchor(objectiveHeader.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(1000f, 28f));
-            TextMeshProUGUI objectiveLabel = Text("Label", objective, mono, string.Empty, 30f, Color.white, TextAlignmentOptions.TopLeft);
-            Anchor(objectiveLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -30f), new Vector2(1000f, 44f));
-            ObjectivePanel objectivePanel = objective.gameObject.AddComponent<ObjectivePanel>();
-            Configure(objectivePanel, so =>
-            {
-                P(so, "_group").objectReferenceValue = objectiveGroup;
-                P(so, "_label").objectReferenceValue = objectiveLabel;
-            });
+            ObjectivePanel objectivePanel = BuildObjective(canvasRect, mono);
 
             // RAM
             // Узкие слоты, чтобы все 15 поместились в одну строку
@@ -1094,7 +1066,7 @@ namespace N89.EditorTools
 
             Image warning = BuildWarningWindow(canvasRect, mono, out CanvasGroup warningGroup, out TextMeshProUGUI warningText);
 
-            HackingHud hackingHud = go.AddComponent<HackingHud>();
+            HackingHud hackingHud = canvasRect.gameObject.AddComponent<HackingHud>();
             Configure(hackingHud, so =>
             {
                 P(so, "_hacking").objectReferenceValue = hacking;
@@ -1117,19 +1089,8 @@ namespace N89.EditorTools
                 P(so, "_warningText").objectReferenceValue = warningText;
             });
 
-            // Киношные полосы для катсцен (высота 0 — спрятаны). Под субтитрами, чтобы не закрывать их
-            Image letterboxTop = Img("LetterboxTop", canvasRect, Color.black);
-            letterboxTop.rectTransform.anchorMin = new Vector2(0f, 1f);
-            letterboxTop.rectTransform.anchorMax = new Vector2(1f, 1f);
-            letterboxTop.rectTransform.pivot = new Vector2(0.5f, 1f);
-            letterboxTop.rectTransform.anchoredPosition = Vector2.zero;
-            letterboxTop.rectTransform.sizeDelta = Vector2.zero;
-            Image letterboxBottom = Img("LetterboxBottom", canvasRect, Color.black);
-            letterboxBottom.rectTransform.anchorMin = new Vector2(0f, 0f);
-            letterboxBottom.rectTransform.anchorMax = new Vector2(1f, 0f);
-            letterboxBottom.rectTransform.pivot = new Vector2(0.5f, 0f);
-            letterboxBottom.rectTransform.anchoredPosition = Vector2.zero;
-            letterboxBottom.rectTransform.sizeDelta = Vector2.zero;
+            // Киношные полосы под субтитрами, чтобы не закрывать их
+            BuildLetterbox(canvasRect, out RectTransform letterboxTop, out RectTransform letterboxBottom);
 
             // Субтитры голоса
             Image subtitles = Img("Subtitles", canvasRect, new Color(0f, 0f, 0f, 0.7f));
@@ -1153,41 +1114,13 @@ namespace N89.EditorTools
             });
 
             // Перекрестие — под затемнением, чтобы исчезало на экране смерти
-            Image crosshairImage = MainMenuSceneBuilder.Create<Image>("Crosshair", canvasRect);
-            crosshairImage.sprite = SpriteFactory.Crosshair();
-            crosshairImage.raycastTarget = false;
-            Anchor(crosshairImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(45f, 45f));
-            Crosshair crosshair = crosshairImage.gameObject.AddComponent<Crosshair>();
-            Configure(crosshair, so =>
-            {
-                P(so, "_canvasRect").objectReferenceValue = canvasRect;
-                P(so, "_image").objectReferenceValue = crosshairImage;
-                P(so, "_weapon").objectReferenceValue = hacking.GetComponent<Weapon>();
-                P(so, "_hacking").objectReferenceValue = hacking;
-            });
+            Crosshair crosshair = BuildCrosshair(canvasRect, hacking.GetComponent<Weapon>(), hacking);
+            Image crosshairImage = crosshair.GetComponent<Image>();
 
-            TextMeshProUGUI hint = Text("Hint", canvasRect, mono, "ESC — меню    ENTER — пропустить реплику", 18f, new Color(1f, 1f, 1f, 0.4f), TextAlignmentOptions.BottomRight);
-            Anchor(hint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-30f, 20f), new Vector2(700f, 30f));
+            BuildHint(canvasRect, mono, "ESC — меню    ENTER — пропустить реплику");
 
             // Затемнение и экран смерти — поверх всего
-            RectTransform fader = MainMenuSceneBuilder.CreateRect("Fader", canvasRect);
-            MainMenuSceneBuilder.Stretch(fader);
-            Image black = Img("Black", fader, Color.black);
-            MainMenuSceneBuilder.Stretch(black.rectTransform);
-            Image flash = Img("Flash", fader, new Color(1f, 0f, 0f, 0f));
-            MainMenuSceneBuilder.Stretch(flash.rectTransform);
-            TextMeshProUGUI title = Text("Title", fader, mono, string.Empty, 64f, new Color(1f, 0.2f, 0.3f), TextAlignmentOptions.Center);
-            Anchor(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(1600f, 90f));
-            TextMeshProUGUI subtitle = Text("Subtitle", fader, mono, string.Empty, 28f, new Color(0.85f, 0.85f, 0.9f), TextAlignmentOptions.Center);
-            Anchor(subtitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(1600f, 50f));
-            ScreenFader screenFader = fader.gameObject.AddComponent<ScreenFader>();
-            Configure(screenFader, so =>
-            {
-                P(so, "_black").objectReferenceValue = black;
-                P(so, "_flash").objectReferenceValue = flash;
-                P(so, "_title").objectReferenceValue = title;
-                P(so, "_subtitle").objectReferenceValue = subtitle;
-            });
+            ScreenFader screenFader = BuildFader(canvasRect, mono, new Color(1f, 0.2f, 0.3f));
 
             // Итоговый экран — поверх всего, включая затемнение
             Image endPanel = Img("EndScreen", canvasRect, new Color(0.02f, 0f, 0.05f, 0.7f));
@@ -1223,16 +1156,118 @@ namespace N89.EditorTools
                 P(so, "_group").objectReferenceValue = endGroup;
                 P(so, "_continueButton").objectReferenceValue = button;
                 P(so, "_crosshair").objectReferenceValue = crosshairImage.gameObject;
+                P(so, "_nextScene").stringValue = Interlude01SceneBuilder.SceneName;
             });
 
             return new HudRefs
             {
                 Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen,
-                LetterboxTop = letterboxTop.rectTransform, LetterboxBottom = letterboxBottom.rectTransform,
+                LetterboxTop = letterboxTop, LetterboxBottom = letterboxBottom,
             };
         }
 
-        private static Image Img(string name, RectTransform parent, Color color)
+        // Холст HUD 1920x1080 и EventSystem (для кнопок)
+        internal static RectTransform BuildCanvas()
+        {
+            var go = new GameObject("HUD", typeof(RectTransform)) { layer = LayerMask.NameToLayer("UI") };
+            Canvas canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            CanvasScaler scaler = go.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+            go.AddComponent<GraphicRaycaster>();
+
+            var eventSystem = new GameObject("EventSystem");
+            eventSystem.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            eventSystem.AddComponent<InputSystemUIInputModule>();
+            return (RectTransform)go.transform;
+        }
+
+        // Задача в левом верхнем углу
+        internal static ObjectivePanel BuildObjective(RectTransform canvasRect, TMP_FontAsset mono)
+        {
+            RectTransform objective = Anchor(MainMenuSceneBuilder.CreateRect("Objective", canvasRect), new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(40f, -36f), new Vector2(1000f, 90f));
+            CanvasGroup objectiveGroup = Group(objective.gameObject, 0f);
+            TextMeshProUGUI objectiveHeader = Text("Header", objective, mono, "ЗАДАЧА", 20f, Magenta, TextAlignmentOptions.TopLeft);
+            Anchor(objectiveHeader.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), Vector2.zero, new Vector2(1000f, 28f));
+            TextMeshProUGUI objectiveLabel = Text("Label", objective, mono, string.Empty, 30f, Color.white, TextAlignmentOptions.TopLeft);
+            Anchor(objectiveLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(0f, -30f), new Vector2(1000f, 44f));
+            ObjectivePanel objectivePanel = objective.gameObject.AddComponent<ObjectivePanel>();
+            Configure(objectivePanel, so =>
+            {
+                P(so, "_group").objectReferenceValue = objectiveGroup;
+                P(so, "_label").objectReferenceValue = objectiveLabel;
+            });
+            return objectivePanel;
+        }
+
+        // Киношные полосы для катсцен (высота 0 — спрятаны)
+        internal static void BuildLetterbox(RectTransform canvasRect, out RectTransform top, out RectTransform bottom)
+        {
+            top = Img("LetterboxTop", canvasRect, Color.black).rectTransform;
+            top.anchorMin = new Vector2(0f, 1f);
+            top.anchorMax = new Vector2(1f, 1f);
+            top.pivot = new Vector2(0.5f, 1f);
+            top.anchoredPosition = Vector2.zero;
+            top.sizeDelta = Vector2.zero;
+            bottom = Img("LetterboxBottom", canvasRect, Color.black).rectTransform;
+            bottom.anchorMin = new Vector2(0f, 0f);
+            bottom.anchorMax = new Vector2(1f, 0f);
+            bottom.pivot = new Vector2(0.5f, 0f);
+            bottom.anchoredPosition = Vector2.zero;
+            bottom.sizeDelta = Vector2.zero;
+        }
+
+        // Перекрестие вместо системного курсора. Оружие и взлом необязательны (дома героя без них)
+        internal static Crosshair BuildCrosshair(RectTransform canvasRect, Weapon weapon, HackingController hacking)
+        {
+            Image image = MainMenuSceneBuilder.Create<Image>("Crosshair", canvasRect);
+            image.sprite = SpriteFactory.Crosshair();
+            image.raycastTarget = false;
+            Anchor(image.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(45f, 45f));
+            Crosshair crosshair = image.gameObject.AddComponent<Crosshair>();
+            Configure(crosshair, so =>
+            {
+                P(so, "_canvasRect").objectReferenceValue = canvasRect;
+                P(so, "_image").objectReferenceValue = image;
+                P(so, "_weapon").objectReferenceValue = weapon;
+                P(so, "_hacking").objectReferenceValue = hacking;
+            });
+            return crosshair;
+        }
+
+        internal static void BuildHint(RectTransform canvasRect, TMP_FontAsset mono, string text)
+        {
+            TextMeshProUGUI hint = Text("Hint", canvasRect, mono, text, 18f, new Color(1f, 1f, 1f, 0.4f), TextAlignmentOptions.BottomRight);
+            Anchor(hint.rectTransform, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-30f, 20f), new Vector2(700f, 30f));
+        }
+
+        // Затемнение, вспышки и титры поверх чёрного
+        internal static ScreenFader BuildFader(RectTransform canvasRect, TMP_FontAsset mono, Color titleColor)
+        {
+            RectTransform fader = MainMenuSceneBuilder.CreateRect("Fader", canvasRect);
+            MainMenuSceneBuilder.Stretch(fader);
+            Image black = Img("Black", fader, Color.black);
+            MainMenuSceneBuilder.Stretch(black.rectTransform);
+            Image flash = Img("Flash", fader, new Color(1f, 0f, 0f, 0f));
+            MainMenuSceneBuilder.Stretch(flash.rectTransform);
+            TextMeshProUGUI title = Text("Title", fader, mono, string.Empty, 64f, titleColor, TextAlignmentOptions.Center);
+            Anchor(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 40f), new Vector2(1600f, 90f));
+            TextMeshProUGUI subtitle = Text("Subtitle", fader, mono, string.Empty, 28f, new Color(0.85f, 0.85f, 0.9f), TextAlignmentOptions.Center);
+            Anchor(subtitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -40f), new Vector2(1600f, 50f));
+            ScreenFader screenFader = fader.gameObject.AddComponent<ScreenFader>();
+            Configure(screenFader, so =>
+            {
+                P(so, "_black").objectReferenceValue = black;
+                P(so, "_flash").objectReferenceValue = flash;
+                P(so, "_title").objectReferenceValue = title;
+                P(so, "_subtitle").objectReferenceValue = subtitle;
+            });
+            return screenFader;
+        }
+
+        internal static Image Img(string name, RectTransform parent, Color color)
         {
             Image img = MainMenuSceneBuilder.Create<Image>(name, parent);
             img.sprite = s_white;
@@ -1268,14 +1303,14 @@ namespace N89.EditorTools
             return panel;
         }
 
-        private static TextMeshProUGUI Text(string name, RectTransform parent, TMP_FontAsset font, string value, float size, Color color, TextAlignmentOptions alignment)
+        internal static TextMeshProUGUI Text(string name, RectTransform parent, TMP_FontAsset font, string value, float size, Color color, TextAlignmentOptions alignment)
         {
             TextMeshProUGUI text = MainMenuSceneBuilder.CreateText(name, parent, font, value, size, color);
             text.alignment = alignment;
             return text;
         }
 
-        private static CanvasGroup Group(GameObject go, float alpha)
+        internal static CanvasGroup Group(GameObject go, float alpha)
         {
             CanvasGroup group = go.AddComponent<CanvasGroup>();
             group.alpha = alpha;
@@ -1284,7 +1319,7 @@ namespace N89.EditorTools
             return group;
         }
 
-        private static RectTransform Anchor(RectTransform rect, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
+        internal static RectTransform Anchor(RectTransform rect, Vector2 anchor, Vector2 pivot, Vector2 position, Vector2 size)
         {
             rect.anchorMin = anchor;
             rect.anchorMax = anchor;
@@ -1296,7 +1331,15 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- Общее
 
-        private static Camera CreateCamera()
+        // Общие материалы и белый спрайт — вызывать сразу после EditorSceneManager.NewScene
+        internal static void LoadCommonAssets()
+        {
+            s_lit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Lit-Default.mat");
+            s_unlit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
+            s_white = SpriteFactory.White();
+        }
+
+        internal static Camera CreateCamera()
         {
             var go = new GameObject("Main Camera") { tag = "MainCamera" };
             Camera cam = go.AddComponent<Camera>();
@@ -1309,9 +1352,9 @@ namespace N89.EditorTools
             return cam;
         }
 
-        private static void CreateVolume()
+        internal static void CreateVolume(string profileName)
         {
-            string path = SettingsDir + "/TutorialVolume.asset";
+            string path = $"{SettingsDir}/{profileName}.asset";
             AssetDatabase.DeleteAsset(path);
             VolumeProfile profile = ScriptableObject.CreateInstance<VolumeProfile>();
             AssetDatabase.CreateAsset(profile, path);
@@ -1337,7 +1380,7 @@ namespace N89.EditorTools
             volume.sharedProfile = profile;
         }
 
-        private static SpriteRenderer CreateSprite(string name, Transform parent, Sprite sprite, Vector2 position, int order, bool lit = true, float angle = 0f)
+        internal static SpriteRenderer CreateSprite(string name, Transform parent, Sprite sprite, Vector2 position, int order, bool lit = true, float angle = 0f)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -1350,7 +1393,7 @@ namespace N89.EditorTools
             return sr;
         }
 
-        private static Light2D AddLight(Transform parent, string name, Vector2 worldPosition, Color color, float radius, float intensity)
+        internal static Light2D AddLight(Transform parent, string name, Vector2 worldPosition, Color color, float radius, float intensity)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent);
@@ -1365,7 +1408,7 @@ namespace N89.EditorTools
             return light;
         }
 
-        private static void EnsureLayers()
+        internal static void EnsureLayers()
         {
             var tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
             SerializedProperty layers = tagManager.FindProperty("layers");
@@ -1376,25 +1419,26 @@ namespace N89.EditorTools
             tagManager.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static void AddSceneToBuildSettings(string path)
+        // Новая сцена встаёт в Build Settings сразу после сцены afterScene
+        internal static void AddSceneToBuildSettings(string path, string afterScene = "MainMenu")
         {
             var scenes = new List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
             if (!scenes.Exists(s => s.path == path))
             {
-                int menuIndex = scenes.FindIndex(s => s.path.EndsWith("MainMenu.unity"));
-                scenes.Insert(menuIndex + 1, new EditorBuildSettingsScene(path, true));
+                int afterIndex = scenes.FindIndex(s => s.path.EndsWith($"/{afterScene}.unity"));
+                scenes.Insert(afterIndex + 1, new EditorBuildSettingsScene(path, true));
                 EditorBuildSettings.scenes = scenes.ToArray();
             }
         }
 
-        private static void Configure(Object target, Action<SerializedObject> edit)
+        internal static void Configure(Object target, Action<SerializedObject> edit)
         {
             var so = new SerializedObject(target);
             edit(so);
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        private static SerializedProperty P(SerializedObject so, string name)
+        internal static SerializedProperty P(SerializedObject so, string name)
         {
             SerializedProperty property = so.FindProperty(name);
             if (property == null)
@@ -1405,7 +1449,7 @@ namespace N89.EditorTools
             return property;
         }
 
-        private static void SetArray(SerializedObject so, string name, params Object[] values)
+        internal static void SetArray(SerializedObject so, string name, params Object[] values)
         {
             SerializedProperty property = P(so, name);
             property.arraySize = values.Length;

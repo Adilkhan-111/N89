@@ -77,6 +77,21 @@ namespace N89.UI
             _subtitle.maxVisibleCharacters = total;
         }
 
+        public IEnumerator HideTitle(float duration)
+        {
+            float from = _title.alpha;
+            for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+            {
+                float alpha = Mathf.Lerp(from, 0f, t / duration);
+                _title.alpha = alpha;
+                _subtitle.alpha = alpha;
+                yield return null;
+            }
+
+            _title.alpha = 0f;
+            _subtitle.alpha = 0f;
+        }
+
         private void Update()
         {
             // Лёгкий глитч заголовка, пока он на экране

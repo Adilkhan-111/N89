@@ -7,7 +7,7 @@ namespace N89.EditorTools
 {
     // Генерирует временный пиксель-арт для прототипа (PNG в Art/Sprites/Generated).
     // Когда появится настоящий арт — просто заменить PNG с теми же именами.
-    internal static class SpriteFactory
+    internal static partial class SpriteFactory
     {
         public const int PixelsPerUnit = 32;
         private const string Dir = "Assets/_Project/Art/Sprites/Generated";

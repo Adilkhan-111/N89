@@ -118,7 +118,7 @@ namespace N89.EditorTools
         {
             // Охранник корпорации Е: тёмная броня, шлем с красным визором, автомат
             DrawShooter(c, new Color(0.22f, 0.24f, 0.32f), new Color(0.13f, 0.14f, 0.2f), new Color(0.1f, 0.1f, 0.12f),
-                new Color(0.07f, 0.07f, 0.09f), new Color(0.11f, 0.11f, 0.15f), Red, new Color(1f, 0.45f, 0.1f), true);
+                new Color(0.07f, 0.07f, 0.09f), new Color(0.11f, 0.11f, 0.15f), Red, new Color(1f, 0.45f, 0.1f), DrawRifle);
             // Нашивка корпорации на плече
             c.Rect(12, 22, 14, 23, new Color(1f, 0.45f, 0.1f));
         });
@@ -126,9 +126,8 @@ namespace N89.EditorTools
         // Вид сверху, смотрит вправо (+x). Боевая стойка: левое плечо (сверху) выдвинуто вперёд,
         // правое (снизу) отведено назад, оружие в двух руках на линии прицела (y = 16).
         private static void DrawShooter(PixelCanvas c, Color body, Color bodyShade, Color hands, Color handsShade,
-            Color head, Color face, Color backOfHead, bool rifle)
+            Color head, Color face, Color backOfHead, Action<PixelCanvas> drawGun)
         {
-            Color gun = new Color(0.14f, 0.14f, 0.18f);
             Vector2 leftShoulder = new Vector2(13.5f, 23.5f);
             Vector2 rightShoulder = new Vector2(7.5f, 9.5f);
             Vector2 grip = new Vector2(23.5f, 16f);
@@ -142,25 +141,37 @@ namespace N89.EditorTools
             // Левая (ближняя) рука — от выдвинутого плеча прямо вперёд
             c.Line(leftShoulder, grip + new Vector2(0f, 0.6f), 2.6f, hands);
             c.Line(leftShoulder, Vector2.Lerp(leftShoulder, grip, 0.35f), 3.4f, body);
-            // Оружие
-            if (rifle)
-            {
-                c.Rect(19, 15, 31, 16, gun);
-                c.Rect(21, 13, 23, 14, gun);
-                c.Rect(28, 16, 31, 17, new Color(0.3f, 0.3f, 0.36f));
-            }
-            else
-            {
-                c.Rect(22, 15, 31, 16, gun);
-                c.Rect(22, 14, 24, 14, gun);
-                c.Rect(30, 16, 31, 16, new Color(0.3f, 0.3f, 0.36f));
-            }
+            drawGun(c);
             // Голова сверху: в основном макушка, спереди край лица (или визор), на затылке метка
             c.Circle(11.5f, 16.5f, 4.1f, head);
             c.Rect(14, 15, 15, 17, face);
             c.Rect(7, 16, 8, 17, backOfHead);
             c.Outline(Outline);
         }
+
+        // Оружие сверху, ствол вправо по линии прицела y = 16
+        private static void DrawRifle(PixelCanvas c)
+        {
+            c.Rect(19, 15, 31, 16, Gun);
+            c.Rect(21, 13, 23, 14, Gun);
+            c.Rect(28, 16, 31, 17, new Color(0.3f, 0.3f, 0.36f));
+        }
+
+        // Бандит из уличной банды: тёмная куртка, ирокез и бандана ядовито-зелёные, обрез-ПП
+        public static Sprite Bandit() => Create("bandit", 32, 32, c =>
+        {
+            Color toxic = new Color(0.45f, 1f, 0.3f);
+            DrawShooter(c, new Color(0.2f, 0.23f, 0.17f), new Color(0.12f, 0.14f, 0.1f), new Color(0.62f, 0.45f, 0.35f),
+                new Color(0.5f, 0.35f, 0.27f), new Color(0.09f, 0.08f, 0.07f), new Color(0.62f, 0.45f, 0.35f), toxic, gun =>
+                {
+                    gun.Rect(21, 15, 29, 16, Gun);
+                    gun.Rect(22, 13, 23, 14, Gun);
+                    gun.Rect(27, 16, 29, 16, new Color(0.35f, 0.33f, 0.3f));
+                });
+            // Ирокез вдоль головы и бандана на плече
+            c.Rect(8, 16, 14, 16, toxic);
+            c.Rect(12, 22, 14, 23, toxic);
+        });
 
         public static Sprite Crosshair() => Create("crosshair", 15, 15, c =>
         {

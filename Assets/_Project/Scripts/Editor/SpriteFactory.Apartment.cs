@@ -75,6 +75,38 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Рэй в миссии: боевая стойка с выбранным в арсенале оружием (вид сверху, ствол вправо)
+        public static Sprite HeroSmg() => Create("hero_smg", 32, 32, c => DrawHeroArmed(c, gun =>
+        {
+            gun.Rect(21, 15, 29, 16, GunDark);
+            gun.Rect(22, 14, 26, 17, GunMid);
+            gun.Rect(23, 16, 24, 16, Red);
+            gun.Rect(29, 15, 31, 16, GunEdge);
+        }));
+
+        public static Sprite HeroRifle() => Create("hero_rifle", 32, 32, c => DrawHeroArmed(c, gun =>
+        {
+            gun.Rect(19, 15, 31, 16, GunDark);
+            gun.Rect(24, 14, 29, 17, new Color(0.55f, 0.37f, 0.22f));
+            gun.Rect(25, 16, 28, 16, new Color(0.7f, 0.5f, 0.3f));
+            gun.Rect(30, 15, 31, 16, GunEdge);
+        }));
+
+        public static Sprite HeroShotgun() => Create("hero_shotgun", 32, 32, c => DrawHeroArmed(c, gun =>
+        {
+            gun.Rect(18, 15, 31, 16, new Color(0.2f, 0.2f, 0.24f));
+            gun.Rect(20, 16, 30, 16, GunEdge);
+            gun.Rect(24, 14, 28, 17, GunDark);
+            gun.Rect(31, 14, 31, 17, GunDark);
+        }));
+
+        private static void DrawHeroArmed(PixelCanvas c, System.Action<PixelCanvas> drawGun)
+        {
+            DrawShooter(c, HeroJacket, HeroJacketShade, HeroSkin, HeroSkinShade, HeroHair, HeroSkin, HeroHairLight, drawGun);
+            c.Circle(10.8f, 17.4f, 1.6f, HeroHairLight);
+            c.Rect(12, 12, 14, 12, Magenta);
+        }
+
         // Ноги для анимации ходьбы (как в Hotline Miami — отдельный спрайт под корпусом), смотрят вправо (+x).
         // stride > 0 — левая нога (сверху) впереди, < 0 — правая; 0 — ноги вместе
         public static Sprite HeroLegs(string name, float stride) => Create(name, 32, 32, c =>

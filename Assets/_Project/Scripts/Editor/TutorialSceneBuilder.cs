@@ -68,26 +68,25 @@ namespace N89.EditorTools
             TMP_FontAsset mono = MainMenuSceneBuilder.GetOrCreateFontAsset("RobotoMono-Regular");
             TMP_FontAsset audiowide = MainMenuSceneBuilder.GetOrCreateFontAsset("Audiowide-Regular");
 
-            // --- Данные взломов ---
-            // Цены под 15 слотов RAM: та же доля памяти, что была при 4 слотах (1 и 2)
-            QuickhackData unlock = CreateQuickhack("Unlock", "ВЗЛОМ ЗАМКА", 4, 0.6f, QuickhackEffect.Unlock);
-            QuickhackData shortCircuit = CreateQuickhack("ShortCircuit", "КОРОТКОЕ ЗАМЫКАНИЕ", 7, 1f, QuickhackEffect.ShortCircuit);
+            // --- Данные взломов и общие префабы ---
+            CommonPrefabs common = CreateCommonPrefabs();
+            QuickhackData unlock = common.Unlock;
+            QuickhackData shortCircuit = common.ShortCircuit;
+            GameObject explosion = common.Explosion;
+            GameObject electric = common.Electric;
+            GameObject blood = common.Blood;
+            GameObject muzzle = common.Muzzle;
+            GameObject remains = common.Remains;
+            GameObject bloodPool = common.BloodPool;
+            Bullet turretBullet = common.EnemyBullet;
 
-            // --- Префабы ---
-            Material particleMat = MainMenuSceneBuilder.GetOrCreateMaterial("ParticleUnlit", new Material(s_unlit));
-            GameObject sparks = BurstPrefab("FX_Sparks", Yellow, Color.white, 10, 3f, 8f, 0.1f, 0.3f, 0.06f, 0.12f, particleMat);
-            GameObject explosion = BurstPrefab("FX_Explosion", new Color(1f, 0.55f, 0.15f), Magenta, 40, 2f, 9f, 0.3f, 0.7f, 0.08f, 0.2f, particleMat);
-            GameObject electric = BurstPrefab("FX_ShortCircuit", Cyan, Color.white, 40, 1f, 7f, 0.3f, 0.9f, 0.05f, 0.12f, particleMat);
-            // «Синяя кровь» — проводящая жидкость для имплантов, у людей этого мира кровь синяя
-            GameObject blood = BurstPrefab("FX_Blood", BloodLight, BloodDark, 30, 1f, 6f, 0.3f, 0.8f, 0.08f, 0.16f, particleMat);
-            GameObject muzzle = BurstPrefab("FX_Muzzle", new Color(1f, 0.9f, 0.5f), Color.white, 6, 4f, 10f, 0.04f, 0.09f, 0.06f, 0.1f, particleMat);
-            GameObject remains = RemainsPrefab("Remains_Scorch", SpriteFactory.Scorch());
-            GameObject bloodPool = RemainsPrefab("Remains_Blood", SpriteFactory.BloodPool());
-
-            Bullet playerBullet = BulletPrefab("Bullet_Player", SpriteFactory.Bullet("bullet_player", new Color(1f, 0.95f, 0.6f)), 32f, sparks);
-            Bullet turretBullet = BulletPrefab("Bullet_Turret", SpriteFactory.Bullet("bullet_turret", new Color(1f, 0.3f, 0.35f)), 26f, sparks);
-
-            GameObject playerPrefab = PlayerPrefab(SpriteFactory.Player(), playerBullet, muzzle, blood);
+            // 89 — ребёнок, поэтому хитбокс меньше, чем у охраны. Короткие детские шаги, но он быстрый —
+            // кадры ног сменяются реже по пути
+            GameObject playerPrefab = PlayerPrefab("Player", SpriteFactory.Player(), new[]
+            {
+                SpriteFactory.KidLegs("player_legs_idle", 0f), SpriteFactory.KidLegs("player_legs_left", 8f),
+                SpriteFactory.KidLegs("player_legs_pass", 1.5f), SpriteFactory.KidLegs("player_legs_right", -8f),
+            }, 0.6f, 0.26f, common);
             GameObject dronePrefab = DronePrefab(SpriteFactory.Drone(), explosion, remains);
             GameObject targetPrefab = TargetPrefab(SpriteFactory.Target(), explosion, remains);
             TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
@@ -454,14 +453,14 @@ namespace N89.EditorTools
             SpawnEnemy(guardPrefab, route, new Vector2(39f, 5.5f), 200f, Vector2.zero, 0f);
             SpawnEnemy(guardPrefab, route, new Vector2(32f, -5.5f), 150f, Vector2.zero, 0f);
             // F: дрон облетает склад по кругу (точки — смещения от старта), патруль у западной стены, пост у двери
-            SpawnPerimeterDrone(dronePrefab, route, new Vector2(32.5f, 24.5f), 0f, 4.5f,
+            SpawnPerimeter(dronePrefab, route, new Vector2(32.5f, 24.5f), 0f, 4.5f,
                 new Vector2(12f, 0f), new Vector2(12f, -8.7f), new Vector2(0f, -8.7f));
             SpawnEnemy(guardPrefab, route, new Vector2(31.5f, 17f), 90f, new Vector2(0f, 6f), 1.2f);
             SpawnEnemy(guardPrefab, route, new Vector2(44f, 23f), 225f, Vector2.zero, 0f);
             // D: пост за дверью склада
             SpawnEnemy(guardPrefab, route, new Vector2(52.5f, 20.1f), 180f, Vector2.zero, 0f);
             // E: дрон по периметру зала, патруль по центру и двое по углам
-            SpawnPerimeterDrone(dronePrefab, route, new Vector2(60f, 28f), 0f, 4.5f,
+            SpawnPerimeter(dronePrefab, route, new Vector2(60f, 28f), 0f, 4.5f,
                 new Vector2(11.5f, 0f), new Vector2(11.5f, -16f), new Vector2(-3.5f, -16f), new Vector2(-3.5f, 0f));
             SpawnEnemy(guardPrefab, route, new Vector2(60.5f, 20f), 0f, new Vector2(7f, 0f), 1.3f);
             SpawnEnemy(guardPrefab, route, new Vector2(66f, 11.5f), 120f, Vector2.zero, 0f);
@@ -521,7 +520,7 @@ namespace N89.EditorTools
             return go.AddComponent<TriggerZone>();
         }
 
-        private static EnemyAI SpawnEnemy(GameObject prefab, Transform parent, Vector2 position, float facing, Vector2 patrol, float speed)
+        internal static EnemyAI SpawnEnemy(GameObject prefab, Transform parent, Vector2 position, float facing, Vector2 patrol, float speed)
         {
             GameObject enemy = Spawn(prefab, parent, position);
             enemy.transform.Find("Body").rotation = Quaternion.Euler(0f, 0f, facing);
@@ -534,7 +533,8 @@ namespace N89.EditorTools
             return ai;
         }
 
-        private static EnemyAI SpawnPerimeterDrone(GameObject prefab, Transform parent, Vector2 position, float facing, float speed,
+        // Обход по кругу через точки perimeter (относительно старта): дроны и патрульные
+        internal static EnemyAI SpawnPerimeter(GameObject prefab, Transform parent, Vector2 position, float facing, float speed,
             params Vector2[] perimeter)
         {
             EnemyAI ai = SpawnEnemy(prefab, parent, position, facing, Vector2.zero, speed);
@@ -630,20 +630,65 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- Префабы
 
-        private static GameObject PlayerPrefab(Sprite sprite, Bullet bullet, GameObject muzzleFx, GameObject deathFx)
+        // Общие для туториала и миссий: данные взломов, эффекты, следы на полу и пули
+        internal struct CommonPrefabs
         {
-            var root = new GameObject("Player") { layer = PlayerLayer };
+            public QuickhackData Unlock;
+            public QuickhackData ShortCircuit;
+            public GameObject Sparks;
+            public GameObject Explosion;
+            public GameObject Electric;
+            public GameObject Blood;
+            public GameObject Muzzle;
+            public GameObject Remains;
+            public GameObject BloodPool;
+            public Bullet PlayerBullet;
+            public Bullet EnemyBullet;
+        }
+
+        // Вызывать после EditorSceneManager.NewScene и LoadCommonAssets
+        internal static CommonPrefabs CreateCommonPrefabs()
+        {
+            MainMenuSceneBuilder.EnsureFolder(PrefabsDir);
+            MainMenuSceneBuilder.EnsureFolder(QuickhacksDir);
+            Material particleMat = MainMenuSceneBuilder.GetOrCreateMaterial("ParticleUnlit", new Material(s_unlit));
+            GameObject sparks = BurstPrefab("FX_Sparks", Yellow, Color.white, 10, 3f, 8f, 0.1f, 0.3f, 0.06f, 0.12f, particleMat);
+            return new CommonPrefabs
+            {
+                // Цены под 15 слотов RAM: та же доля памяти, что была при 4 слотах (1 и 2)
+                Unlock = CreateQuickhack("Unlock", "ВЗЛОМ ЗАМКА", 4, 0.6f, QuickhackEffect.Unlock),
+                ShortCircuit = CreateQuickhack("ShortCircuit", "КОРОТКОЕ ЗАМЫКАНИЕ", 7, 1f, QuickhackEffect.ShortCircuit),
+                Sparks = sparks,
+                Explosion = BurstPrefab("FX_Explosion", new Color(1f, 0.55f, 0.15f), Magenta, 40, 2f, 9f, 0.3f, 0.7f, 0.08f, 0.2f, particleMat),
+                Electric = BurstPrefab("FX_ShortCircuit", Cyan, Color.white, 40, 1f, 7f, 0.3f, 0.9f, 0.05f, 0.12f, particleMat),
+                // «Синяя кровь» — проводящая жидкость для имплантов, у людей этого мира кровь синяя
+                Blood = BurstPrefab("FX_Blood", BloodLight, BloodDark, 30, 1f, 6f, 0.3f, 0.8f, 0.08f, 0.16f, particleMat),
+                Muzzle = BurstPrefab("FX_Muzzle", new Color(1f, 0.9f, 0.5f), Color.white, 6, 4f, 10f, 0.04f, 0.09f, 0.06f, 0.1f, particleMat),
+                Remains = RemainsPrefab("Remains_Scorch", SpriteFactory.Scorch()),
+                BloodPool = RemainsPrefab("Remains_Blood", SpriteFactory.BloodPool()),
+                PlayerBullet = BulletPrefab("Bullet_Player", SpriteFactory.Bullet("bullet_player", new Color(1f, 0.95f, 0.6f)), 32f, sparks),
+                EnemyBullet = BulletPrefab("Bullet_Turret", SpriteFactory.Bullet("bullet_turret", new Color(1f, 0.3f, 0.35f)), 26f, sparks),
+            };
+        }
+
+        // Игрок со всеми механиками туториала: ходьба, прицел, стрельба, RAM и взлом.
+        // legs — кадры ног: стоит, левый шаг, проход, правый шаг
+        internal static GameObject PlayerPrefab(string name, Sprite sprite, Sprite[] legs, float legsDistancePerFrame, float radius,
+            CommonPrefabs common)
+        {
+            Bullet bullet = common.PlayerBullet;
+            GameObject muzzleFx = common.Muzzle;
+            GameObject deathFx = common.Blood;
+
+            var root = new GameObject(name) { layer = PlayerLayer };
             Rigidbody2D rb = root.AddComponent<Rigidbody2D>();
             rb.gravityScale = 0f;
             rb.freezeRotation = true;
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
-            // 89 — ребёнок, поэтому хитбокс меньше, чем у охраны
-            root.AddComponent<CircleCollider2D>().radius = 0.26f;
+            root.AddComponent<CircleCollider2D>().radius = radius;
 
-            // Ноги 89: короткие детские шаги, но он быстрее героя — кадры сменяются реже по пути
-            AddLegs(root, rb, SpriteFactory.KidLegs("player_legs_idle", 0f), SpriteFactory.KidLegs("player_legs_left", 8f),
-                SpriteFactory.KidLegs("player_legs_pass", 1.5f), SpriteFactory.KidLegs("player_legs_right", -8f), 0.6f);
+            AddLegs(root, rb, legs[0], legs[1], legs[2], legs[3], legsDistancePerFrame);
 
             SpriteRenderer body = CreateSprite("Body", root.transform, sprite, Vector2.zero, 10);
             body.gameObject.layer = PlayerLayer;
@@ -696,7 +741,7 @@ namespace N89.EditorTools
                 P(so, "_bodyRenderer").objectReferenceValue = body;
             });
 
-            return SavePrefab(root, "Player");
+            return SavePrefab(root, name);
         }
 
         private static GameObject DronePrefab(Sprite sprite, GameObject deathFx, GameObject remains)
@@ -784,7 +829,7 @@ namespace N89.EditorTools
         }
 
         // Враг корпорации Е: видит, реагирует, стреляет; взламывается «Коротким замыканием»
-        private static GameObject EnemyPrefab(string name, string deviceName, Sprite sprite, int health, float cooldown, float reaction,
+        internal static GameObject EnemyPrefab(string name, string deviceName, Sprite sprite, int health, float cooldown, float reaction,
             Bullet bullet, GameObject muzzleFx, GameObject deathFx, GameObject remains, QuickhackData shortCircuit, GameObject electricFx,
             bool chases)
         {
@@ -992,7 +1037,7 @@ namespace N89.EditorTools
         }
 
         // Каждое устройство должно ссылаться на сохранённые ассеты взломов, иначе в сцене окажется пустая ссылка
-        private static void ValidateQuickhacks()
+        internal static void ValidateQuickhacks()
         {
             foreach (HackableDevice device in Object.FindObjectsByType<HackableDevice>())
             {
@@ -1008,7 +1053,7 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- HUD
 
-        private struct HudRefs
+        internal struct HudRefs
         {
             public SubtitleBox Subtitles;
             public ObjectivePanel Objective;
@@ -1019,7 +1064,10 @@ namespace N89.EditorTools
             public RectTransform LetterboxBottom;
         }
 
-        private static HudRefs BuildHud(HackingController hacking, TMP_FontAsset mono, TMP_FontAsset audiowide)
+        // Полный боевой HUD: RAM, взлом, задача, субтитры, перекрестие, затемнение и итоговый экран.
+        // endTitle — заголовок итогового экрана, nextScene — куда ведёт кнопка «Вперёд»
+        internal static HudRefs BuildHud(HackingController hacking, TMP_FontAsset mono, TMP_FontAsset audiowide,
+            string endTitle = "ТУТОРИАЛ ОКОНЧЕН", string nextScene = Interlude01SceneBuilder.SceneName)
         {
             RectTransform canvasRect = BuildCanvas();
 
@@ -1147,8 +1195,8 @@ namespace N89.EditorTools
             Image endPanel = Img("EndScreen", canvasRect, new Color(0.02f, 0f, 0.05f, 0.7f));
             MainMenuSceneBuilder.Stretch(endPanel.rectTransform);
             CanvasGroup endGroup = Group(endPanel.gameObject, 0f);
-            TextMeshProUGUI endTitle = Text("Title", endPanel.rectTransform, mono, "ТУТОРИАЛ ОКОНЧЕН", 72f, new Color(1f, 0.85f, 0.97f), TextAlignmentOptions.Center);
-            Anchor(endTitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 100f));
+            TextMeshProUGUI endTitleLabel = Text("Title", endPanel.rectTransform, mono, endTitle, 72f, new Color(1f, 0.85f, 0.97f), TextAlignmentOptions.Center);
+            Anchor(endTitleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 100f));
             Image divider = Img("Divider", endPanel.rectTransform, Magenta);
             Anchor(divider.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 115f), new Vector2(760f, 3f));
             TextMeshProUGUI rating = Text("Rating", endPanel.rectTransform, mono, "РЕЙТИНГ:   <color=#8A8A99>НЕ ОЦЕНЕНО</color>", 38f, Color.white, TextAlignmentOptions.Center);
@@ -1177,7 +1225,7 @@ namespace N89.EditorTools
                 P(so, "_group").objectReferenceValue = endGroup;
                 P(so, "_continueButton").objectReferenceValue = button;
                 P(so, "_crosshair").objectReferenceValue = crosshairImage.gameObject;
-                P(so, "_nextScene").stringValue = Interlude01SceneBuilder.SceneName;
+                P(so, "_nextScene").stringValue = nextScene;
             });
 
             return new HudRefs

@@ -10,6 +10,8 @@ namespace N89.Combat
         [SerializeField, TextArea(3, 8)] private string _description;
         [Tooltip("Иконка сбоку для барабана выбора")]
         [SerializeField] private Sprite _icon;
+        [Tooltip("Спрайт героя с этим оружием в руках (вид сверху) — ставится в миссии")]
+        [SerializeField] private Sprite _heroSprite;
 
         [Header("Стрельба")]
         [SerializeField] private float _cooldown = 0.13f;
@@ -28,6 +30,7 @@ namespace N89.Combat
         public string DisplayName => _displayName;
         public string Description => _description;
         public Sprite Icon => _icon;
+        public Sprite HeroSprite => _heroSprite;
         public float Cooldown => _cooldown;
         public float SpreadDegrees => _spreadDegrees;
         public int Pellets => _pellets;

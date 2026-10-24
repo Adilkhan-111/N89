@@ -74,11 +74,10 @@ namespace N89.EditorTools
             AddLight(lights, "Arsenal", new Vector2(7.2f, 2.75f), CpYellow, 3.8f, 1.1f);
             AddLight(lights, "Terminal", new Vector2(4.4f, 4.4f), Cyan, 2.8f, 1f);
             Pulsing(AddLight(lights, "Bathroom", new Vector2(6f, -2.6f), new Color(0.6f, 0.95f, 1f), 4.5f, 0.75f), 23f, 0.6f, 0.85f);
-            AddLight(lights, "FrontDoor", new Vector2(1f, -5f), Cyan, 1.6f, 0.9f);
-
             Transform apartment = new GameObject("Apartment").transform;
-            BuildRooms(apartment);
+            BuildRooms(apartment, out Door frontDoor);
             BuildFurniture(apartment);
+            TriggerZone exitZone = BuildCorridor(apartment, lights);
 
             // --- Герой и точки катсцены ---
             Transform gameplay = new GameObject("Gameplay").transform;
@@ -91,6 +90,8 @@ namespace N89.EditorTools
             Transform messageCamPoint = Point(gameplay, "MessageCamPoint", new Vector2(0.3f, -1.2f), 0f);
             // Площадка перед витриной арсенала
             TriggerZone arsenalZone = CreateZone(gameplay, "ArsenalZone", new Vector2(5.7f, 2.75f), new Vector2(1.4f, 3.2f));
+            // Площадка у входной двери изнутри
+            TriggerZone doorZone = CreateZone(gameplay, "DoorZone", new Vector2(1f, Bottom + 1f), new Vector2(2f, 1.4f));
 
             GameObject hero = Spawn(heroPrefab, gameplay, standPoint.position);
             hero.transform.Find("Body").rotation = standPoint.rotation;
@@ -115,6 +116,7 @@ namespace N89.EditorTools
             Crosshair crosshair = BuildCrosshair(canvasRect, null, null);
             BuildHint(canvasRect, mono, "WASD — ходьба    SHIFT — осмотреться    ESC — меню");
             ScreenFader fader = BuildFader(canvasRect, mono, new Color(1f, 0.85f, 0.97f));
+            LoadingScreen loading = BuildLoadingScreen(canvasRect, mono);
 
             // --- Режиссёр ---
             InterludeDirector director = new GameObject("InterludeDirector").AddComponent<InterludeDirector>();
@@ -136,6 +138,10 @@ namespace N89.EditorTools
                 P(so, "_messageCamPoint").objectReferenceValue = messageCamPoint;
                 P(so, "_arsenalZone").objectReferenceValue = arsenalZone;
                 P(so, "_arsenal").objectReferenceValue = arsenal;
+                P(so, "_frontDoor").objectReferenceValue = frontDoor;
+                P(so, "_doorZone").objectReferenceValue = doorZone;
+                P(so, "_exitZone").objectReferenceValue = exitZone;
+                P(so, "_loading").objectReferenceValue = loading;
                 P(so, "_letterboxTop").objectReferenceValue = letterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = letterboxBottom;
             });
@@ -148,7 +154,7 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- Комнаты
 
-        private static void BuildRooms(Transform parent)
+        private static void BuildRooms(Transform parent, out Door frontDoor)
         {
             Transform walls = new GameObject("Walls").transform;
             walls.SetParent(parent);
@@ -180,12 +186,97 @@ namespace N89.EditorTools
             window.drawMode = SpriteDrawMode.Tiled;
             window.size = new Vector2(5.2f, WallThickness);
 
-            // Входная дверь (пока закрыта)
-            SpriteRenderer door = CreateSprite("FrontDoor", walls, SpriteFactory.HomeDoor(), new Vector2(doorX, Bottom), 6);
-            door.drawMode = SpriteDrawMode.Tiled;
-            door.size = new Vector2(DoorWidth, WallThickness);
-            door.gameObject.layer = WallLayer;
-            door.gameObject.AddComponent<BoxCollider2D>().size = door.size;
+            // Входная дверь: закрыта (лампа красная), пока не выбрано снаряжение; панель уезжает вправо, под стену
+            var doorRoot = new GameObject("FrontDoor") { layer = WallLayer };
+            doorRoot.transform.SetParent(walls);
+            doorRoot.transform.position = new Vector2(doorX, Bottom);
+            BoxCollider2D doorCollider = doorRoot.AddComponent<BoxCollider2D>();
+            doorCollider.size = new Vector2(DoorWidth, WallThickness);
+            SpriteRenderer panel = CreateSprite("Panel", doorRoot.transform, SpriteFactory.HomeDoor(), Vector2.zero, 4);
+            panel.drawMode = SpriteDrawMode.Tiled;
+            panel.size = doorCollider.size;
+            // Лампа справа от двери — слева висит неоновая вывеска
+            Vector2 lampPosition = new Vector2(doorX + DoorWidth * 0.5f + 0.35f, Bottom + 0.45f);
+            SpriteRenderer lamp = CreateSprite("FrontDoor_Lamp", walls, SpriteFactory.White(), lampPosition, 7, false);
+            lamp.transform.localScale = new Vector3(0.6f, 0.6f, 1f);
+            Light2D lampLight = AddLight(lamp.transform, "Light", lampPosition, Color.red, 1.8f, 0.9f);
+            frontDoor = doorRoot.AddComponent<Door>();
+            Configure(frontDoor, so =>
+            {
+                P(so, "_collider").objectReferenceValue = doorCollider;
+                P(so, "_panel").objectReferenceValue = panel.transform;
+                P(so, "_openOffset").vector2Value = new Vector2(DoorWidth, 0f);
+                P(so, "_statusLamp").objectReferenceValue = lamp;
+                P(so, "_statusLight").objectReferenceValue = lampLight;
+            });
+        }
+
+        // Коридор мегаблока за входной дверью: тусклые мигающие лампы, мусор, в конце — выход
+        private static TriggerZone BuildCorridor(Transform parent, Transform lights)
+        {
+            const float left = -0.6f, right = 2.6f, end = -15.5f;
+            Transform corridor = new GameObject("Corridor").transform;
+            corridor.SetParent(parent);
+            Sprite wall = SpriteFactory.HomeWall();
+            float t = WallThickness * 0.5f;
+
+            SpriteRenderer floor = CreateSprite("Floor", corridor, SpriteFactory.ApartmentFloor(), new Vector2((left + right) * 0.5f, (Bottom + end) * 0.5f), -100);
+            floor.drawMode = SpriteDrawMode.Tiled;
+            floor.size = new Vector2(right - left, Bottom - end);
+            floor.color = new Color(0.7f, 0.72f, 0.8f);
+
+            CreateWall(corridor, "Wall_W", new Vector2(left, Bottom), new Vector2(left, end - t), wall, WallLayer, 5);
+            CreateWall(corridor, "Wall_E", new Vector2(right, Bottom), new Vector2(right, end - t), wall, WallLayer, 5);
+            CreateWall(corridor, "Wall_End", new Vector2(left - t, end), new Vector2(right + t, end), wall, WallLayer, 5);
+
+            Prop("Clutter", corridor, SpriteFactory.Clutter(), new Vector2(-0.05f, -9.2f), Vector2.zero);
+            Prop("Crate", corridor, SpriteFactory.Crate(), new Vector2(2.05f, -11.6f), new Vector2(0.85f, 0.85f));
+            NeonSign(corridor, SpriteFactory.NeonSign(), new Vector2(1f, end + 0.45f), 0f, new Color(0.35f, 1f, 0.5f));
+
+            Pulsing(AddLight(lights, "Corridor_1", new Vector2(1f, -8f), new Color(0.75f, 0.9f, 1f), 3.5f, 0.7f), 17f, 0.25f, 0.8f);
+            AddLight(lights, "Corridor_2", new Vector2(1f, -12.5f), new Color(1f, 0.6f, 0.4f), 3.5f, 0.6f);
+
+            return CreateZone(corridor, "ExitZone", new Vector2(1f, end + 1.1f), new Vector2(right - left, 1.4f));
+        }
+
+        // Экран загрузки миссии: чёрный фон, название, полоска прогресса
+        private static LoadingScreen BuildLoadingScreen(RectTransform canvasRect, TMP_FontAsset mono)
+        {
+            Color yellow = new Color(0.98f, 0.86f, 0.38f);
+            Color cyan = new Color(0.3f, 1f, 1f);
+            Vector2 center = new Vector2(0.5f, 0.5f);
+            Vector2 bottom = new Vector2(0.5f, 0f);
+
+            Image root = Img("Loading", canvasRect, Color.black);
+            MainMenuSceneBuilder.Stretch(root.rectTransform);
+            CanvasGroup group = Group(root.gameObject, 0f);
+
+            TextMeshProUGUI title = Text("Title", root.rectTransform, mono, string.Empty, 72f, yellow, TextAlignmentOptions.Center);
+            Anchor(title.rectTransform, center, center, new Vector2(0f, 70f), new Vector2(1400f, 100f));
+            Anchor(Img("Line", root.rectTransform, new Color(1f, 0.33f, 0.33f)).rectTransform, center, center, new Vector2(0f, 10f), new Vector2(700f, 2f));
+            TextMeshProUGUI subtitle = Text("Subtitle", root.rectTransform, mono, string.Empty, 28f, Color.white, TextAlignmentOptions.Center);
+            Anchor(subtitle.rectTransform, center, center, new Vector2(0f, -34f), new Vector2(1400f, 44f));
+
+            TextMeshProUGUI percent = Text("Percent", root.rectTransform, mono, string.Empty, 22f, cyan, TextAlignmentOptions.Center);
+            Anchor(percent.rectTransform, bottom, bottom, new Vector2(0f, 150f), new Vector2(600f, 30f));
+            Image bar = Img("Bar", root.rectTransform, new Color(0.3f, 1f, 1f, 0.15f));
+            Anchor(bar.rectTransform, bottom, bottom, new Vector2(0f, 120f), new Vector2(900f, 8f));
+            Image fill = Img("Fill", bar.rectTransform, cyan);
+            MainMenuSceneBuilder.Stretch(fill.rectTransform);
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+
+            LoadingScreen loading = root.gameObject.AddComponent<LoadingScreen>();
+            Configure(loading, so =>
+            {
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_title").objectReferenceValue = title;
+                P(so, "_subtitle").objectReferenceValue = subtitle;
+                P(so, "_fill").objectReferenceValue = fill;
+                P(so, "_percent").objectReferenceValue = percent;
+            });
+            return loading;
         }
 
         private static void BuildFurniture(Transform parent)
@@ -413,18 +504,18 @@ namespace N89.EditorTools
         private const string WeaponsDir = "Assets/_Project/ScriptableObjects/Weapons";
         private const string ImplantsDir = "Assets/_Project/ScriptableObjects/Implants";
 
-        private static WeaponData[] CreateWeapons()
+        internal static WeaponData[] CreateWeapons()
         {
             MainMenuSceneBuilder.EnsureFolder(WeaponsDir);
             return new[]
             {
-                CreateWeapon("Smg", "КИБЕР-ПП", ArtOr("Weapons/weapon_smg", SpriteFactory.IconSmg), 0.07f, 7f, 1, 14f, new[] { 5, 2, 2, 2 },
+                CreateWeapon("Smg", "КИБЕР-ПП", ArtOr("Weapons/weapon_smg", SpriteFactory.IconSmg), SpriteFactory.HeroSmg(), 0.07f, 7f, 1, 14f, new[] { 5, 2, 2, 2 },
                     "Компактный пистолет-пулемёт с умным спуском. Стреляет быстрее всех и почти не дёргается в руках, " +
                     "но пули разлетаются веером и быстро теряют силу. Для тех, кто врывается в комнату первым."),
-                CreateWeapon("Rifle", "АВТОМАТ", ArtOr("Weapons/weapon_rifle", SpriteFactory.IconRifle), 0.13f, 2.5f, 1, 30f, new[] { 3, 3, 4, 5 },
+                CreateWeapon("Rifle", "АВТОМАТ", ArtOr("Weapons/weapon_rifle", SpriteFactory.IconRifle), SpriteFactory.HeroRifle(), 0.13f, 2.5f, 1, 30f, new[] { 3, 3, 4, 5 },
                     "Штурмовая винтовка корпоративного образца. Ровная, точная очередь на любой дистанции. " +
                     "Золотая середина: не подведёт ни в узком коридоре, ни в большом зале."),
-                CreateWeapon("Shotgun", "ДРОБОВИК", ArtOr("Weapons/weapon_shotgun", SpriteFactory.IconShotgun), 0.7f, 14f, 8, 8f, new[] { 1, 5, 1, 1 },
+                CreateWeapon("Shotgun", "ДРОБОВИК", ArtOr("Weapons/weapon_shotgun", SpriteFactory.IconShotgun), SpriteFactory.HeroShotgun(), 0.7f, 14f, 8, 8f, new[] { 1, 5, 1, 1 },
                     "Помповое ружьё. Один выстрел — веер из восьми дробин, который сносит всех вблизи. " +
                     "Между выстрелами — пауза на перезарядку, а издалека дробь почти бесполезна."),
             };
@@ -456,24 +547,25 @@ namespace N89.EditorTools
             return sprite != null ? sprite : placeholder();
         }
 
-        // У уже созданного ассета меняем только иконку-заглушку (из Generated) — иконку, поставленную вручную, не трогаем
-        private static void UpdatePlaceholderIcon(Object asset, Sprite current, Sprite icon)
+        // У уже созданного ассета меняем только спрайт-заглушку (пустой или из Generated) — арт, поставленный вручную, не трогаем
+        private static void UpdatePlaceholder(Object asset, string field, Sprite current, Sprite sprite)
         {
             if (current != null && !AssetDatabase.GetAssetPath(current).Contains("/Generated/")) return;
-            if (current == icon) return;
-            Configure(asset, so => P(so, "_icon").objectReferenceValue = icon);
+            if (current == sprite) return;
+            Configure(asset, so => P(so, field).objectReferenceValue = sprite);
             EditorUtility.SetDirty(asset);
         }
 
         // Ассет создаётся один раз — дальше значения тюнят в инспекторе (как данные взломов)
-        private static WeaponData CreateWeapon(string fileName, string displayName, Sprite icon, float cooldown, float spread,
+        private static WeaponData CreateWeapon(string fileName, string displayName, Sprite icon, Sprite heroSprite, float cooldown, float spread,
             int pellets, float range, int[] ratings, string description)
         {
             string path = $"{WeaponsDir}/{fileName}.asset";
             var weapon = AssetDatabase.LoadAssetAtPath<WeaponData>(path);
             if (weapon != null)
             {
-                UpdatePlaceholderIcon(weapon, weapon.Icon, icon);
+                UpdatePlaceholder(weapon, "_icon", weapon.Icon, icon);
+                UpdatePlaceholder(weapon, "_heroSprite", weapon.HeroSprite, heroSprite);
                 return weapon;
             }
 
@@ -484,6 +576,7 @@ namespace N89.EditorTools
                 P(so, "_displayName").stringValue = displayName;
                 P(so, "_description").stringValue = description;
                 P(so, "_icon").objectReferenceValue = icon;
+                P(so, "_heroSprite").objectReferenceValue = heroSprite;
                 P(so, "_cooldown").floatValue = cooldown;
                 P(so, "_spreadDegrees").floatValue = spread;
                 P(so, "_pellets").intValue = pellets;
@@ -502,7 +595,7 @@ namespace N89.EditorTools
             var implant = AssetDatabase.LoadAssetAtPath<ImplantData>(path);
             if (implant != null)
             {
-                UpdatePlaceholderIcon(implant, implant.Icon, icon);
+                UpdatePlaceholder(implant, "_icon", implant.Icon, icon);
                 return implant;
             }
 

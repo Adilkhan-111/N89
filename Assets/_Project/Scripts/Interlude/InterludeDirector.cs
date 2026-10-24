@@ -11,8 +11,8 @@ namespace N89.Interlude
     // Интерлюдия перед миссией 1: квартира героя (кличка — Рэй). Он спит на диване, ворочается,
     // просыпается, садится и встаёт — дальше игрок свободно ходит по квартире.
     // Цель — зайти в ванную; там босс присылает брифинг в мессенджер. Потом цель — арсенал:
-    // у витрины открывается выбор оружия и импланта на миссию.
-    // Продолжение — дальше по сценарию.
+    // у витрины открывается выбор оружия и импланта на миссию. Затем — к входной двери, через
+    // коридор мегаблока, в конце коридора экран загрузки миссии.
     public class InterludeDirector : MonoBehaviour
     {
         [Header("Hero")]
@@ -41,6 +41,19 @@ namespace N89.Interlude
         [SerializeField] private ArsenalPanel _arsenal;
         [Tooltip("Перед какой миссией эта интерлюдия: от номера зависит доступный имплант")]
         [SerializeField] private int _mission = 1;
+
+        [Header("Выход на миссию")]
+        [SerializeField] private Door _frontDoor;
+        [Tooltip("Площадка у входной двери изнутри: подошёл — дверь открывается")]
+        [SerializeField] private TriggerZone _doorZone;
+        [Tooltip("Конец коридора за дверью: дошёл — грузится миссия")]
+        [SerializeField] private TriggerZone _exitZone;
+        [SerializeField] private LoadingScreen _loading;
+        [SerializeField] private string _doorObjective = "Иди к двери";
+        [SerializeField] private string _leaveObjective = "Выйди из коридора";
+        [SerializeField] private string _missionScene = "Mission01";
+        [SerializeField] private string _missionTitle = "МИССИЯ 1";
+        [SerializeField] private string _missionSubtitle = "ЛОГОВО БАНДЫ  //  ЗАЧИСТИТЬ ВСЕХ";
 
         [Header("Брифинг от босса")]
         [SerializeField] private TriggerZone _bathroomZone;
@@ -135,7 +148,18 @@ namespace N89.Interlude
             _objective.Set(string.Empty);
             yield return ChooseLoadout(rb);
 
-            // Дальше — продолжение интерлюдии (будет описано позже)
+            // К двери, через коридор мегаблока — и загрузка миссии
+            _objective.Set(_doorObjective);
+            yield return new WaitUntil(() => _doorZone.PlayerInside);
+            _frontDoor.Open();
+            _objective.Set(_leaveObjective);
+            yield return new WaitUntil(() => _exitZone.WasEntered);
+
+            _objective.Set(string.Empty);
+            _hero.CanMove = false;
+            rb.linearVelocity = Vector2.zero;
+            _crosshair.SetActive(false);
+            yield return _loading.Load(_missionScene, _missionTitle, _missionSubtitle);
         }
 
         // Выбор оружия и импланта на миссию; выбор сохраняется в Loadout

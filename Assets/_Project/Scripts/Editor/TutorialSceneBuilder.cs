@@ -37,7 +37,7 @@ namespace N89.EditorTools
         private const int RamSlots = 15;
 
         internal const int WallLayer = 6;
-        private const int GlassLayer = 7;
+        internal const int GlassLayer = 7;
         internal const int PlayerLayer = 8;
         private const int EnemyLayer = 9;
 
@@ -49,6 +49,7 @@ namespace N89.EditorTools
 
         private static Material s_lit;
         private static Material s_unlit;
+        internal static Material UnlitMaterial => s_unlit;
         private static Sprite s_white;
 
         [MenuItem("N89/Build Tutorial Scene")]
@@ -1007,7 +1008,7 @@ namespace N89.EditorTools
             return drone.GetComponent<Health>();
         }
 
-        private static QuickhackData CreateQuickhack(string fileName, string displayName, int cost, float upload, QuickhackEffect effect)
+        internal static QuickhackData CreateQuickhack(string fileName, string displayName, int cost, float upload, QuickhackEffect effect)
         {
             string path = $"{QuickhacksDir}/{fileName}.asset";
             var hack = AssetDatabase.LoadAssetAtPath<QuickhackData>(path);

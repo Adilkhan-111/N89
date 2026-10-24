@@ -6,6 +6,8 @@ namespace N89.Hacking
     {
         Unlock,
         ShortCircuit,
+        // Отключить камеру наблюдения
+        Disable,
     }
 
     // Описание одного взлома (как quickhack в Cyberpunk): название, цена в RAM, время загрузки.

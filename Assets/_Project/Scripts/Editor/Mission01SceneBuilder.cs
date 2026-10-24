@@ -69,6 +69,10 @@ namespace N89.EditorTools
             Transform level = new GameObject("Level").transform;
             BuildYard(level);
             BuildBase(level);
+            BuildInterior(level);
+            // Отключение камеры дешевле замыкания — как взлом замка
+            QuickhackData cameraOff = CreateQuickhack("CameraOff", "ОТКЛЮЧИТЬ КАМЕРУ", 4, 0.6f, QuickhackEffect.Disable);
+            BuildCameras(level, cameraOff, common.Electric);
 
             Transform enemiesRoot = new GameObject("Bandits").transform;
             Health[] enemies = SpawnBandits(banditPrefab, enemiesRoot);
@@ -155,13 +159,111 @@ namespace N89.EditorTools
             Block(walls, "Stairs_Block", new Vector2(0f, 20.25f), new Vector2(2.1f, H));
             Wall(walls, "Stairs_Rail", 2.1f, 23.75f, 5.6f, 23.75f);
 
-            // Левая комната: три глухих стеллажа
-            Block(walls, "Rack_1", new Vector2(0f, 7.6f), new Vector2(1.25f, 14.9f));
-            Block(walls, "Rack_2", new Vector2(2.7f, 7.6f), new Vector2(3.9f, 14.9f));
-            Block(walls, "Rack_3", new Vector2(5.4f, 7.6f), new Vector2(6.5f, 14.9f));
+            // Левая комната (раздевалка): три ряда шкафчиков
+            Sprite lockers = SpriteFactory.Lockers();
+            Block(walls, "Lockers_1", new Vector2(0f, 7.6f), new Vector2(1.25f, 14.9f), lockers);
+            Block(walls, "Lockers_2", new Vector2(2.7f, 7.6f), new Vector2(3.9f, 14.9f), lockers);
+            Block(walls, "Lockers_3", new Vector2(5.4f, 7.6f), new Vector2(6.5f, 14.9f), lockers);
+        }
 
-            // Нижняя средняя комната: большой стол посередине (вокруг него проходят патрульные)
-            Block(walls, "Table", new Vector2(13.8f, 2.6f), new Vector2(24.3f, 5.8f));
+        // Интерьер по схеме. Высокое (шкафы, автомат) — слой Wall: закрывает обзор.
+        // Низкое (стол, диван, скамьи) — слой Glass: не пройти и пули не пробивают, но поверх видно
+        private static void BuildInterior(Transform parent)
+        {
+            Transform interior = new GameObject("Interior").transform;
+            interior.SetParent(parent);
+
+            // Полы комнат поверх бетона
+            Floor(interior, "Floor_Chill", SpriteFactory.Carpet(), V(32.2f, 20.25f), V(W, H), -99);
+            Floor(interior, "Floor_Discussion", SpriteFactory.WoodFloor(), V(10.3f, 0f), V(29.5f, 8.2f), -99);
+            Floor(interior, "Floor_Gym", SpriteFactory.GymFloor(), V(29.5f, 0f), V(W, 8.2f), -99);
+
+            // Лестница: два пролёта по сторонам перил
+            Sprite stairs = SpriteFactory.Stairs();
+            Prop(interior, "Stairs_Upper", stairs, new Vector2(2.2f, 24f), new Vector2(5f, 26.9f), -98);
+            Prop(interior, "Stairs_Lower", stairs, new Vector2(2.2f, 20.35f), new Vector2(5f, 23.5f), -98);
+
+            // Chill room: диван у нижней стены, аркадный автомат у правой
+            Prop(interior, "Sofa", SpriteFactory.GangSofa(), new Vector2(32.7f, 20.45f), new Vector2(40.5f, 22.4f), 3, GlassLayer);
+            Prop(interior, "Arcade", SpriteFactory.Arcade(), new Vector2(44f, 22.4f), new Vector2(45.75f, 25.8f), 3, WallLayer);
+
+            // Discussion room: стол, на краю проектор, луч на экран на стене качалки
+            Prop(interior, "Table", SpriteFactory.ConferenceTable(), new Vector2(13.8f, 2.6f), new Vector2(24.3f, 5.8f), 3, GlassLayer);
+            Prop(interior, "Projector", SpriteFactory.Projector(), new Vector2(23.1f, 3.7f), new Vector2(24.1f, 4.7f), 4);
+            Prop(interior, "ProjectorBeam", SpriteFactory.ProjectorBeam(), new Vector2(24.1f, 3f), new Vector2(29.2f, 5.4f), 6, -1, false);
+            Prop(interior, "ProjectorScreen", SpriteFactory.ProjectorScreen(), new Vector2(29f, 2.9f), new Vector2(29.25f, 5.5f), 6, -1, false);
+
+            // Качалка: две скамьи для жима, штанги слева. Коллайдер — только у скамьи, штанга не мешает пройти
+            Sprite bench = SpriteFactory.BenchPress();
+            Prop(interior, "Bench_1", bench, new Vector2(30.1f, 4.4f), new Vector2(33.9f, 6f), 3);
+            Solid(interior, "Bench_1_Collider", new Vector2(30.95f, 4.95f), new Vector2(33.8f, 5.45f), GlassLayer);
+            Prop(interior, "Bench_2", bench, new Vector2(30.1f, 2f), new Vector2(33.9f, 3.6f), 3);
+            Solid(interior, "Bench_2_Collider", new Vector2(30.95f, 2.55f), new Vector2(33.8f, 3.05f), GlassLayer);
+        }
+
+        // ---------------------------------------------------------------- Камеры
+
+        // Камеры наблюдения — чёрные точки на схеме: позиция (юниты схемы), куда смотрит, на сколько водит, дальность (мир)
+        private static void BuildCameras(Transform parent, QuickhackData cameraOff, GameObject sparksFx)
+        {
+            Transform root = new GameObject("Cameras").transform;
+            root.SetParent(parent);
+            Sprite head = SpriteFactory.SecurityCamera();
+            Sprite mount = SpriteFactory.CameraMount();
+
+            SecurityCam(root, "Camera_TopRoom", new Vector2(10.3f, 26.3f), -25f, 40f, 8f, head, mount, cameraOff, sparksFx);
+            SecurityCam(root, "Camera_Chill", new Vector2(45.2f, 26.3f), 215f, 35f, 7f, head, mount, cameraOff, sparksFx);
+            SecurityCam(root, "Camera_Corridor", new Vector2(0.7f, 19.6f), -8f, 20f, 11f, head, mount, cameraOff, sparksFx);
+            SecurityCam(root, "Camera_Lockers", new Vector2(9.6f, 14.4f), 225f, 35f, 7f, head, mount, cameraOff, sparksFx);
+            SecurityCam(root, "Camera_Hall", new Vector2(45.2f, 14.4f), 195f, 25f, 11f, head, mount, cameraOff, sparksFx);
+        }
+
+        private static void SecurityCam(Transform parent, string name, Vector2 schemaPosition, float angle, float sweep, float range,
+            Sprite headSprite, Sprite mountSprite, QuickhackData cameraOff, GameObject sparksFx)
+        {
+            var root = new GameObject(name);
+            root.transform.SetParent(parent);
+            root.transform.position = V(schemaPosition.x, schemaPosition.y);
+            CircleCollider2D col = root.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+            col.radius = 0.3f;
+
+            CreateSprite("Mount", root.transform, mountSprite, Vector2.zero, 6);
+            SpriteRenderer head = CreateSprite("Head", root.transform, headSprite, Vector2.zero, 7, true, angle);
+            SpriteRenderer led = CreateSprite("Led", head.transform, SpriteFactory.White(), new Vector2(-0.12f, 0f), 8, false);
+            led.transform.localScale = Vector3.one * 0.35f;
+            Light2D light = AddLight(root.transform, "Light", root.transform.position, Color.green, 1.2f, 0.7f);
+
+            var cone = new GameObject("Cone");
+            cone.transform.SetParent(root.transform, false);
+            MeshFilter filter = cone.AddComponent<MeshFilter>();
+            MeshRenderer renderer = cone.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = UnlitMaterial;
+            renderer.sortingOrder = -50;
+
+            SecurityCamera cam = root.AddComponent<SecurityCamera>();
+            Configure(cam, so =>
+            {
+                P(so, "_head").objectReferenceValue = head.transform;
+                P(so, "_led").objectReferenceValue = led;
+                P(so, "_light").objectReferenceValue = light;
+                P(so, "_coneFilter").objectReferenceValue = filter;
+                P(so, "_coneRenderer").objectReferenceValue = renderer;
+                P(so, "_baseAngle").floatValue = angle;
+                P(so, "_sweepAngle").floatValue = sweep;
+                P(so, "_range").floatValue = range;
+                P(so, "_sightBlockers").intValue = 1 << WallLayer;
+            });
+
+            HackableDevice device = root.AddComponent<HackableDevice>();
+            Configure(device, so =>
+            {
+                P(so, "_deviceName").stringValue = "КАМЕРА НАБЛЮДЕНИЯ";
+                SetArray(so, "_quickhacks", cameraOff);
+                P(so, "_collider").objectReferenceValue = col;
+                SetArray(so, "_highlightRenderers", head);
+                P(so, "_shortCircuitFxPrefab").objectReferenceValue = sparksFx;
+            });
         }
 
         // Двор вокруг здания: асфальт и забор — между E1 и E2 можно пройти снаружи
@@ -255,6 +357,9 @@ namespace N89.EditorTools
             Pulsing(Lamp(lights, "Hall", 27f, 11.6f, magenta, 12f, 0.6f), 0.8f, 0.45f, 0.7f);
             Lamp(lights, "Room_Table", 20f, 4.2f, warm, 8f, 0.8f);
             Lamp(lights, "Room_BottomRight", 37.7f, 4.1f, toxic, 7f, 0.7f);
+            // Свечение экрана проектора и аркадного автомата
+            Lamp(lights, "ProjectorScreen", 28.3f, 4.2f, cyan, 4f, 0.7f);
+            Pulsing(Lamp(lights, "Arcade", 43.2f, 24.1f, magenta, 3.5f, 0.8f), 2.5f, 0.5f, 0.9f);
 
             // Фонари во дворе у входов
             Lamp(lights, "Street_E1", 5.5f, -2.8f, cyan, 5f, 0.6f);
@@ -276,16 +381,45 @@ namespace N89.EditorTools
             CreateWall(parent, name, V(x1, y1), V(x2, y2), s_wall, WallLayer, 5);
         }
 
-        // Глухой блок (стеллаж, лестница, стол): плитка стены по всей площади и коллайдер
-        private static void Block(Transform parent, string name, Vector2 min, Vector2 max)
+        // Глухой блок (лестница, шкафчики): плитка по всей площади и коллайдер. По умолчанию — плитка стены
+        private static void Block(Transform parent, string name, Vector2 min, Vector2 max, Sprite sprite = null)
         {
             min *= S;
             max *= S;
-            SpriteRenderer sr = CreateSprite(name, parent, s_wall, (min + max) * 0.5f, 5);
+            SpriteRenderer sr = CreateSprite(name, parent, sprite != null ? sprite : s_wall, (min + max) * 0.5f, 5);
             sr.drawMode = SpriteDrawMode.Tiled;
             sr.size = max - min;
             sr.gameObject.layer = WallLayer;
             sr.gameObject.AddComponent<BoxCollider2D>().size = sr.size;
+        }
+
+        // Предмет интерьера: спрайт растягивается на прямоугольник схемы. layer < 0 — без коллайдера (декор)
+        private static SpriteRenderer Prop(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order,
+            int layer = -1, bool lit = true)
+        {
+            min *= S;
+            max *= S;
+            SpriteRenderer sr = CreateSprite(name, parent, sprite, (min + max) * 0.5f, order, lit);
+            Vector2 size = sprite.bounds.size;
+            sr.transform.localScale = new Vector3((max.x - min.x) / size.x, (max.y - min.y) / size.y, 1f);
+            if (layer >= 0)
+            {
+                sr.gameObject.layer = layer;
+                sr.gameObject.AddComponent<BoxCollider2D>();
+            }
+
+            return sr;
+        }
+
+        // Невидимое препятствие (часть предмета, о которую можно споткнуться)
+        private static void Solid(Transform parent, string name, Vector2 min, Vector2 max, int layer)
+        {
+            min *= S;
+            max *= S;
+            var go = new GameObject(name) { layer = layer };
+            go.transform.SetParent(parent);
+            go.transform.position = (min + max) * 0.5f;
+            go.AddComponent<BoxCollider2D>().size = max - min;
         }
 
         private static void Floor(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order)

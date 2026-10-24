@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using N89.Combat;
+using N89.Enemies;
 using N89.World;
 using UnityEngine;
 
@@ -73,6 +74,9 @@ namespace N89.Hacking
                     Health health = GetComponent<Health>();
                     Malfunction malfunction = GetComponent<Malfunction>();
                     return health != null && !health.IsDead && (malfunction == null || !malfunction.IsActive);
+                case QuickhackEffect.Disable:
+                    SecurityCamera securityCamera = GetComponent<SecurityCamera>();
+                    return securityCamera != null && !securityCamera.IsDisabled;
                 default:
                     return true;
             }
@@ -118,6 +122,13 @@ namespace N89.Hacking
                     {
                         GetComponent<Health>()?.TakeDamage(hack.Damage);
                     }
+                    break;
+                case QuickhackEffect.Disable:
+                    if (_shortCircuitFxPrefab != null)
+                    {
+                        Instantiate(_shortCircuitFxPrefab, transform.position, Quaternion.identity);
+                    }
+                    GetComponent<SecurityCamera>()?.Disable();
                     break;
             }
 

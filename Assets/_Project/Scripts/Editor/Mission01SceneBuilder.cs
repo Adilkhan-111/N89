@@ -118,6 +118,8 @@ namespace N89.EditorTools
                 P(so, "_maxLookAhead").floatValue = 3f;
             });
             Configure(hero.GetComponent<PlayerController>(), so => P(so, "_cameraFollow").objectReferenceValue = follow);
+            // Имплант миссии 1 фиксированный — «Руки гориллы»
+            AddGorillaArms(hero, follow, common);
             cam.transform.position = new Vector3(start.x, start.y, -10f);
 
             // --- UI и сценарий ---
@@ -524,6 +526,34 @@ namespace N89.EditorTools
             Stand(new Vector2(39f, 4f), 135f);
 
             return bandits.ToArray();
+        }
+
+        // ---------------------------------------------------------------- Имплант
+
+        // «Руки гориллы»: ПКМ — рывок с ударом, зажать ПКМ — блок на 3 попадания. Руки в блоке — спрайт перед корпусом
+        private static void AddGorillaArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
+        {
+            Transform body = hero.transform.Find("Body");
+            SpriteRenderer guard = CreateSprite("GorillaGuard", body, SpriteFactory.GorillaGuard(), new Vector2(0.38f, 0f), 11);
+
+            GorillaArms arms = hero.AddComponent<GorillaArms>();
+            Configure(arms, so =>
+            {
+                P(so, "_player").objectReferenceValue = hero.GetComponent<PlayerController>();
+                P(so, "_health").objectReferenceValue = hero.GetComponent<Health>();
+                P(so, "_rb").objectReferenceValue = hero.GetComponent<Rigidbody2D>();
+                P(so, "_body").objectReferenceValue = body;
+                P(so, "_bodyRenderer").objectReferenceValue = body.GetComponent<SpriteRenderer>();
+                P(so, "_cameraFollow").objectReferenceValue = follow;
+                P(so, "_guard").objectReferenceValue = guard;
+                P(so, "_pixel").objectReferenceValue = SpriteFactory.White();
+                P(so, "_material").objectReferenceValue = UnlitMaterial;
+                P(so, "_enemyMask").intValue = 1 << 9;
+                P(so, "_wallMask").intValue = (1 << WallLayer) | (1 << GlassLayer);
+                P(so, "_bloodFxPrefab").objectReferenceValue = common.Blood;
+                P(so, "_bloodPoolPrefab").objectReferenceValue = common.BloodPool;
+                P(so, "_blockFxPrefab").objectReferenceValue = common.Sparks;
+            });
         }
 
         // ---------------------------------------------------------------- Подсказки «куда идти»

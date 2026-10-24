@@ -20,6 +20,8 @@ namespace N89.Combat
 
         public bool IsDead { get; private set; }
         public event Action<Health> Died;
+        // Защита (блок «Рук гориллы»): вернула true — удар поглощён, урона нет
+        public Func<bool> Guard { get; set; }
 
         private void Awake()
         {
@@ -37,6 +39,11 @@ namespace N89.Combat
                 return;
             }
 
+            if (Guard != null && Guard())
+            {
+                return;
+            }
+
             _health -= amount;
             if (_health <= 0)
             {
@@ -49,9 +56,16 @@ namespace N89.Combat
             }
         }
 
+        // Сценарная смерть — мимо блока
         public void Kill()
         {
-            TakeDamage(Mathf.Max(_health, 1));
+            if (IsDead)
+            {
+                return;
+            }
+
+            _health = 0;
+            Die();
         }
 
         private void Die()

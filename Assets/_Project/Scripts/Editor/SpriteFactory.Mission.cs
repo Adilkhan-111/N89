@@ -263,6 +263,26 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // «Руки гориллы» в блоке: два массивных кибер-предплечья сомкнуты перед героем (вид сверху, вперёд — +x),
+        // гидравлика светится оранжевым
+        public static Sprite GorillaGuard() => Create("gorilla_guard", 20, 32, c =>
+        {
+            Color steel = new Color(0.42f, 0.43f, 0.48f);
+            Color steelDark = new Color(0.2f, 0.2f, 0.24f);
+            Color hydraulic = new Color(1f, 0.6f, 0.15f);
+            foreach (int y0 in new[] { 2, 17 })
+            {
+                c.RoundRect(6, y0, 17, y0 + 12, 3, steelDark);
+                c.RoundRect(7, y0 + 1, 16, y0 + 11, 2, steel);
+                c.Rect(9, y0 + 3, 14, y0 + 3, hydraulic);
+                c.Rect(9, y0 + 8, 14, y0 + 8, hydraulic);
+                // Костяшки
+                for (int k = 0; k < 4; k++) c.Rect(17, y0 + 1 + k * 3, 18, y0 + 2 + k * 3, steelDark);
+            }
+            c.Rect(3, 13, 6, 18, hydraulic * 0.8f);
+            c.Outline(Outline);
+        });
+
         // Стрелка-указатель «куда идти»: жирный шеврон остриём вправо (+x)
         public static Sprite WaypointArrow() => Create("waypoint_arrow", 20, 20, c =>
         {

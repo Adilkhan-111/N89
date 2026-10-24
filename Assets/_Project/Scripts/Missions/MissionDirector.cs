@@ -52,6 +52,9 @@ namespace N89.Missions
         [SerializeField] private Vector2 _officeDoor;
         [SerializeField] private Banner _banner;
         [SerializeField] private WaypointArrow _waypoint;
+        [Tooltip("Подсказка про имплант в начале миссии (пусто — не показывать)")]
+        [SerializeField] private string _implantTitle = "РУКИ ГОРИЛЛЫ";
+        [SerializeField] private string _implantHint = "ПКМ — РЫВОК С УДАРОМ   ·   ЗАЖАТЬ ПКМ — БЛОК";
         [SerializeField] private string _stairsText = "Поднимись на второй этаж";
         [SerializeField] private string _floor2Text = "Убей всех, кроме цели";
         [SerializeField] private string _officeText = "Зайди в кабинет цели";
@@ -125,6 +128,10 @@ namespace N89.Missions
                 UpdateObjective(_objectiveText, _enemies);
             }
             yield return _fader.Fade(1f, 0f, fromCheckpoint ? 0.5f : 1f);
+            if (!fromCheckpoint && _banner != null && !string.IsNullOrEmpty(_implantTitle))
+            {
+                _banner.Show(_implantTitle, _implantHint, 3.5f);
+            }
             if (fromCheckpoint)
             {
                 yield return Floor2Grace();

@@ -35,6 +35,10 @@ namespace N89.Player
         public bool CanShoot { get; set; } = true;
         // Выключается в катсценах, чтобы 89 не крутился за курсором
         public bool CanAim { get; set; } = true;
+        // Импланты: замедление (блок), своё движение (рывок) и занятые руки (оружие молчит)
+        public float SpeedMultiplier { get; set; } = 1f;
+        public bool ExternalVelocity { get; set; }
+        public bool WeaponLocked { get; set; }
         public Vector2 AimPoint { get; private set; }
         public Health Health => _health;
 
@@ -79,7 +83,7 @@ namespace N89.Player
                 }
 
                 bool hackingBlocks = _hacking != null && _hacking.BlocksShooting;
-                if (_weapon != null && CanShoot && !hackingBlocks && mouse.leftButton.isPressed)
+                if (_weapon != null && CanShoot && !WeaponLocked && !hackingBlocks && mouse.leftButton.isPressed)
                 {
                     _weapon.TryFire(aim);
                 }
@@ -92,7 +96,12 @@ namespace N89.Player
 
         private void FixedUpdate()
         {
-            Vector2 target = _moveInput * _moveSpeed;
+            if (ExternalVelocity)
+            {
+                return;
+            }
+
+            Vector2 target = _moveInput * _moveSpeed * SpeedMultiplier;
             _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, target, _acceleration * Time.fixedDeltaTime);
         }
 

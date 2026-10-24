@@ -1,14 +1,17 @@
 using System.Collections;
 using N89.Player;
 using N89.UI;
+using N89.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 
 namespace N89.Interlude
 {
-    // Интерлюдия перед миссией 1: квартира героя. Он спит на диване, ворочается, просыпается,
-    // садится и встаёт — дальше игрок свободно ходит по квартире.
+    // Интерлюдия перед миссией 1: квартира героя (кличка — Рэй). Он спит на диване, ворочается,
+    // просыпается, садится и встаёт — дальше игрок свободно ходит по квартире.
+    // Цель — зайти в ванную; там босс присылает брифинг в мессенджер. Потом цель — арсенал.
+    // Продолжение — дальше по сценарию.
     public class InterludeDirector : MonoBehaviour
     {
         [Header("Hero")]
@@ -27,6 +30,27 @@ namespace N89.Interlude
         [SerializeField] private float _sleepDuration = 4f;
         [SerializeField] private float _closeZoom = 3f;
         [SerializeField] private float _roamZoom = 5f;
+
+        [Header("Цели")]
+        [SerializeField] private string _bathroomObjective = "Зайди в ванную";
+        [SerializeField] private string _arsenalObjective = "Иди в арсенал";
+        [SerializeField] private TriggerZone _arsenalZone;
+
+        [Header("Брифинг от босса")]
+        [SerializeField] private TriggerZone _bathroomZone;
+        [SerializeField] private MessengerPanel _messenger;
+        [Tooltip("Куда смотрит камера, пока открыт мессенджер: панель закрывает зал, ванная остаётся справа")]
+        [SerializeField] private Transform _messageCamPoint;
+        [SerializeField] private string _bossName = "БОСС";
+        [SerializeField] private string _briefingTopic = "ЗАДАНИЕ: ЛОГОВО БАНДЫ";
+        [SerializeField, TextArea] private string[] _briefing =
+        {
+            "Рэй. Есть работа.",
+            "Одна уличная банда уже который месяц грабит и громит имущество Корпорации Е. Склады, конвои, всё, до чего дотянется.",
+            "Наверху это надоело. Пойдёшь в их логово и уберёшь всех. Без исключений.",
+            "Местоположение — в файле. Не подведи.",
+        };
+        [SerializeField] private string _briefingFile = "ЛОГОВО_БАНДЫ.loc";
 
         [Header("UI")]
         [SerializeField] private ScreenFader _fader;
@@ -95,11 +119,35 @@ namespace N89.Interlude
             _hero.CanAim = true;
             _crosshair.SetActive(true);
 
-            // Подсказка висит, пока игрок не пройдётся
-            _objective.Set("Ходьба:  [W] [A] [S] [D]    Осмотреться:  [SHIFT]");
-            Vector3 start = root.position;
-            yield return new WaitUntil(() => Vector3.Distance(start, root.position) > 2f);
+            _objective.Set(_bathroomObjective);
+            yield return new WaitUntil(() => _bathroomZone.WasEntered);
             _objective.Set(string.Empty);
+            yield return BossBriefing(rb);
+
+            _objective.Set(_arsenalObjective);
+            yield return new WaitUntil(() => _arsenalZone.PlayerInside);
+
+            // Дальше — арсенал (будет описано позже)
+        }
+
+        // Босс пишет в мессенджер: панель закрывает зал, камера сдвигается, чтобы ванная была справа.
+        // Рэй не отвечает — игрок закрывает переписку на Enter
+        private IEnumerator BossBriefing(Rigidbody2D rb)
+        {
+            _hero.CanMove = false;
+            _hero.CanAim = false;
+            rb.linearVelocity = Vector2.zero;
+            _crosshair.SetActive(false);
+            Cursor.visible = false;
+            _cameraFollow.Focus(_messageCamPoint, 4f);
+
+            yield return new WaitForSeconds(0.4f);
+            yield return _messenger.Show(_bossName, _briefingTopic, _briefing, _briefingFile);
+
+            _cameraFollow.Focus(null, 0f);
+            _hero.CanMove = true;
+            _hero.CanAim = true;
+            _crosshair.SetActive(true);
         }
 
         private void Update()

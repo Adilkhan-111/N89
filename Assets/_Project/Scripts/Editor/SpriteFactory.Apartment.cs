@@ -9,7 +9,7 @@ namespace N89.EditorTools
         private static readonly Color HeroJacket = new Color(0.46f, 0.11f, 0.16f);
         private static readonly Color HeroJacketShade = new Color(0.3f, 0.07f, 0.11f);
         private static readonly Color HeroShirt = new Color(0.17f, 0.17f, 0.21f);
-        private static readonly Color HeroPants = new Color(0.11f, 0.11f, 0.15f);
+        private static readonly Color HeroPants = new Color(0.16f, 0.17f, 0.26f);
         private static readonly Color HeroBoots = new Color(0.06f, 0.06f, 0.08f);
         private static readonly Color HeroSkin = new Color(0.8f, 0.62f, 0.52f);
         private static readonly Color HeroSkinShade = new Color(0.64f, 0.47f, 0.39f);
@@ -74,6 +74,25 @@ namespace N89.EditorTools
             c.Circle(26.5f, 10f, 1.7f, HeroSkinShade);
             c.Outline(Outline);
         });
+
+        // Ноги для анимации ходьбы (как в Hotline Miami — отдельный спрайт под корпусом), смотрят вправо (+x).
+        // stride > 0 — левая нога (сверху) впереди, < 0 — правая; 0 — ноги вместе
+        public static Sprite HeroLegs(string name, float stride) => Create(name, 32, 32, c =>
+        {
+            DrawLeg(c, new Vector2(14f, 19.5f), new Vector2(15f + stride, 20.5f), 4.5f, HeroPants, HeroBoots, 3f, 2.2f);
+            DrawLeg(c, new Vector2(14f, 12.5f), new Vector2(15f - stride, 11.5f), 4.5f, HeroPants, HeroBoots, 3f, 2.2f);
+            c.Outline(Outline);
+        });
+
+        // Нога сверху: штанина от бедра к стопе, ботинок носком вперёд (+x) с бликом
+        private static void DrawLeg(PixelCanvas c, Vector2 hip, Vector2 foot, float thickness, Color pants, Color boots, float bootLength, float bootWidth)
+        {
+            c.Line(hip, foot, thickness, pants);
+            c.Ellipse(foot.x + bootLength * 0.5f, foot.y, bootLength, bootWidth, boots);
+            int tipX = Mathf.RoundToInt(foot.x + bootLength);
+            int tipY = Mathf.FloorToInt(foot.y);
+            c.Rect(tipX, tipY, tipX, tipY, new Color(0.24f, 0.24f, 0.3f));
+        }
 
         // Плечи в куртке с поднятым воротником и голова сверху; x — линия плеч
         private static void DrawHeroTorso(PixelCanvas c, float x)

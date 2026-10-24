@@ -8,6 +8,10 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using Image = UnityEngine.UI.Image;
+using LayoutElement = UnityEngine.UI.LayoutElement;
+using Outline = UnityEngine.UI.Outline;
+using VerticalLayoutGroup = UnityEngine.UI.VerticalLayoutGroup;
 using static N89.EditorTools.TutorialSceneBuilder;
 
 namespace N89.EditorTools
@@ -78,8 +82,15 @@ namespace N89.EditorTools
             Transform sitPoint = Point(gameplay, "SitPoint", new Vector2(-5.6f, 4.05f), -90f);
             Transform standPoint = Point(gameplay, "StandPoint", new Vector2(-6.3f, 2.9f), -90f);
 
+            // Брифинг: зона ванной и точка камеры (весь план квартиры — ванная справа, зал под панелью)
+            TriggerZone bathroomZone = CreateZone(gameplay, "BathroomZone", new Vector2(6f, -2.75f), new Vector2(5.2f, 4.8f));
+            Transform messageCamPoint = Point(gameplay, "MessageCamPoint", new Vector2(0.3f, -1.2f), 0f);
+            // Площадка перед витриной арсенала
+            TriggerZone arsenalZone = CreateZone(gameplay, "ArsenalZone", new Vector2(5.7f, 2.75f), new Vector2(1.4f, 3.2f));
+
             GameObject hero = Spawn(heroPrefab, gameplay, standPoint.position);
             hero.transform.Find("Body").rotation = standPoint.rotation;
+            hero.transform.Find("Legs").rotation = standPoint.rotation;
 
             // Камера как в туториале: сдвиг к курсору, Shift — осмотреться
             CameraFollow follow = cam.gameObject.AddComponent<CameraFollow>();
@@ -95,8 +106,9 @@ namespace N89.EditorTools
             RectTransform canvasRect = BuildCanvas();
             ObjectivePanel objective = BuildObjective(canvasRect, mono);
             BuildLetterbox(canvasRect, out RectTransform letterboxTop, out RectTransform letterboxBottom);
+            MessengerPanel messenger = BuildMessenger(canvasRect, mono);
             Crosshair crosshair = BuildCrosshair(canvasRect, null, null);
-            BuildHint(canvasRect, mono, "SHIFT — осмотреться    ESC — меню");
+            BuildHint(canvasRect, mono, "WASD — ходьба    SHIFT — осмотреться    ESC — меню");
             ScreenFader fader = BuildFader(canvasRect, mono, new Color(1f, 0.85f, 0.97f));
 
             // --- Режиссёр ---
@@ -114,6 +126,10 @@ namespace N89.EditorTools
                 P(so, "_fader").objectReferenceValue = fader;
                 P(so, "_objective").objectReferenceValue = objective;
                 P(so, "_crosshair").objectReferenceValue = crosshair.gameObject;
+                P(so, "_bathroomZone").objectReferenceValue = bathroomZone;
+                P(so, "_messenger").objectReferenceValue = messenger;
+                P(so, "_messageCamPoint").objectReferenceValue = messageCamPoint;
+                P(so, "_arsenalZone").objectReferenceValue = arsenalZone;
                 P(so, "_letterboxTop").objectReferenceValue = letterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = letterboxBottom;
             });
@@ -256,6 +272,136 @@ namespace N89.EditorTools
             return light;
         }
 
+        // ---------------------------------------------------------------- Мессенджер
+
+        // Панель сообщений как журнал в Cyberpunk 2077: тёмно-красный фон, красные заголовки,
+        // контакт слева, справа лента с жёлтыми сообщениями и бирюзовым вложением. Занимает левые 60% экрана.
+        private static MessengerPanel BuildMessenger(RectTransform canvasRect, TMP_FontAsset mono)
+        {
+            Color red = new Color(1f, 0.33f, 0.33f);
+            Color redDim = new Color(0.65f, 0.2f, 0.22f);
+            Color yellow = new Color(0.98f, 0.86f, 0.38f);
+            Color cyan = new Color(0.4f, 1f, 0.95f);
+            const float width = 1150f;
+
+            RectTransform root = MainMenuSceneBuilder.CreateRect("Messenger", canvasRect);
+            MainMenuSceneBuilder.Stretch(root);
+            CanvasGroup group = Group(root.gameObject, 0f);
+
+            Image panel = Img("Panel", root, new Color(0.07f, 0.015f, 0.03f, 0.95f));
+            RectTransform panelRect = panel.rectTransform;
+            panelRect.anchorMin = new Vector2(0f, 0f);
+            panelRect.anchorMax = new Vector2(0f, 1f);
+            panelRect.pivot = new Vector2(0f, 0.5f);
+            panelRect.sizeDelta = new Vector2(width, 0f);
+            panelRect.anchoredPosition = new Vector2(-width, 0f);
+
+            Image edge = Img("Edge", panelRect, red);
+            edge.rectTransform.anchorMin = new Vector2(1f, 0f);
+            edge.rectTransform.anchorMax = new Vector2(1f, 1f);
+            edge.rectTransform.pivot = new Vector2(1f, 0.5f);
+            edge.rectTransform.sizeDelta = new Vector2(3f, 0f);
+
+            // Шапка
+            TextMeshProUGUI header = Text("Header", panelRect, mono, "СООБЩЕНИЯ", 34f, red, TextAlignmentOptions.BottomLeft);
+            Anchor(header.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(50f, -50f), new Vector2(500f, 50f));
+            TextMeshProUGUI protocol = Text("Protocol", panelRect, mono, "NEURO NETPROTOCOL 3889_M  //  КОРПОРАЦИЯ Е", 14f, redDim, TextAlignmentOptions.BottomRight);
+            Anchor(protocol.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-50f, -60f), new Vector2(600f, 24f));
+            Anchor(Img("HeaderLine", panelRect, red).rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(50f, -110f), new Vector2(width - 100f, 2f));
+
+            // Контакт слева: выбранный (красная заливка) и тема переписки под ним
+            Image contact = Img("Contact", panelRect, new Color(0.55f, 0.09f, 0.12f, 1f));
+            Anchor(contact.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(50f, -150f), new Vector2(370f, 72f));
+            contact.gameObject.AddComponent<Outline>().effectColor = red;
+            Anchor(Img("Marker", contact.rectTransform, red).rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(0f, 0f), new Vector2(6f, 72f));
+            TextMeshProUGUI contactLabel = Text("Name", contact.rectTransform, mono, "БОСС", 30f, cyan, TextAlignmentOptions.Left);
+            Anchor(contactLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(26f, 0f), new Vector2(330f, 50f));
+
+            Image topic = Img("Topic", panelRect, new Color(0.25f, 0.04f, 0.06f, 1f));
+            Anchor(topic.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(80f, -236f), new Vector2(340f, 64f));
+            topic.gameObject.AddComponent<Outline>().effectColor = redDim;
+            TextMeshProUGUI topicLabel = Text("Label", topic.rectTransform, mono, string.Empty, 17f, cyan, TextAlignmentOptions.Left);
+            Anchor(topicLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(18f, 0f), new Vector2(240f, 50f));
+            topicLabel.textWrappingMode = TextWrappingModes.Normal;
+            Image newTag = Img("New", topic.rectTransform, new Color(0.25f, 0.04f, 0.06f, 1f));
+            Anchor(newTag.rectTransform, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-12f, 0f), new Vector2(70f, 26f));
+            newTag.gameObject.AddComponent<Outline>().effectColor = yellow;
+            MainMenuSceneBuilder.Stretch(Text("Label", newTag.rectTransform, mono, "НОВОЕ", 14f, yellow, TextAlignmentOptions.Center).rectTransform);
+
+            // Лента сообщений справа
+            TextMeshProUGUI threadHeader = Text("ThreadHeader", panelRect, mono, "ЗАЩИЩЁННЫЙ КАНАЛ  //  ШИФРОВАНИЕ AES-4096", 14f, redDim, TextAlignmentOptions.BottomLeft);
+            Anchor(threadHeader.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(460f, -130f), new Vector2(640f, 22f));
+            Anchor(Img("ThreadLine", panelRect, redDim).rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(460f, -158f), new Vector2(640f, 1f));
+
+            RectTransform thread = MainMenuSceneBuilder.CreateRect("Thread", panelRect);
+            Anchor(thread, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(460f, -180f), new Vector2(640f, 760f));
+            VerticalLayoutGroup threadLayout = thread.gameObject.AddComponent<VerticalLayoutGroup>();
+            threadLayout.spacing = 20f;
+            threadLayout.childAlignment = TextAnchor.UpperLeft;
+            threadLayout.childControlWidth = true;
+            threadLayout.childControlHeight = true;
+            threadLayout.childForceExpandWidth = true;
+            threadLayout.childForceExpandHeight = false;
+
+            // Шаблон сообщения: тёмная плашка в жёлтой рамке, текст подстраивает высоту
+            Image bubble = Img("BubbleTemplate", thread, new Color(0.1f, 0.04f, 0.03f, 1f));
+            bubble.gameObject.AddComponent<Outline>().effectColor = yellow;
+            VerticalLayoutGroup bubbleLayout = bubble.gameObject.AddComponent<VerticalLayoutGroup>();
+            bubbleLayout.padding = new RectOffset(28, 28, 20, 20);
+            bubbleLayout.childControlWidth = true;
+            bubbleLayout.childControlHeight = true;
+            bubbleLayout.childForceExpandWidth = true;
+            bubbleLayout.childForceExpandHeight = false;
+            TextMeshProUGUI bubbleText = Text("Text", bubble.rectTransform, mono, string.Empty, 28f, yellow, TextAlignmentOptions.TopLeft);
+            bubbleText.textWrappingMode = TextWrappingModes.Normal;
+
+            // Вложение: файл с координатами
+            Image attachment = Img("Attachment", thread, new Color(0.02f, 0.1f, 0.11f, 1f));
+            attachment.gameObject.AddComponent<Outline>().effectColor = cyan;
+            LayoutElement attachmentSize = attachment.gameObject.AddComponent<LayoutElement>();
+            attachmentSize.preferredHeight = 96f;
+            Image icon = Img("Icon", attachment.rectTransform, cyan);
+            Anchor(icon.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(24f, 0f), new Vector2(48f, 56f));
+            Anchor(Img("Fold", icon.rectTransform, new Color(0.02f, 0.12f, 0.13f)).rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(14f, 14f));
+            Anchor(Img("Pin", icon.rectTransform, new Color(0.02f, 0.12f, 0.13f)).rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -4f), new Vector2(14f, 14f));
+            TextMeshProUGUI attachmentLabel = Text("Name", attachment.rectTransform, mono, string.Empty, 26f, cyan, TextAlignmentOptions.BottomLeft);
+            Anchor(attachmentLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0f), new Vector2(96f, 2f), new Vector2(500f, 34f));
+            TextMeshProUGUI attachmentInfo = Text("Info", attachment.rectTransform, mono, "ФАЙЛ ПОЛУЧЕН  //  КООРДИНАТЫ ЦЕЛИ", 16f, new Color(0.4f, 1f, 0.95f, 0.6f), TextAlignmentOptions.TopLeft);
+            Anchor(attachmentInfo.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 1f), new Vector2(96f, -4f), new Vector2(500f, 24f));
+
+            // Индикатор "печатает" и подсказка закрытия
+            TextMeshProUGUI typing = Text("Typing", panelRect, mono, string.Empty, 20f, redDim, TextAlignmentOptions.BottomLeft);
+            Anchor(typing.rectTransform, Vector2.zero, Vector2.zero, new Vector2(460f, 60f), new Vector2(500f, 30f));
+
+            RectTransform close = MainMenuSceneBuilder.CreateRect("CloseHint", panelRect);
+            Anchor(close, new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-50f, 50f), new Vector2(260f, 44f));
+            CanvasGroup closeGroup = Group(close.gameObject, 0f);
+            Image key = Img("Key", close, new Color(0.07f, 0.015f, 0.03f, 1f));
+            Anchor(key.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(100f, 40f));
+            key.gameObject.AddComponent<Outline>().effectColor = cyan;
+            MainMenuSceneBuilder.Stretch(Text("Label", key.rectTransform, mono, "ENTER", 18f, cyan, TextAlignmentOptions.Center).rectTransform);
+            TextMeshProUGUI closeLabel = Text("Label", close, mono, "Закрыть", 26f, red, TextAlignmentOptions.Left);
+            Anchor(closeLabel.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(114f, 0f), new Vector2(150f, 40f));
+
+            MessengerPanel messenger = root.gameObject.AddComponent<MessengerPanel>();
+            Configure(messenger, so =>
+            {
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_panel").objectReferenceValue = panelRect;
+                P(so, "_contactLabel").objectReferenceValue = contactLabel;
+                P(so, "_topicLabel").objectReferenceValue = topicLabel;
+                P(so, "_thread").objectReferenceValue = thread;
+                P(so, "_bubbleTemplate").objectReferenceValue = bubble.gameObject;
+                P(so, "_attachment").objectReferenceValue = attachment.gameObject;
+                P(so, "_attachmentLabel").objectReferenceValue = attachmentLabel;
+                P(so, "_typingLabel").objectReferenceValue = typing;
+                P(so, "_closeHint").objectReferenceValue = closeGroup;
+            });
+            bubble.gameObject.SetActive(false);
+            attachment.gameObject.SetActive(false);
+            return messenger;
+        }
+
         // ---------------------------------------------------------------- Префаб
 
         // Герой дома: без оружия и здоровья, но целится за мышью, как в миссиях
@@ -268,6 +414,10 @@ namespace N89.EditorTools
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
             rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
             root.AddComponent<CircleCollider2D>().radius = 0.32f;
+
+            // Ноги под корпусом: смотрят по ходьбе, корпус — за мышью
+            AddLegs(root, rb, SpriteFactory.HeroLegs("hero_legs_idle", 0f), SpriteFactory.HeroLegs("hero_legs_left", 9f),
+                SpriteFactory.HeroLegs("hero_legs_pass", 2f), SpriteFactory.HeroLegs("hero_legs_right", -9f), 0.5f);
 
             SpriteRenderer body = CreateSprite("Body", root.transform, sprite, Vector2.zero, 10);
             body.gameObject.layer = PlayerLayer;

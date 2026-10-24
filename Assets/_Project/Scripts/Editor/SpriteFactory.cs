@@ -67,6 +67,16 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Ноги 89 для анимации ходьбы: короткие, серый комбинезон, тёмные ботинки. Смотрят вправо (+x)
+        public static Sprite KidLegs(string name, float stride) => Create(name, 32, 32, c =>
+        {
+            Color boots = new Color(0.12f, 0.12f, 0.15f);
+            // Стопы расставлены шире плеч, чтобы шаг было видно из-под рук и большого пистолета
+            DrawLeg(c, new Vector2(11f, 19f), new Vector2(12f + stride, 21f), 3.4f, KidSuitShade, boots, 2.3f, 1.7f);
+            DrawLeg(c, new Vector2(11f, 13f), new Vector2(12f - stride, 11f), 3.4f, KidSuitShade, boots, 2.3f, 1.7f);
+            c.Outline(Outline);
+        });
+
         // 89 лежит лицом вниз, вид сверху, головой вправо (+x): маленькое тело в сером комбинезоне,
         // раскинутые руки, седой затылок и выпавший большой пистолет
         public static Sprite PlayerDead() => Create("player_dead", 48, 32, c =>

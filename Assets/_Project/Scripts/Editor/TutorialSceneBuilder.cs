@@ -160,6 +160,7 @@ namespace N89.EditorTools
 
             GameObject player = Spawn(playerPrefab, gameplay, new Vector2(0f, -9.6f));
             player.transform.Find("Body").rotation = Quaternion.Euler(0f, 0f, 90f);
+            player.transform.Find("Legs").rotation = Quaternion.Euler(0f, 0f, 90f);
 
             Sprite markerSprite = SpriteFactory.Marker();
             TriggerZone[] markers =
@@ -640,6 +641,10 @@ namespace N89.EditorTools
             // 89 — ребёнок, поэтому хитбокс меньше, чем у охраны
             root.AddComponent<CircleCollider2D>().radius = 0.26f;
 
+            // Ноги 89: короткие детские шаги, но он быстрее героя — кадры сменяются реже по пути
+            AddLegs(root, rb, SpriteFactory.KidLegs("player_legs_idle", 0f), SpriteFactory.KidLegs("player_legs_left", 8f),
+                SpriteFactory.KidLegs("player_legs_pass", 1.5f), SpriteFactory.KidLegs("player_legs_right", -8f), 0.6f);
+
             SpriteRenderer body = CreateSprite("Body", root.transform, sprite, Vector2.zero, 10);
             body.gameObject.layer = PlayerLayer;
             Transform muzzle = new GameObject("Muzzle").transform;
@@ -911,6 +916,22 @@ namespace N89.EditorTools
             renderer.sortingOrder = 30;
 
             return SavePrefab(root, name);
+        }
+
+        // Ноги под корпусом, как в Hotline Miami: смотрят по ходьбе, кадры — стоит, левый шаг, проход, правый шаг.
+        // distancePerFrame — сколько юнитов пути на один кадр (больше — медленнее шаг)
+        internal static void AddLegs(GameObject root, Rigidbody2D rb, Sprite idle, Sprite left, Sprite pass, Sprite right, float distancePerFrame)
+        {
+            SpriteRenderer legs = CreateSprite("Legs", root.transform, idle, Vector2.zero, 9);
+            legs.gameObject.layer = root.layer;
+            LegsAnimator animator = root.AddComponent<LegsAnimator>();
+            Configure(animator, so =>
+            {
+                P(so, "_rb").objectReferenceValue = rb;
+                P(so, "_legs").objectReferenceValue = legs;
+                SetArray(so, "_frames", idle, left, pass, right, pass);
+                P(so, "_distancePerFrame").floatValue = distancePerFrame;
+            });
         }
 
         internal static GameObject SavePrefab(GameObject root, string name)

@@ -45,7 +45,7 @@ namespace N89.Missions
         [SerializeField] private Transform _floor2Spawn;
         [SerializeField] private float _floor2Facing = 0f;
         [Tooltip("Сколько секунд после появления наверху охрана второго этажа ещё не реагирует")]
-        [SerializeField] private float _floor2Grace = 1f;
+        [SerializeField] private float _floor2Grace = 1.5f;
         [Tooltip("Кабинет цели: герой внутри после зачистки — катсцена")]
         [SerializeField] private Rect _officeZone;
         [Tooltip("Куда указывает стрелка после зачистки второго этажа — дверь кабинета")]

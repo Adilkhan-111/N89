@@ -65,7 +65,7 @@ namespace N89.EditorTools
                 SpriteFactory.HeroLegs("hero_legs_pass", 2f), SpriteFactory.HeroLegs("hero_legs_right", -9f),
             }, 0.65f, 0.32f, common, 0, SpriteFactory.HeroDead());
             // Бандиты — люди с имплантами: истекают синей кровью, взламываются «Коротким замыканием»
-            GameObject banditPrefab = EnemyPrefab("Bandit", "БАНДИТ", SpriteFactory.Bandit(), 1, 0.4f, 0.55f,
+            GameObject banditPrefab = EnemyPrefab("Bandit", "БАНДИТ", SpriteFactory.Bandit(), 1, 0.5f, 0.7f,
                 common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.BanditDead());
 
             // --- Сцена ---

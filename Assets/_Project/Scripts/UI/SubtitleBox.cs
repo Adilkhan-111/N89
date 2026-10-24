@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace N89.UI
 {
-    // Субтитры "голоса": печатаются по буквам, держатся на экране и сами скрываются. Enter — пропустить.
+    // Субтитры "голоса": печатаются по буквам, держатся на экране и сами скрываются. Enter (Space, ЛКМ) — пропустить.
     // У каждого говорящего свой цвет (имя, акцентная полоса, оттенок текста). Когда говорящий меняется,
     // плашка "выстреливает", а имя расшифровывается из случайных символов.
     public class SubtitleBox : MonoBehaviour
@@ -138,10 +138,13 @@ namespace N89.UI
             _speakerLabel.text = speaker;
         }
 
+        // Пропустить реплику: Enter, Space или ЛКМ
         private static bool SkipPressed()
         {
             Keyboard kb = Keyboard.current;
-            return kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
+            Mouse mouse = Mouse.current;
+            return (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame))
+                   || (mouse != null && mouse.leftButton.wasPressedThisFrame);
         }
 
         private void Update()

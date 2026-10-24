@@ -8,13 +8,24 @@ using UnityEngine.SceneManagement;
 
 namespace N89.Interlude
 {
-    // Интерлюдия перед миссией 1: квартира героя (кличка — Рэй). Он спит на диване, ворочается,
-    // просыпается, садится и встаёт — дальше игрок свободно ходит по квартире.
-    // Цель — зайти в ванную; там босс присылает брифинг в мессенджер. Потом цель — арсенал:
-    // у витрины открывается выбор оружия и импланта на миссию. Затем — к входной двери, через
-    // коридор мегаблока, в конце коридора экран загрузки миссии.
+    // Интерлюдия в квартире героя (кличка — Рэй). Начало зависит от _opening:
+    //  Sleep (перед миссией 1) — спит на диване, ворочается, просыпается и встаёт; цель — зайти
+    //  в ванную, там босс присылает брифинг в мессенджер;
+    //  WatchTv (перед миссией 2) — сидит на диване и смотрит телевизор, босс пишет прямо туда,
+    //  после брифинга Рэй встаёт.
+    // Дальше одинаково: арсенал (выбор оружия и импланта на миссию), входная дверь, коридор
+    // мегаблока, в конце коридора экран загрузки миссии.
     public class InterludeDirector : MonoBehaviour
     {
+        public enum Opening { Sleep, WatchTv }
+
+        [Header("Начало")]
+        [SerializeField] private Opening _opening = Opening.Sleep;
+        [Tooltip("WatchTv: откуда камера смотрит в начале — диван и телевизор в кадре")]
+        [SerializeField] private Transform _tvCamPoint;
+        [Tooltip("WatchTv: сколько Рэй смотрит телевизор, пока камера наезжает на него")]
+        [SerializeField] private float _tvDuration = 6f;
+
         [Header("Hero")]
         [SerializeField] private PlayerController _hero;
         [SerializeField] private SpriteRenderer _heroBody;
@@ -85,63 +96,34 @@ namespace N89.Interlude
 
         private IEnumerator Start()
         {
-            Transform root = _hero.transform;
-            Transform body = _heroBody.transform;
             Rigidbody2D rb = _hero.GetComponent<Rigidbody2D>();
             Sprite standing = _heroBody.sprite;
 
             // Пока идёт катсцена, герой — просто картинка на диване: физика и управление выключены
-            _hero.CanMove = false;
-            _hero.CanAim = false;
             rb.simulated = false;
-            _heroBody.sprite = _sleepingSprite;
-            root.position = _sleepPoint.position;
-            body.rotation = _sleepPoint.rotation;
-            _cameraFollow.CutTo(_sleepPoint);
-            Camera.main.orthographicSize = _closeZoom;
+            SetControl(false, rb);
             SetLetterbox(_letterboxHeight);
             _objective.Set(string.Empty);
-            _crosshair.SetActive(false);
             Cursor.visible = false;
             _fader.SetBlack(1f);
 
-            yield return new WaitForSeconds(0.5f);
-            yield return _fader.ShowTitle(_title, _subtitle);
-            yield return new WaitForSeconds(1.2f);
-            yield return _fader.HideTitle(0.6f);
-            yield return _fader.Fade(1f, 0f, 2.5f);
+            if (_opening == Opening.WatchTv)
+            {
+                yield return WatchTv();
+                yield return StandUp(rb, standing);
+            }
+            else
+            {
+                yield return WakeUp();
+                yield return StandUp(rb, standing);
 
-            // Спит, потом ворочается — сон беспокойный
-            yield return Breathe(body, _sleepDuration);
-            yield return Toss(body, 0.3f, 4f);
-            yield return Breathe(body, 1.4f);
-            yield return Toss(body, 0.4f, 7f);
-
-            // Просыпается и садится
-            _heroBody.sprite = _sittingSprite;
-            root.position = _sitPoint.position;
-            body.rotation = _sitPoint.rotation;
-            _cameraFollow.Shake(0.06f, 0.15f);
-            yield return new WaitForSeconds(1.8f);
-
-            // Встаёт с дивана
-            _heroBody.sprite = standing;
-            body.rotation = _standPoint.rotation;
-            yield return Move(root, _sitPoint.position, _standPoint.position, 0.45f);
-
-            _cameraFollow.Focus(null, 0f);
-            StartCoroutine(_cameraFollow.Zoom(_roamZoom, 1.5f));
-            yield return Letterbox(0f, 0.6f);
-
-            rb.simulated = true;
-            _hero.CanMove = true;
-            _hero.CanAim = true;
-            _crosshair.SetActive(true);
-
-            _objective.Set(_bathroomObjective);
-            yield return new WaitUntil(() => _bathroomZone.WasEntered);
-            _objective.Set(string.Empty);
-            yield return BossBriefing(rb);
+                _objective.Set(_bathroomObjective);
+                yield return new WaitUntil(() => _bathroomZone.WasEntered);
+                _objective.Set(string.Empty);
+                SetControl(false, rb);
+                yield return BossBriefing();
+                SetControl(true, rb);
+            }
 
             _objective.Set(_arsenalObjective);
             yield return new WaitUntil(() => _arsenalZone.PlayerInside);
@@ -156,37 +138,108 @@ namespace N89.Interlude
             yield return new WaitUntil(() => _exitZone.WasEntered);
 
             _objective.Set(string.Empty);
-            _hero.CanMove = false;
-            rb.linearVelocity = Vector2.zero;
-            _crosshair.SetActive(false);
+            SetControl(false, rb);
             yield return _loading.Load(_missionScene, _missionTitle, _missionSubtitle);
+        }
+
+        private IEnumerator ShowTitle()
+        {
+            yield return new WaitForSeconds(0.5f);
+            yield return _fader.ShowTitle(_title, _subtitle);
+            yield return new WaitForSeconds(1.2f);
+            yield return _fader.HideTitle(0.6f);
+            yield return _fader.Fade(1f, 0f, 2.5f);
+        }
+
+        // Перед миссией 1: спит на диване, ворочается, просыпается и садится
+        private IEnumerator WakeUp()
+        {
+            Transform root = _hero.transform;
+            Transform body = _heroBody.transform;
+            _heroBody.sprite = _sleepingSprite;
+            root.position = _sleepPoint.position;
+            body.rotation = _sleepPoint.rotation;
+            _cameraFollow.CutTo(_sleepPoint);
+            Camera.main.orthographicSize = _closeZoom;
+
+            yield return ShowTitle();
+
+            // Спит, потом ворочается — сон беспокойный
+            yield return Breathe(body, _sleepDuration);
+            yield return Toss(body, 0.3f, 4f);
+            yield return Breathe(body, 1.4f);
+            yield return Toss(body, 0.4f, 7f);
+
+            // Просыпается и садится
+            _heroBody.sprite = _sittingSprite;
+            root.position = _sitPoint.position;
+            body.rotation = _sitPoint.rotation;
+            _cameraFollow.Shake(0.06f, 0.15f);
+            yield return new WaitForSeconds(1.8f);
+        }
+
+        // Перед миссией 2: сидит на диване лицом к телевизору, камера медленно наезжает на него.
+        // Приходит сообщение — брифинг прямо на диване
+        private IEnumerator WatchTv()
+        {
+            _heroBody.sprite = _sittingSprite;
+            _hero.transform.position = _sitPoint.position;
+            _heroBody.transform.rotation = _sitPoint.rotation;
+            _cameraFollow.CutTo(_tvCamPoint);
+            Camera.main.orthographicSize = _roamZoom;
+
+            yield return ShowTitle();
+
+            _cameraFollow.Focus(_sitPoint, 0.5f);
+            yield return _cameraFollow.Zoom(_closeZoom, _tvDuration);
+
+            // Вибрация импланта-коммуникатора: сообщение от босса
+            _cameraFollow.Shake(0.05f, 0.2f);
+            yield return new WaitForSeconds(0.6f);
+            yield return BossBriefing();
+            _cameraFollow.Focus(_sitPoint, 4f);
+            yield return new WaitForSeconds(0.5f);
+        }
+
+        // Встаёт с дивана, камера отъезжает, управление — игроку
+        private IEnumerator StandUp(Rigidbody2D rb, Sprite standing)
+        {
+            _heroBody.sprite = standing;
+            _heroBody.transform.rotation = _standPoint.rotation;
+            yield return Move(_hero.transform, _sitPoint.position, _standPoint.position, 0.45f);
+
+            _cameraFollow.Focus(null, 0f);
+            StartCoroutine(_cameraFollow.Zoom(_roamZoom, 1.5f));
+            yield return Letterbox(0f, 0.6f);
+
+            rb.simulated = true;
+            SetControl(true, rb);
+        }
+
+        private void SetControl(bool enabled, Rigidbody2D rb)
+        {
+            _hero.CanMove = enabled;
+            _hero.CanAim = enabled;
+            if (!enabled) rb.linearVelocity = Vector2.zero;
+            _crosshair.SetActive(enabled);
         }
 
         // Выбор оружия и импланта на миссию; выбор сохраняется в Loadout
         private IEnumerator ChooseLoadout(Rigidbody2D rb)
         {
-            _hero.CanMove = false;
-            _hero.CanAim = false;
-            rb.linearVelocity = Vector2.zero;
-            _crosshair.SetActive(false);
+            SetControl(false, rb);
             Cursor.visible = true;
 
             yield return _arsenal.Show(_mission);
 
             Cursor.visible = false;
-            _hero.CanMove = true;
-            _hero.CanAim = true;
-            _crosshair.SetActive(true);
+            SetControl(true, rb);
         }
 
-        // Босс пишет в мессенджер: панель закрывает зал, камера сдвигается, чтобы ванная была справа.
-        // Рэй не отвечает — игрок закрывает переписку на Enter
-        private IEnumerator BossBriefing(Rigidbody2D rb)
+        // Босс пишет в мессенджер: панель закрывает левую часть экрана, камера сдвигается,
+        // чтобы Рэй остался справа. Он не отвечает — игрок закрывает переписку на Enter
+        private IEnumerator BossBriefing()
         {
-            _hero.CanMove = false;
-            _hero.CanAim = false;
-            rb.linearVelocity = Vector2.zero;
-            _crosshair.SetActive(false);
             Cursor.visible = false;
             _cameraFollow.Focus(_messageCamPoint, 4f);
 
@@ -194,9 +247,6 @@ namespace N89.Interlude
             yield return _messenger.Show(_bossName, _briefingTopic, _briefing, _briefingFile);
 
             _cameraFollow.Focus(null, 0f);
-            _hero.CanMove = true;
-            _hero.CanAim = true;
-            _crosshair.SetActive(true);
         }
 
         private void Update()

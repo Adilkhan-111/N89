@@ -21,11 +21,11 @@ namespace N89.Combat
 
         [Header("Мини-игра")]
         [Tooltip("Секунд на проход бегунка от края до края")]
-        [SerializeField] private float _sweepTime = 0.55f;
+        [SerializeField] private float _sweepTime = 0.65f;
         [Tooltip("Ширина зелёной зоны (доля полоски)")]
-        [SerializeField, Range(0.05f, 0.6f)] private float _zoneWidth = 0.2f;
+        [SerializeField, Range(0.05f, 0.6f)] private float _zoneWidth = 0.4f;
         [Tooltip("Заминка после промаха")]
-        [SerializeField] private float _failPause = 0.5f;
+        [SerializeField] private float _failPause = 0.35f;
 
         private static readonly Color ZoneColor = new Color(0.25f, 0.95f, 0.35f);
         private static readonly Color FailColor = new Color(1f, 0.2f, 0.25f);

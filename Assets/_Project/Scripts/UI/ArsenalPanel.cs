@@ -4,6 +4,7 @@ using N89.Core;
 using N89.Implants;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
@@ -65,6 +66,13 @@ namespace N89.UI
             _weaponDown.onClick.AddListener(() => Spin(false, 1));
             _implantUp.onClick.AddListener(() => Spin(true, -1));
             _implantDown.onClick.AddListener(() => Spin(true, 1));
+
+            // Кнопки — только для мыши: без навигации с клавиатуры, иначе выбранная стрелка
+            // ловит Enter/Space как «нажатие» и крутит барабан вместо подтверждения
+            foreach (Button button in new[] { _confirm, _weaponUp, _weaponDown, _implantUp, _implantDown })
+            {
+                button.navigation = new Navigation { mode = Navigation.Mode.None };
+            }
 
             for (int i = 0; i < _weapons.Length; i++)
             {
@@ -136,6 +144,12 @@ namespace N89.UI
 
         private void HandleInput()
         {
+            // Клавиатурой управляет только сам арсенал: кликнутая стрелка не остаётся «выбранной»
+            if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
+
             Keyboard kb = Keyboard.current;
             if (kb != null)
             {

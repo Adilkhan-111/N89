@@ -26,7 +26,6 @@ namespace N89.EditorTools
     public static class Interlude01SceneBuilder
     {
         public const string SceneName = "Interlude01";
-        private const string ScenePath = "Assets/_Project/Scenes/" + SceneName + ".unity";
 
         // Внутренние границы квартиры: x от -9 до 9, y от -5.5 до 5.5.
         // Слева гостиная с кухней, справа (за стеной x = 3) спальня сверху и ванная снизу.
@@ -44,10 +43,18 @@ namespace N89.EditorTools
         [MenuItem("N89/Build Interlude 01 Scene")]
         public static void Build()
         {
+            BuildApartment("Interlude01Volume");
+            SaveScene(SceneName, "Tutorial");
+        }
+
+        // Квартира целиком, герой, UI и режиссёр со сценарием интерлюдии 1. Другие интерлюдии
+        // донастраивают режиссёра поверх и сохраняют сцену под своим именем (SaveScene)
+        internal static InterludeDirector BuildApartment(string volumeName)
+        {
             EnsureLayers();
             Physics2D.gravity = Vector2.zero;
 
-            Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             LoadCommonAssets();
             TMP_FontAsset mono = MainMenuSceneBuilder.GetOrCreateFontAsset("RobotoMono-Regular");
 
@@ -56,7 +63,7 @@ namespace N89.EditorTools
             // --- Сцена ---
             Camera cam = CreateCamera();
             cam.orthographicSize = 5f;
-            CreateVolume("Interlude01Volume");
+            CreateVolume(volumeName);
 
             Transform lights = new GameObject("Lights").transform;
             Light2D globalLight = new GameObject("Global Light").AddComponent<Light2D>();
@@ -145,11 +152,16 @@ namespace N89.EditorTools
                 P(so, "_letterboxTop").objectReferenceValue = letterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = letterboxBottom;
             });
+            return director;
+        }
 
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            AddSceneToBuildSettings(ScenePath, "Tutorial");
+        internal static void SaveScene(string sceneName, string afterScene)
+        {
+            string path = $"Assets/_Project/Scenes/{sceneName}.unity";
+            EditorSceneManager.SaveScene(SceneManager.GetActiveScene(), path);
+            AddSceneToBuildSettings(path, afterScene);
             AssetDatabase.SaveAssets();
-            Debug.Log($"[N89] Интерлюдия 1 собрана: {ScenePath}");
+            Debug.Log($"[N89] Интерлюдия собрана: {path}");
         }
 
         // ---------------------------------------------------------------- Комнаты
@@ -347,7 +359,7 @@ namespace N89.EditorTools
             sr.size = max - min;
         }
 
-        private static Transform Point(Transform parent, string name, Vector2 position, float angle)
+        internal static Transform Point(Transform parent, string name, Vector2 position, float angle)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent);
@@ -532,8 +544,10 @@ namespace N89.EditorTools
                     $"{key}[ПКМ] — РЫВОК.</color> Короткий бросок вперёд с ударом в конце. Удар дробит цель и отшвыривает её далеко назад.\n\n" +
                     $"{key}[Зажать ПКМ] — БЛОК.</color> Руки закрывают тебя от пуль. Блок держит 3 попадания — шкала над героем " +
                     "показывает запас. После третьего блок ломается и восстанавливается 7 секунд."),
-                CreateImplant("Mission2Implant", "ЗАСЕКРЕЧЕНО", ArtOr("Implants/implant_mission2", () => SpriteFactory.IconLockedImplant("implant_mission2")), 2,
-                    "Данные об импланте засекречены. Станет доступен перед миссией 2."),
+                CreateImplant("BladeArms", "РУКИ-ЛЕЗВИЯ", ArtOr("Implants/implant_blade_arms", () => SpriteFactory.IconLockedImplant("implant_mission2")), 2,
+                    "Выдвижные клинки в предплечьях. Кромка режет плоть и броню одинаково легко.\n\n" +
+                    $"{key}[ПКМ] — УДАР ЛЕЗВИЕМ.</color> Взмах клинком перед собой. Попал по врагу — разрубает его пополам.\n\n" +
+                    $"{key}[ПКМ] по пуле — ОТБИТЬ.</color> Взмахни, когда пуля рядом, — клинок отобьёт её."),
                 CreateImplant("Mission3Implant", "ЗАСЕКРЕЧЕНО", ArtOr("Implants/implant_mission3", () => SpriteFactory.IconLockedImplant("implant_mission3")), 3,
                     "Данные об импланте засекречены. Станет доступен перед миссией 3."),
             };

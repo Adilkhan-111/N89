@@ -50,7 +50,7 @@ MonoBehaviour:
   m_Light2DProvider:
     rid: -2
   m_SelectionSources:
-    rid: 2931020381448831869
+    rid: 2931020384564674898
   m_FalloffIntensity: 0.6
   m_Color: {r: 0.6, g: 0.9, b: 1, a: 1}
   m_Intensity: 0.6
@@ -96,7 +96,7 @@ MonoBehaviour:
     RefIds:
     - rid: -2
       type: {class: , ns: , asm: }
-    - rid: 2931020381448831869
+    - rid: 2931020384564674898
       type: {class: Light2DProviderSources, ns: UnityEngine.Rendering.Universal, asm: Unity.RenderPipelines.Universal.2D.Runtime}
       data:
         m_SelectedHashCode: 3
@@ -293,9 +293,9 @@ MonoBehaviour:
   _material: {fileID: 2100000, guid: 9dfc825aed78fcd4ba02077103263b40, type: 2}
   _offset: {x: 0, y: 0.85}
   _width: 1.4
-  _sweepTime: 0.55
-  _zoneWidth: 0.2
-  _failPause: 0.5
+  _sweepTime: 0.65
+  _zoneWidth: 0.4
+  _failPause: 0.35
 --- !u!114 &8689091485868237200
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -105,7 +105,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0809f9f0b03144d4e8c4ad1e0643b614, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::N89.Combat.Bullet
-  _speed: 26
+  _speed: 23
   _lifetime: 2
   _damage: 1
   _impactFxPrefab: {fileID: 5227313109115469745, guid: 0892fc2afe93bf749a24de86607fa4a3, type: 3}

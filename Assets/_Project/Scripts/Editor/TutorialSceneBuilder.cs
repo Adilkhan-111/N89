@@ -94,9 +94,9 @@ namespace N89.EditorTools
             GameObject targetPrefab = TargetPrefab(SpriteFactory.Target(), explosion, remains);
             TurretPrefab(SpriteFactory.TurretBase(), SpriteFactory.TurretHead(), turretBullet, muzzle);
             // Охрана — люди: истекают синей кровью. Дроны — техника: взрываются
-            GameObject guardPrefab = EnemyPrefab("CorpGuard", "ОХРАНА // КОРПОРАЦИЯ Е", SpriteFactory.Guard(), 1, 0.45f, 0.5f,
+            GameObject guardPrefab = EnemyPrefab("CorpGuard", "ОХРАНА // КОРПОРАЦИЯ Е", SpriteFactory.Guard(), 1, 0.5f, 0.6f,
                 turretBullet, muzzle, blood, bloodPool, shortCircuit, electric, true, SpriteFactory.GuardDead());
-            GameObject combatDronePrefab = EnemyPrefab("CombatDrone", "БОЕВОЙ ДРОН", SpriteFactory.CombatDrone(), 2, 0.7f, 0.5f,
+            GameObject combatDronePrefab = EnemyPrefab("CombatDrone", "БОЕВОЙ ДРОН", SpriteFactory.CombatDrone(), 2, 0.75f, 0.6f,
                 turretBullet, muzzle, explosion, remains, shortCircuit, electric, false);
 
             // --- Сцена ---
@@ -672,7 +672,8 @@ namespace N89.EditorTools
                 Remains = RemainsPrefab("Remains_Scorch", SpriteFactory.Scorch()),
                 BloodPool = RemainsPrefab("Remains_Blood", SpriteFactory.BloodPool()),
                 PlayerBullet = BulletPrefab("Bullet_Player", SpriteFactory.Bullet("bullet_player", new Color(1f, 0.95f, 0.6f)), 32f, sparks),
-                EnemyBullet = BulletPrefab("Bullet_Turret", SpriteFactory.Bullet("bullet_turret", new Color(1f, 0.3f, 0.35f)), 26f, sparks),
+                // Вражеские пули медленнее игроцких — от них можно увернуться
+                EnemyBullet = BulletPrefab("Bullet_Turret", SpriteFactory.Bullet("bullet_turret", new Color(1f, 0.3f, 0.35f)), 23f, sparks),
             };
         }
 
@@ -880,7 +881,7 @@ namespace N89.EditorTools
                 P(so, "_bulletPrefab").objectReferenceValue = bullet;
                 P(so, "_muzzle").objectReferenceValue = muzzle;
                 P(so, "_cooldown").floatValue = cooldown;
-                P(so, "_spreadDegrees").floatValue = 4f;
+                P(so, "_spreadDegrees").floatValue = 6f;
                 P(so, "_hitMask").intValue = (1 << WallLayer) | (1 << GlassLayer) | (1 << DoorLayer) | (1 << PlayerLayer);
                 P(so, "_muzzleFxPrefab").objectReferenceValue = muzzleFx;
             });
@@ -895,6 +896,9 @@ namespace N89.EditorTools
                 P(so, "_sightBlockers").intValue = (1 << WallLayer) | (1 << DoorLayer);
                 P(so, "_moveBlockers").intValue = (1 << WallLayer) | (1 << GlassLayer);
                 P(so, "_bodyRadius").floatValue = col.radius;
+                // Чуть казуальнее: видят не так далеко и вплотную со спины замечают ближе
+                P(so, "_viewDistance").floatValue = 9.5f;
+                P(so, "_closeRange").floatValue = 2.2f;
                 // Охрана преследует и дольше ищет; дрон держит периметр, зато быстрее крутится
                 P(so, "_chases").boolValue = chases;
                 P(so, "_forgetTime").floatValue = chases ? 5f : 3f;
@@ -1211,7 +1215,7 @@ namespace N89.EditorTools
             Crosshair crosshair = BuildCrosshair(canvasRect, hacking.GetComponent<Weapon>(), hacking);
             Image crosshairImage = crosshair.GetComponent<Image>();
 
-            BuildHint(canvasRect, mono, "ESC — меню    ENTER — пропустить реплику");
+            BuildHint(canvasRect, mono, "ESC — меню    ENTER / SPACE / ЛКМ — пропустить реплику");
 
             // Затемнение и экран смерти — поверх всего
             ScreenFader screenFader = BuildFader(canvasRect, mono, new Color(1f, 0.2f, 0.3f));

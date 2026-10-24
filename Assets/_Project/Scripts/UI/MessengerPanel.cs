@@ -7,7 +7,7 @@ namespace N89.UI
 {
     // Мессенджер в духе журнала сообщений Cyberpunk 2077: выезжает слева, собеседник "печатает",
     // сообщения появляются по одному (печатаются по буквам), в конце — прикреплённый файл.
-    // Enter — сразу показать всё; когда всё показано, Enter закрывает панель.
+    // Enter (или Space, ЛКМ) — сразу показать всё; когда всё показано, повторное нажатие закрывает панель.
     public class MessengerPanel : MonoBehaviour
     {
         [SerializeField] private CanvasGroup _group;
@@ -110,10 +110,13 @@ namespace N89.UI
             _group.alpha = open ? 1f : 0f;
         }
 
+        // Дальше / закрыть: Enter, Space или ЛКМ
         private static bool EnterPressed()
         {
             Keyboard kb = Keyboard.current;
-            return kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
+            Mouse mouse = Mouse.current;
+            return (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame))
+                   || (mouse != null && mouse.leftButton.wasPressedThisFrame);
         }
     }
 }

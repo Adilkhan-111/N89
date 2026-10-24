@@ -77,6 +77,9 @@ namespace N89.Hacking
                 case QuickhackEffect.Disable:
                     SecurityCamera securityCamera = GetComponent<SecurityCamera>();
                     return securityCamera != null && !securityCamera.IsDisabled;
+                case QuickhackEffect.Immobilize:
+                    BossAI boss = GetComponent<BossAI>();
+                    return boss != null && boss.IsFighting && !boss.IsImmobilized;
                 default:
                     return true;
             }
@@ -129,6 +132,13 @@ namespace N89.Hacking
                         Instantiate(_shortCircuitFxPrefab, transform.position, Quaternion.identity);
                     }
                     GetComponent<SecurityCamera>()?.Disable();
+                    break;
+                case QuickhackEffect.Immobilize:
+                    if (_shortCircuitFxPrefab != null)
+                    {
+                        Instantiate(_shortCircuitFxPrefab, transform.position, Quaternion.identity);
+                    }
+                    GetComponent<BossAI>()?.Immobilize();
                     break;
             }
 

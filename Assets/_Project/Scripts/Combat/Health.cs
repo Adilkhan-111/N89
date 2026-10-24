@@ -21,6 +21,8 @@ namespace N89.Combat
         private Color _baseColor;
 
         public bool IsDead { get; private set; }
+        // Доля оставшегося здоровья 0..1 (полоса здоровья босса)
+        public float Fraction => _maxHealth <= 0 ? 0f : Mathf.Clamp01((float)_health / _maxHealth);
         public Sprite CorpseSprite => _corpseSprite;
         // Выключить, если тело уложит кто-то другой (катсцена, удар «Рук гориллы» отшвыривает его сам)
         public bool SpawnCorpse { get; set; } = true;

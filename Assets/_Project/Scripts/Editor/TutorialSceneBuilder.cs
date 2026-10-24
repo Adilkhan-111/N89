@@ -947,7 +947,7 @@ namespace N89.EditorTools
             return SavePrefab(root, name);
         }
 
-        private static GameObject BurstPrefab(string name, Color colorA, Color colorB, int count, float speedMin, float speedMax,
+        internal static GameObject BurstPrefab(string name, Color colorA, Color colorB, int count, float speedMin, float speedMax,
             float lifeMin, float lifeMax, float sizeMin, float sizeMax, Material material)
         {
             var root = new GameObject(name);

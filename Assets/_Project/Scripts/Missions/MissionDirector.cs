@@ -59,6 +59,8 @@ namespace N89.Missions
         [SerializeField] private string _floor2Text = "Убей всех, кроме цели";
         [SerializeField] private string _officeText = "Зайди в кабинет цели";
         [SerializeField] private string _checkpoint = "mission01_floor2";
+        [Tooltip("Подвал с Боссом (миссия 2): вместо второго этажа лестница ведёт вниз, на бой")]
+        [SerializeField] private BossFight _bossFight;
 
         [Header("Цель")]
         [SerializeField] private Transform _target;
@@ -96,6 +98,8 @@ namespace N89.Missions
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => s_restarted = false;
         private bool HasFloor2 => _floor2Enemies != null && _floor2Enemies.Length > 0 && _target != null;
+        private bool HasStairs => _stairsZone.width > 0f;
+        private bool HasBasement => _bossFight != null;
 
         private IEnumerator Start()
         {
@@ -113,15 +117,16 @@ namespace N89.Missions
             // Враги второго этажа ждут, пока герой не поднимется
             SetFloor2Active(false);
 
-            bool fromCheckpoint = HasFloor2 && Checkpoint.Is(_checkpoint);
+            bool fromCheckpoint = (HasFloor2 || HasBasement) && Checkpoint.Is(_checkpoint);
             // После смерти — без заставки: сразу в бой
             bool restarted = s_restarted;
             s_restarted = false;
             if (fromCheckpoint)
             {
-                // Смерть на втором этаже: первый уже зачищен
+                // Смерть на втором этаже (или в подвале): первый уже зачищен
                 foreach (Health enemy in _enemies) enemy.gameObject.SetActive(false);
                 MoveHero(_floor2Spawn.position, _floor2Facing);
+                if (HasBasement) _bossFight.Prepare(true);
             }
             else if (!restarted)
             {
@@ -172,8 +177,32 @@ namespace N89.Missions
                 yield return TargetCutscene();
                 Checkpoint.Clear();
             }
+            else if (HasBasement)
+            {
+                // Вниз по лестнице — в тёмный подвал, к Боссу (BossFight ведёт бой и финальную сцену)
+                if (!fromCheckpoint)
+                {
+                    yield return GoUpstairs();
+                }
+
+                yield return _bossFight.Run(fromCheckpoint);
+                if (_over) yield break;
+                _over = true;
+                Checkpoint.Clear();
+            }
             else
             {
+                // Лестница есть, а этажа выше пока нет: дошёл до неё — миссия окончена
+                if (HasStairs)
+                {
+                    _objective.Set(_stairsText);
+                    if (_stairsMarker != null) _stairsMarker.enabled = true;
+                    Announce("ЭТАЖ ЗАЧИЩЕН", _stairsText.ToUpper(), _stairsZone.center);
+                    yield return new WaitUntil(() => _over || _stairsZone.Contains(_player.transform.position));
+                    if (_waypoint != null) _waypoint.Hide();
+                    if (_over) yield break;
+                }
+
                 _over = true;
                 _objective.Set(_clearedText);
                 yield return new WaitForSeconds(1.5f);
@@ -251,7 +280,8 @@ namespace N89.Missions
             if (_stairsMarker != null) _stairsMarker.enabled = false;
             if (_waypoint != null) _waypoint.Hide();
             MoveHero(_floor2Spawn.position, _floor2Facing);
-            // С этого момента смерть отматывает ко второму этажу
+            if (HasBasement) _bossFight.Prepare(false);
+            // С этого момента смерть отматывает ко второму этажу (или в подвал)
             Checkpoint.Set(_checkpoint);
             yield return new WaitForSeconds(0.2f);
             SetControl(true);

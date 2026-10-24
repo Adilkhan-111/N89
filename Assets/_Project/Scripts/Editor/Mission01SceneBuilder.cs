@@ -28,7 +28,7 @@ namespace N89.EditorTools
         public const string SceneName = "Mission01";
         private const string ScenePath = "Assets/_Project/Scenes/" + SceneName + ".unity";
 
-        private const float S = 0.6f;
+        internal const float S = 0.6f;
         private const float W = 46f;
         private const float H = 27f;
         private const float PatrolSpeed = 1.4f;
@@ -37,11 +37,19 @@ namespace N89.EditorTools
         private static readonly Vector2 Floor2Origin = new Vector2(60f, 0f);
 
         // Точка схемы -> мир (s_origin — начало текущего этажа)
-        private static Vector2 V(float x, float y) => ToWorld(new Vector2(x, y));
-        private static Vector2 ToWorld(Vector2 schema) => schema * S + s_origin;
+        internal static Vector2 V(float x, float y) => ToWorld(new Vector2(x, y));
+        internal static Vector2 ToWorld(Vector2 schema) => schema * S + s_origin;
 
         private static Sprite s_wall;
         private static Vector2 s_origin;
+
+        // Помощники ниже (Wall, Prop, AutoDoorAt, SecurityCam...) берут начало схемы и спрайт стен отсюда —
+        // другие миссии с тем же масштабом S задают свои перед сборкой
+        internal static void SetLayout(Vector2 origin, Sprite wall)
+        {
+            s_origin = origin;
+            s_wall = wall;
+        }
 
         [MenuItem("N89/Build Mission 01 Scene")]
         public static void Build()
@@ -76,7 +84,7 @@ namespace N89.EditorTools
             s_wall = SpriteFactory.GangWall();
             s_origin = Vector2.zero;
             Transform level = new GameObject("Level").transform;
-            BuildCity(level);
+            BuildCity(level, YardMin * S - Vector2.one * 2f, YardMax * S + Vector2.one * 2f, new Vector2(-36f, -32f), new Vector2(56f, 50f));
             BuildYard(level);
             BuildBase(level);
             BuildInterior(level);
@@ -278,7 +286,7 @@ namespace N89.EditorTools
             SecurityCam(root, "Camera_Hall", new Vector2(45.2f, 14.4f), 195f, 25f, 11f, head, mount, cameraOff, sparksFx, enemies);
         }
 
-        private static void SecurityCam(Transform parent, string name, Vector2 schemaPosition, float angle, float sweep, float range,
+        internal static void SecurityCam(Transform parent, string name, Vector2 schemaPosition, float angle, float sweep, float range,
             Sprite headSprite, Sprite mountSprite, QuickhackData cameraOff, GameObject sparksFx, Transform enemies)
         {
             var root = new GameObject(name);
@@ -409,7 +417,7 @@ namespace N89.EditorTools
 
         // Декор на полу без коллайдера: центр и размер по ширине (юниты схемы). Поворот случайный в пределах
         // maxAngle в обе стороны (граффити — чуть наклонено, чтобы читалось; мусор — как угодно)
-        private static void Decor(Transform parent, string name, Sprite sprite, Vector2 schema, float size, float maxAngle = 180f)
+        internal static void Decor(Transform parent, string name, Sprite sprite, Vector2 schema, float size, float maxAngle = 180f)
         {
             Vector2 bounds = sprite.bounds.size;
             float aspect = bounds.y / bounds.x;
@@ -486,17 +494,14 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Город за забором
 
         // Крыши мегаблоков вокруг базы: кварталы по сетке, между ними тёмные улицы. На крышах вентблоки
-        // и неоновые вывески со светом. Чисто фон — без коллайдеров, за забором всё равно не пройти
-        private static void BuildCity(Transform parent)
+        // и неоновые вывески со светом. Чисто фон — без коллайдеров, за забором всё равно не пройти.
+        // Координаты мировые: кварталы не ставятся внутри fenceMin..fenceMax (сам участок с забором)
+        internal static void BuildCity(Transform parent, Vector2 fenceMin, Vector2 fenceMax, Vector2 areaMin, Vector2 areaMax)
         {
             Transform city = new GameObject("City").transform;
             city.SetParent(parent);
             var rng = new System.Random(89);
 
-            Vector2 fenceMin = YardMin * S - Vector2.one * 2f;
-            Vector2 fenceMax = YardMax * S + Vector2.one * 2f;
-            Vector2 areaMin = new Vector2(-36f, -32f);
-            Vector2 areaMax = new Vector2(56f, 50f);
             Floor(city, "Streets", SpriteFactory.Asphalt(), areaMin, areaMax, -110);
 
             Color[] tints = { new Color(0.14f, 0.14f, 0.17f), new Color(0.17f, 0.15f, 0.16f), new Color(0.12f, 0.15f, 0.17f), new Color(0.19f, 0.18f, 0.2f) };
@@ -547,7 +552,7 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Автодвери
 
         // Раздвижная дверь в проёме: from..to — края проёма вдоль стены (юниты схемы), at — координата стены
-        private static void AutoDoorAt(Transform parent, string name, bool horizontal, float from, float to, float at)
+        internal static void AutoDoorAt(Transform parent, string name, bool horizontal, float from, float to, float at)
         {
             Vector2 a = horizontal ? V(from, at) : V(at, from);
             Vector2 b = horizontal ? V(to, at) : V(at, to);
@@ -835,7 +840,7 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Подсказки «куда идти»
 
         // Крупная надпись по центру экрана — под затемнением, чтобы на смене этажа не висела поверх чёрного
-        private static Banner BuildBanner(Transform fader, TMP_FontAsset mono)
+        internal static Banner BuildBanner(Transform fader, TMP_FontAsset mono)
         {
             RectTransform canvas = (RectTransform)fader.parent;
             Color cyan = new Color(0.3f, 1f, 1f);
@@ -864,7 +869,7 @@ namespace N89.EditorTools
         }
 
         // Стрелка у героя к следующей цели и маркер над самой целью
-        private static WaypointArrow BuildWaypoint(Transform hero)
+        internal static WaypointArrow BuildWaypoint(Transform hero)
         {
             var root = new GameObject("Waypoint");
             Sprite arrowSprite = SpriteFactory.WaypointArrow();
@@ -896,7 +901,7 @@ namespace N89.EditorTools
         }
 
         // Прямоугольник схемы -> мир (для зон в сценарии)
-        private static Rect WorldRect(Vector2 min, Vector2 max)
+        internal static Rect WorldRect(Vector2 min, Vector2 max)
         {
             Vector2 a = ToWorld(min);
             Vector2 b = ToWorld(max);
@@ -943,18 +948,18 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Помощники
 
         // Помощники ниже принимают координаты схемы и сами переводят их в мир
-        private static Light2D Lamp(Transform parent, string name, float x, float y, Color color, float radius, float intensity)
+        internal static Light2D Lamp(Transform parent, string name, float x, float y, Color color, float radius, float intensity)
         {
             return AddLight(parent, name, V(x, y), color, radius * S, intensity);
         }
 
-        private static void Wall(Transform parent, string name, float x1, float y1, float x2, float y2)
+        internal static void Wall(Transform parent, string name, float x1, float y1, float x2, float y2)
         {
             CreateWall(parent, name, V(x1, y1), V(x2, y2), s_wall, WallLayer, 5);
         }
 
         // Глухой блок (лестница, шкафчики): плитка по всей площади и коллайдер. По умолчанию — плитка стены
-        private static void Block(Transform parent, string name, Vector2 min, Vector2 max, Sprite sprite = null)
+        internal static void Block(Transform parent, string name, Vector2 min, Vector2 max, Sprite sprite = null)
         {
             min = ToWorld(min);
             max = ToWorld(max);
@@ -967,7 +972,7 @@ namespace N89.EditorTools
 
         // Предмет интерьера: спрайт растягивается на прямоугольник схемы. layer < 0 — без коллайдера (декор)
         // angle — поворот спрайта (±90 — лёжа на боку: ширина спрайта идёт по высоте прямоугольника)
-        private static SpriteRenderer Prop(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order,
+        internal static SpriteRenderer Prop(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order,
             int layer = -1, bool lit = true, float angle = 0f)
         {
             min = ToWorld(min);
@@ -990,7 +995,7 @@ namespace N89.EditorTools
         }
 
         // Невидимое препятствие (часть предмета, о которую можно споткнуться)
-        private static void Solid(Transform parent, string name, Vector2 min, Vector2 max, int layer)
+        internal static void Solid(Transform parent, string name, Vector2 min, Vector2 max, int layer)
         {
             min = ToWorld(min);
             max = ToWorld(max);
@@ -1000,14 +1005,14 @@ namespace N89.EditorTools
             go.AddComponent<BoxCollider2D>().size = max - min;
         }
 
-        private static void Floor(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order)
+        internal static void Floor(Transform parent, string name, Sprite sprite, Vector2 min, Vector2 max, int order)
         {
             SpriteRenderer sr = CreateSprite(name, parent, sprite, (min + max) * 0.5f, order);
             sr.drawMode = SpriteDrawMode.Tiled;
             sr.size = max - min;
         }
 
-        private static Light2D Pulsing(Light2D light, float speed, float min, float max)
+        internal static Light2D Pulsing(Light2D light, float speed, float min, float max)
         {
             Pulse pulse = light.gameObject.AddComponent<Pulse>();
             Configure(pulse, so =>

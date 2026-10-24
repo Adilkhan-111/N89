@@ -6,7 +6,7 @@ using UnityEngine.Rendering.Universal;
 namespace N89.Enemies
 {
     // Камера наблюдения на стене: водит взглядом влево-вправо, конус обзора виден на полу (зелёный).
-    // Заметила игрока — конус краснеет, камера следит за ним, и все враги на уровне идут к нему.
+    // Заметила игрока — конус краснеет, камера следит за ним, и враги поблизости (в _alarmRadius от героя) идут к нему.
     // Взлом «Отключить камеру» гасит её насовсем.
     public class SecurityCamera : MonoBehaviour
     {
@@ -35,6 +35,8 @@ namespace N89.Enemies
         [SerializeField] private LayerMask _sightBlockers;
         [Tooltip("Кого поднимает тревога — враги внутри этого объекта (свой этаж). Пусто — все враги на сцене")]
         [SerializeField] private Transform _enemiesRoot;
+        [Tooltip("Тревога зовёт только врагов в этом радиусе от места, где заметили героя (чуть больше слуха на выстрел — 8). 0 — всех")]
+        [SerializeField] private float _alarmRadius = 10f;
 
         [Header("Цвета")]
         [SerializeField] private Color _calmColor = new Color(0.25f, 1f, 0.35f, 0.14f);
@@ -176,9 +178,11 @@ namespace N89.Enemies
         private void RaiseAlarm()
         {
             EnemyAI[] enemies = _enemiesRoot != null ? _enemiesRoot.GetComponentsInChildren<EnemyAI>() : FindObjectsByType<EnemyAI>();
+            Vector2 spotted = _target.position;
             foreach (EnemyAI enemy in enemies)
             {
-                if (enemy.isActiveAndEnabled)
+                bool inRange = _alarmRadius <= 0f || Vector2.Distance(enemy.transform.position, spotted) <= _alarmRadius;
+                if (enemy.isActiveAndEnabled && inRange)
                 {
                     enemy.Provoke();
                 }

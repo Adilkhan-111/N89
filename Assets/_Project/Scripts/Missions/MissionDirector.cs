@@ -20,7 +20,6 @@ namespace N89.Missions
     // Когда всё сделано — итоговый экран миссии.
     public class MissionDirector : MonoBehaviour
     {
-        private const string TargetSpeaker = "ГЛАВАРЬ";
 
         [Header("Hero")]
         [SerializeField] private PlayerController _player;
@@ -28,7 +27,7 @@ namespace N89.Missions
         [Tooltip("Миссия 3: Сандевистан вместо взлома (HackingController на герое выключен). В начале — сперва подсказка про него, потом про имплант на руки")]
         [SerializeField] private Sandevistan _sandevistan;
         [SerializeField] private string _sandevistanTitle = "САНДЕВИСТАН";
-        [SerializeField] private string _sandevistanHint = "TAB — УСКОРЕНИЕ НА 5 С   ·   НЕ ВЫКЛЮЧИТЬ, ПОКА НЕ КОНЧИТСЯ ЭНЕРГИЯ";
+        [SerializeField] private string _sandevistanHint = "TAB — УСКОРЕНИЕ НА 3 С   ·   НЕ ВЫКЛЮЧИТЬ, ПОКА НЕ КОНЧИТСЯ ЭНЕРГИЯ";
         [SerializeField] private Weapon _weapon;
         [SerializeField] private SpriteRenderer _heroBody;
         [SerializeField] private CameraFollow _cameraFollow;
@@ -51,6 +50,58 @@ namespace N89.Missions
         [SerializeField] private float _floor2Facing = 0f;
         [Tooltip("Сколько секунд после появления наверху охрана второго этажа ещё не реагирует")]
         [SerializeField] private float _floor2Grace = 1.5f;
+        [Tooltip("Без цели (_target пуст): после зачистки второго этажа — дойти сюда (мировые координаты), и миссия окончена")]
+        [SerializeField] private Rect _floor2ExitZone;
+        [SerializeField] private Light2D _floor2ExitMarker;
+        [SerializeField] private string _floor2ExitText = "Поднимись на лифте";
+
+        // Этаж выше второго (миссия 3): приезд на лифте, свой чекпоинт, выход — снова в лифт
+        [System.Serializable]
+        public class UpperFloor
+        {
+            public Health[] Enemies;
+            public Transform Spawn;
+            public float Facing = -90f;
+            public string Text = "Зачисти этаж";
+            public string Checkpoint;
+            [Tooltip("Кабина лифта: здесь герой появляется, сюда же возвращается после зачистки")]
+            public Rect ExitZone;
+            public Light2D ExitMarker;
+            [Tooltip("Засада: герой вышел из кабины — эти двери открываются, враги за ними сразу идут на него")]
+            public Door AmbushDoor;
+            public EnemyAI[] Ambushers;
+            [Tooltip("Последний этаж: противостояние, начальник, сейф с relic (поля «Финал»), выход — к машине")]
+            public bool Finale;
+        }
+
+        [Header("Финал миссии 3 (этаж с Finale)")]
+        [Tooltip("Стоят и целятся, пока герой не включит Сандевистан")]
+        [SerializeField] private EnemyAI[] _standoffEnemies = new EnemyAI[0];
+        [Tooltip("Герой вошёл сюда — противостояние (мировые координаты)")]
+        [SerializeField] private Rect _standoffZone;
+        [SerializeField] private float _standoffReaction = 0.7f;
+        [SerializeField] private string _standoffTitle = "ОНИ ЖДУТ";
+        [SerializeField] private string _standoffHint = "TAB — Сандевистан";
+        [SerializeField] private string _targetSpeaker = "ГЛАВАРЬ";
+        [Tooltip("Пистолет на столе цели: в катсцене она тянется к нему и разворачивается к герою (необязательно)")]
+        [SerializeField] private SpriteRenderer _targetGun;
+        [Tooltip("Ключ от сейфа: появляется у тела начальника")]
+        [SerializeField] private SpriteRenderer _keyItem;
+        [SerializeField] private Vector2 _keyOffset = new Vector2(-1f, -0.5f);
+        [SerializeField] private Transform _safe;
+        [SerializeField] private SpriteRenderer _safeBody;
+        [SerializeField] private Sprite _safeOpen;
+        [SerializeField] private SpriteRenderer _relicItem;
+        [SerializeField] private float _pickupRadius = 0.9f;
+        [SerializeField] private string _keyText = "Возьми ключ от сейфа";
+        [SerializeField] private string _safeText = "Открой сейф";
+        [SerializeField] private string _relicTitle = "RELIC";
+        [SerializeField] private string _relicSubtitle = "КОНСТРУКТ У ТЕБЯ";
+        [SerializeField] private string[] _relicLines = { "..." };
+
+        [Header("Этажи выше второго (без цели)")]
+        [SerializeField] private UpperFloor[] _upperFloors = new UpperFloor[0];
+        [SerializeField] private float _ambushReaction = 0.35f;
         [Tooltip("Кабинет цели: герой внутри после зачистки — катсцена")]
         [SerializeField] private Rect _officeZone;
         [Tooltip("Куда указывает стрелка после зачистки второго этажа — дверь кабинета")]
@@ -119,7 +170,7 @@ namespace N89.Missions
         // Перезагрузка домена при входе в Play Mode выключена — сбрасываем вручную
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics() => s_restarted = false;
-        private bool HasFloor2 => _floor2Enemies != null && _floor2Enemies.Length > 0 && _target != null;
+        private bool HasFloor2 => _floor2Enemies != null && _floor2Enemies.Length > 0;
         private bool HasStairs => _stairsZone.width > 0f;
         private bool HasBasement => _bossFight != null;
 
@@ -128,6 +179,7 @@ namespace N89.Missions
             ApplyLoadout();
             _player.Health.Died += OnPlayerDied;
             if (_stairsMarker != null) _stairsMarker.enabled = false;
+            if (_floor2ExitMarker != null) _floor2ExitMarker.enabled = false;
 
             _player.CanMove = false;
             _player.CanShoot = false;
@@ -137,14 +189,37 @@ namespace N89.Missions
             _objective.Set(string.Empty);
             _fader.SetBlack(1f);
 
-            // Враги второго этажа ждут, пока герой не поднимется
+            // Враги второго этажа (и выше) ждут, пока герой не поднимется
             SetFloor2Active(false);
+            foreach (UpperFloor upper in _upperFloors)
+            {
+                SetEnemiesActive(upper.Enemies, false);
+                if (upper.ExitMarker != null) upper.ExitMarker.enabled = false;
+            }
 
-            bool fromCheckpoint = (HasFloor2 || HasBasement) && Checkpoint.Is(_checkpoint);
+            // Смерть на этаже выше второго отматывает к его лифту: нижние этажи уже зачищены
+            int resumeFloor = -1;
+            for (int i = 0; i < _upperFloors.Length; i++)
+            {
+                if (HasFloor2 && Checkpoint.Is(_upperFloors[i].Checkpoint)) resumeFloor = i;
+            }
+            bool fromUpper = resumeFloor >= 0;
+
+            bool fromCheckpoint = (HasFloor2 || HasBasement) && (Checkpoint.Is(_checkpoint) || fromUpper);
             // После смерти — без заставки: сразу в бой
             bool restarted = s_restarted;
             s_restarted = false;
-            if (fromCheckpoint)
+            if (fromUpper)
+            {
+                foreach (Health enemy in _enemies) enemy.gameObject.SetActive(false);
+                foreach (Health enemy in _floor2Enemies) enemy.gameObject.SetActive(false);
+                for (int i = 0; i < resumeFloor; i++)
+                {
+                    foreach (Health enemy in _upperFloors[i].Enemies) enemy.gameObject.SetActive(false);
+                }
+                MoveHero(_upperFloors[resumeFloor].Spawn.position, _upperFloors[resumeFloor].Facing);
+            }
+            else if (fromCheckpoint)
             {
                 // Смерть на втором этаже (или в подвале): первый уже зачищен
                 foreach (Health enemy in _enemies) enemy.gameObject.SetActive(false);
@@ -169,7 +244,7 @@ namespace N89.Missions
             {
                 StartCoroutine(ImplantBanners());
             }
-            if (fromCheckpoint)
+            if (fromCheckpoint && !fromUpper)
             {
                 yield return Floor2Grace();
             }
@@ -187,17 +262,70 @@ namespace N89.Missions
                     yield return GoUpstairs();
                 }
 
-                yield return WaitCleared(_floor2Text, _floor2Enemies);
-                if (_over) yield break;
+                if (!fromUpper)
+                {
+                    yield return WaitCleared(_floor2Text, _floor2Enemies);
+                    if (_over) yield break;
+                }
 
-                _objective.Set(_officeText);
-                Announce("ЭТАЖ ЗАЧИЩЕН", _officeText.ToUpper(), _officeDoor);
-                yield return new WaitUntil(() => _over || _officeZone.Contains(_player.transform.position));
-                if (_waypoint != null) _waypoint.Hide();
-                if (_over) yield break;
+                if (_target != null && _upperFloors.Length == 0)
+                {
+                    _objective.Set(_officeText);
+                    Announce("ЭТАЖ ЗАЧИЩЕН", _officeText.ToUpper(), _officeDoor);
+                    yield return new WaitUntil(() => _over || _officeZone.Contains(_player.transform.position));
+                    if (_waypoint != null) _waypoint.Hide();
+                    if (_over) yield break;
 
-                _over = true;
-                yield return TargetCutscene();
+                    _over = true;
+                    yield return TargetCutscene();
+                }
+                else
+                {
+                    // Миссия 3: цели нет — этаж за этажом на лифте (_upperFloors); с последнего — конец
+                    int floor = resumeFloor; // -1 — второй этаж
+                    bool finale = false;
+                    if (fromUpper)
+                    {
+                        yield return RunUpperFloor(_upperFloors[floor]);
+                        if (_over) yield break;
+                        finale = _upperFloors[floor].Finale;
+                    }
+                    while (!finale)
+                    {
+                        Rect exitZone = floor < 0 ? _floor2ExitZone : _upperFloors[floor].ExitZone;
+                        Light2D exitMarker = floor < 0 ? _floor2ExitMarker : _upperFloors[floor].ExitMarker;
+                        _objective.Set(_floor2ExitText);
+                        if (exitMarker != null) exitMarker.enabled = true;
+                        Announce("ЭТАЖ ЗАЧИЩЕН", _floor2ExitText.ToUpper(), exitZone.center);
+                        // Герой мог остаться в кабине, где приехал: ждём, пока выйдет и зайдёт снова
+                        yield return new WaitUntil(() => _over || !exitZone.Contains(_player.transform.position));
+                        yield return new WaitUntil(() => _over || exitZone.Contains(_player.transform.position));
+                        if (_waypoint != null) _waypoint.Hide();
+                        if (exitMarker != null) exitMarker.enabled = false;
+                        if (_over) yield break;
+
+                        floor++;
+                        if (floor >= _upperFloors.Length) break;
+                        yield return RideUp(_upperFloors[floor]);
+                        yield return RunUpperFloor(_upperFloors[floor]);
+                        if (_over) yield break;
+                        finale = _upperFloors[floor].Finale;
+                    }
+
+                    if (finale)
+                    {
+                        // Последний этаж: катсцена с начальником, ключ, сейф с relic — дальше к машине (Extract)
+                        yield return Finale();
+                        if (_over) yield break;
+                        _over = true;
+                    }
+                    else
+                    {
+                        _over = true;
+                        _objective.Set(_clearedText);
+                        yield return new WaitForSeconds(1.5f);
+                    }
+                }
                 Checkpoint.Clear();
             }
             else if (HasBasement)
@@ -342,6 +470,165 @@ namespace N89.Missions
             yield return Floor2Grace();
         }
 
+        // Лифт на следующий этаж: затемнение, герой в кабине наверху, чекпоинт этого этажа
+        private IEnumerator RideUp(UpperFloor floor)
+        {
+            SetControl(false);
+            yield return _fader.Fade(0f, 1f, 0.4f);
+            MoveHero(floor.Spawn.position, floor.Facing);
+            Checkpoint.Set(floor.Checkpoint);
+            yield return new WaitForSeconds(0.2f);
+            SetControl(true);
+            yield return _fader.Fade(1f, 0f, 0.4f);
+        }
+
+        // Этаж выше второго: охрана оживает через _floor2Grace, засада ждёт, пока герой выйдет из кабины
+        private IEnumerator RunUpperFloor(UpperFloor floor)
+        {
+            UpdateObjective(floor.Text, floor.Enemies);
+            yield return new WaitForSeconds(_floor2Grace);
+            SetEnemiesActive(floor.Enemies, true);
+            if (floor.AmbushDoor != null) StartCoroutine(Ambush(floor));
+            if (floor.Finale && _standoffEnemies.Length > 0)
+            {
+                foreach (EnemyAI ai in _standoffEnemies) ai.enabled = false;
+                StartCoroutine(Standoff());
+            }
+            yield return WaitCleared(floor.Text, floor.Enemies);
+        }
+
+        // ------------------------------------------------------------ Финал миссии 3
+
+        // Герой входит в лабораторию — охрана стоит и целится в него, но не стреляет. Стрелять нельзя,
+        // пока не включён Сандевистан (TAB, шкала заполняется заранее); включил — все оживают разом
+        private IEnumerator Standoff()
+        {
+            yield return new WaitUntil(() => _over || _standoffZone.Contains(_player.transform.position));
+            // Всех уже перестрелял из-за двери — ждать некого
+            if (_over || !AnyAlive(_standoffEnemies)) yield break;
+
+            _player.CanShoot = false;
+            if (_sandevistan != null) _sandevistan.Refill();
+            _cameraFollow.Shake(0.05f, 0.2f);
+            if (_banner != null) _banner.Show(_standoffTitle, _standoffHint, 4f);
+            _objective.Set(_standoffHint);
+
+            while (!_over && AnyAlive(_standoffEnemies) && (_sandevistan == null || !_sandevistan.IsActive))
+            {
+                foreach (EnemyAI ai in _standoffEnemies)
+                {
+                    if (ai == null || ai.GetComponent<Health>().IsDead) continue;
+                    Transform body = ai.transform.Find("Body");
+                    Vector2 dir = _player.transform.position - ai.transform.position;
+                    float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+                    body.rotation = Quaternion.RotateTowards(body.rotation, Quaternion.Euler(0f, 0f, angle), 360f * Time.deltaTime);
+                }
+                yield return null;
+            }
+            if (_over) yield break;
+
+            _player.CanShoot = true;
+            foreach (EnemyAI ai in _standoffEnemies)
+            {
+                if (ai == null || ai.GetComponent<Health>().IsDead) continue;
+                ai.enabled = true;
+                ai.Engage(_player, _standoffReaction);
+            }
+        }
+
+        private static bool AnyAlive(EnemyAI[] enemies)
+        {
+            foreach (EnemyAI ai in enemies)
+            {
+                if (ai != null && !ai.GetComponent<Health>().IsDead) return true;
+            }
+            return false;
+        }
+
+        // Этаж зачищен: начальник встаёт и угрожает — Рэй стреляет (TargetCutscene). У трупа — ключ,
+        // ключом открывается сейф в стене, из него Рэй забирает relic
+        private IEnumerator Finale()
+        {
+            Time.timeScale = 1f;
+            yield return TargetCutscene();
+
+            // Ключ выпадает у тела
+            _keyItem.transform.position = (Vector2)_target.position + _keyOffset;
+            _keyItem.gameObject.SetActive(true);
+            _cameraFollow.Focus(null, 0f);
+            SetControl(true);
+            _player.CanAim = true;
+
+            _objective.Set(_keyText);
+            Announce("НАЧАЛЬНИК МЁРТВ", _keyText.ToUpper(), _keyItem.transform.position);
+            yield return new WaitUntil(() => _over || Vector2.Distance(_player.transform.position, _keyItem.transform.position) <= _pickupRadius);
+            if (_over) yield break;
+            N89.Core.Sfx.Play(N89.Core.Sfx.ReloadOk, _keyItem.transform.position);
+            _keyItem.gameObject.SetActive(false);
+
+            _objective.Set(_safeText);
+            if (_waypoint != null) _waypoint.Show(_safe.position);
+            yield return new WaitUntil(() => _over || Vector2.Distance(_player.transform.position, _safe.position) <= _pickupRadius + 0.4f);
+            if (_waypoint != null) _waypoint.Hide();
+            if (_over) yield break;
+
+            // Сейф открывается, relic светится и уходит в руки Рэю
+            SetControl(false);
+            _player.CanAim = false;
+            _objective.Set(string.Empty);
+            StartCoroutine(Letterbox(120f, 0.5f));
+            _cameraFollow.Focus(_safe, 0.5f);
+            yield return Turn(_heroBody.transform, _safe.position, 0.3f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Door, _safe.position);
+            _safeBody.sprite = _safeOpen;
+            _cameraFollow.Shake(0.05f, 0.15f);
+            _relicItem.gameObject.SetActive(true);
+            yield return new WaitForSeconds(1.2f);
+
+            Vector3 from = _relicItem.transform.position;
+            Vector3 startScale = _relicItem.transform.localScale;
+            for (float t = 0f; t < 0.6f; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / 0.6f);
+                _relicItem.transform.position = Vector3.Lerp(from, _player.transform.position, k);
+                _relicItem.transform.localScale = startScale * (1f - 0.8f * k);
+                yield return null;
+            }
+            _relicItem.gameObject.SetActive(false);
+            N89.Core.Sfx.Play(N89.Core.Sfx.HackDone, _player.transform.position);
+            _fader.Flash(new Color(0.3f, 1f, 1f, 0.35f), 0.3f);
+            if (_banner != null) _banner.Show(_relicTitle, _relicSubtitle, 3f);
+            foreach (string line in _relicLines)
+            {
+                _subtitles.Say("РЭЙ", line);
+                yield return new WaitForSeconds(1.5f);
+            }
+
+            yield return new WaitForSeconds(0.5f);
+            StartCoroutine(Letterbox(0f, 0.5f));
+            _cameraFollow.Focus(null, 0f);
+        }
+
+        // Герой вышел из кабины — двери соседнего лифта открываются, оттуда сразу идут на него
+        private IEnumerator Ambush(UpperFloor floor)
+        {
+            yield return new WaitUntil(() => _over || !floor.ExitZone.Contains(_player.transform.position));
+            if (_over) yield break;
+            floor.AmbushDoor.Open();
+            foreach (EnemyAI ai in floor.Ambushers)
+            {
+                if (ai != null && !ai.GetComponent<Health>().IsDead) ai.Engage(_player, _ambushReaction);
+            }
+        }
+
+        private static void SetEnemiesActive(Health[] enemies, bool active)
+        {
+            foreach (Health enemy in enemies)
+            {
+                if (enemy != null && enemy.TryGetComponent(out EnemyAI ai)) ai.enabled = active;
+            }
+        }
+
         // Охрана у лестницы стоит вплотную — даём герою секунду осмотреться, прежде чем она оживёт
         private IEnumerator Floor2Grace()
         {
@@ -412,8 +699,19 @@ namespace N89.Missions
 
             foreach (string line in _targetLines)
             {
-                _subtitles.Say(TargetSpeaker, line);
+                _subtitles.Say(_targetSpeaker, line);
                 yield return new WaitForSeconds(1.3f);
+            }
+
+            // Тянется к пистолету на столе, хватает и разворачивается к герою — тут его и снимают
+            if (_targetGun != null)
+            {
+                Transform gun = _targetGun.transform;
+                yield return Turn(_targetBody.transform, gun.position, 0.2f);
+                yield return Move(gun, gun.position, (Vector2)_target.position + (Vector2)_targetBody.transform.right * 0.35f, 0.25f);
+                gun.SetParent(_targetBody.transform, true);
+                yield return Turn(_targetBody.transform, _player.transform.position, 0.2f);
+                yield return new WaitForSeconds(0.15f);
             }
 
             // Выстрел
@@ -431,6 +729,12 @@ namespace N89.Missions
                 Instantiate(_bloodFxPrefab, _target.position, Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg));
             }
             if (_targetDead != null) _targetBody.sprite = _targetDead;
+            // Пистолет выпадает из руки и остаётся лежать
+            if (_targetGun != null && _targetGun.transform.parent == _targetBody.transform)
+            {
+                _targetGun.transform.SetParent(_target.parent, true);
+                _targetGun.transform.position = (Vector2)_target.position - dir * 0.5f;
+            }
             // Лежит головой к дальнему краю стола
             Vector2 fall = _deskPoint - (Vector2)_target.position;
             _targetBody.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(fall.y, fall.x) * Mathf.Rad2Deg);

@@ -14,8 +14,8 @@ namespace N89.Player
     [RequireComponent(typeof(PlayerController))]
     public class Sandevistan : MonoBehaviour
     {
-        [SerializeField] private float _duration = 5f;
-        [SerializeField] private float _rechargeTime = 7f;
+        [SerializeField] private float _duration = 3f;
+        [SerializeField] private float _rechargeTime = 8f;
         [Tooltip("Скорость мира, пока Сандевистан включён")]
         [SerializeField] private float _timeScale = 0.25f;
 
@@ -24,15 +24,15 @@ namespace N89.Player
         [SerializeField] private SpriteRenderer _body;
         [SerializeField] private float _ghostInterval = 0.04f;
         [SerializeField] private float _ghostLife = 0.35f;
-        [SerializeField] private Color _ghostA = new Color(0.2f, 1f, 0.55f, 0.55f);
-        [SerializeField] private Color _ghostB = new Color(1f, 0.25f, 0.75f, 0.55f);
+        [SerializeField] private Color _ghostA = new Color(0.25f, 0.6f, 1f, 0.6f);
+        [SerializeField] private Color _ghostB = new Color(1f, 0.85f, 0.2f, 0.6f);
 
         [Header("HUD (необязательно)")]
         [Tooltip("Полоска энергии: Image с Fill Method = Horizontal")]
         [SerializeField] private Image _energyFill;
-        [SerializeField] private Color _readyColor = new Color(0.2f, 1f, 0.55f);
-        [SerializeField] private Color _chargingColor = new Color(0.2f, 1f, 0.55f, 0.4f);
-        [Tooltip("Зелёный фильтр экрана, пока Сандевистан включён")]
+        [SerializeField] private Color _readyColor = new Color(1f, 0.85f, 0.2f);
+        [SerializeField] private Color _chargingColor = new Color(0.25f, 0.6f, 1f, 0.6f);
+        [Tooltip("Синий фильтр экрана, пока Сандевистан включён")]
         [SerializeField] private CanvasGroup _overlay;
 
         private PlayerController _player;
@@ -45,6 +45,9 @@ namespace N89.Player
         public float Energy { get; private set; } = 1f;
         public bool IsActive { get; private set; }
         public bool IsReady => !IsActive && Energy >= 1f;
+        // Сценарий (противостояние в финале миссии 3): шкала сразу полная
+        public void Refill() => Energy = 1f;
+
         public event Action Activated;
         public event Action Depleted;
 
@@ -122,7 +125,7 @@ namespace N89.Player
             if (_weapon != null) _weapon.CooldownScale = scale;
         }
 
-        // Копия героя на месте — гаснет в реальном времени, цвета чередуются (как в Edgerunners)
+        // Копия героя на месте — гаснет в реальном времени, цвета чередуются: синий и жёлтый
         private void SpawnGhost()
         {
             if (_body == null || _body.sprite == null) return;

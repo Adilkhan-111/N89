@@ -262,6 +262,8 @@ namespace N89.EditorTools
             });
 
             escape.Assassin.gameObject.SetActive(false);
+            // Убийца у выхода — сценарный, в счёт и «пар» ранга не входит
+            Configure(hud.Score, so => SetArray(so, "_exclude", escape.Assassin.GetComponent<Health>()));
 
             ValidateQuickhacks();
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -1089,6 +1091,7 @@ namespace N89.EditorTools
             public RectTransform LetterboxTop;
             public RectTransform LetterboxBottom;
             public AmmoHud Ammo;
+            public ScoreCounter Score;
         }
 
         // Полный боевой HUD: RAM, взлом, задача, субтитры, перекрестие, затемнение и итоговый экран.
@@ -1217,6 +1220,9 @@ namespace N89.EditorTools
 
             BuildHint(canvasRect, mono, "ESC — пауза    ENTER / SPACE / ЛКМ — пропустить реплику");
 
+            // Очки и серии — под затемнением (на экране смерти не видны)
+            ScoreCounter scoreCounter = BuildScore(canvasRect, audiowide, hacking.GetComponent<Health>());
+
             // Затемнение и экран смерти — поверх всего
             ScreenFader screenFader = BuildFader(canvasRect, mono, new Color(1f, 0.2f, 0.3f));
 
@@ -1225,17 +1231,34 @@ namespace N89.EditorTools
             MainMenuSceneBuilder.Stretch(endPanel.rectTransform);
             CanvasGroup endGroup = Group(endPanel.gameObject, 0f);
             TextMeshProUGUI endTitleLabel = Text("Title", endPanel.rectTransform, mono, endTitle, 72f, new Color(1f, 0.85f, 0.97f), TextAlignmentOptions.Center);
-            Anchor(endTitleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(1400f, 100f));
+            Anchor(endTitleLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 270f), new Vector2(1400f, 100f));
             Image divider = Img("Divider", endPanel.rectTransform, Magenta);
-            Anchor(divider.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 115f), new Vector2(760f, 3f));
-            TextMeshProUGUI rating = Text("Rating", endPanel.rectTransform, mono, "РЕЙТИНГ:   <color=#8A8A99>НЕ ОЦЕНЕНО</color>", 38f, Color.white, TextAlignmentOptions.Center);
-            Anchor(rating.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 45f), new Vector2(1000f, 50f));
-            TextMeshProUGUI score = Text("Score", endPanel.rectTransform, mono, "ОЧКИ:   <color=#8A8A99>НЕ ОЦЕНЕНО</color>", 38f, Color.white, TextAlignmentOptions.Center);
-            Anchor(score.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -15f), new Vector2(1000f, 50f));
+            Anchor(divider.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 205f), new Vector2(1000f, 3f));
+
+            // Слева — набегающий счёт и статистика, справа — ранг-печать
+            TMP_FontAsset marker = MainMenuSceneBuilder.GetOrCreateFontAsset("PermanentMarker-Regular");
+            TextMeshProUGUI scoreCaption = Text("ScoreCaption", endPanel.rectTransform, audiowide, "SCORE", 32f, Magenta, TextAlignmentOptions.Left);
+            Anchor(scoreCaption.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-480f, 140f), new Vector2(600f, 40f));
+            TextMeshProUGUI scoreShadow = Text("ScoreShadow", endPanel.rectTransform, marker, "0", 120f, new Color(0.45f, 0.05f, 0.35f), TextAlignmentOptions.Left);
+            Anchor(scoreShadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-474f, 46f), new Vector2(700f, 140f));
+            TextMeshProUGUI scoreValue = Text("Score", endPanel.rectTransform, marker, "0", 120f, new Color(1f, 0.9f, 0.97f), TextAlignmentOptions.Left);
+            Anchor(scoreValue.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-480f, 52f), new Vector2(700f, 140f));
+            TextMeshProUGUI stats = Text("Stats", endPanel.rectTransform, audiowide, string.Empty, 26f, new Color(0.35f, 1f, 1f), TextAlignmentOptions.Left);
+            Anchor(stats.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 0.5f), new Vector2(-480f, -50f), new Vector2(800f, 40f));
+
+            RectTransform rankRoot = MainMenuSceneBuilder.CreateRect("Rank", endPanel.rectTransform);
+            Anchor(rankRoot, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(420f, 10f), new Vector2(320f, 320f));
+            CanvasGroup rankGroup = Group(rankRoot.gameObject, 0f);
+            TextMeshProUGUI rankCaption = Text("Caption", rankRoot, audiowide, "RANK", 32f, Magenta, TextAlignmentOptions.Center);
+            Anchor(rankCaption.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -10f), new Vector2(320f, 40f));
+            TextMeshProUGUI rankShadow = Text("Shadow", rankRoot, marker, "S", 300f, new Color(0.45f, 0.05f, 0.35f), TextAlignmentOptions.Center);
+            Anchor(rankShadow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(10f, -40f), new Vector2(320f, 320f));
+            TextMeshProUGUI rankLetter = Text("Letter", rankRoot, marker, "S", 300f, Color.white, TextAlignmentOptions.Center);
+            Anchor(rankLetter.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -30f), new Vector2(320f, 320f));
 
             Image buttonImage = Img("Continue", endPanel.rectTransform, Color.white);
             buttonImage.raycastTarget = true;
-            Anchor(buttonImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -170f), new Vector2(380f, 76f));
+            Anchor(buttonImage.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -230f), new Vector2(380f, 76f));
             buttonImage.gameObject.AddComponent<Outline>().effectColor = Magenta;
             Button button = buttonImage.gameObject.AddComponent<Button>();
             button.targetGraphic = buttonImage;
@@ -1255,6 +1278,12 @@ namespace N89.EditorTools
                 P(so, "_continueButton").objectReferenceValue = button;
                 P(so, "_crosshair").objectReferenceValue = crosshairImage.gameObject;
                 P(so, "_nextScene").stringValue = nextScene;
+                P(so, "_scoreLabel").objectReferenceValue = scoreValue;
+                P(so, "_scoreShadow").objectReferenceValue = scoreShadow;
+                P(so, "_statsLabel").objectReferenceValue = stats;
+                P(so, "_rankLabel").objectReferenceValue = rankLetter;
+                P(so, "_rankShadow").objectReferenceValue = rankShadow;
+                P(so, "_rankGroup").objectReferenceValue = rankGroup;
             });
 
             BuildPauseMenu(canvasRect, mono);
@@ -1262,7 +1291,7 @@ namespace N89.EditorTools
             return new HudRefs
             {
                 Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen,
-                LetterboxTop = letterboxTop, LetterboxBottom = letterboxBottom, Ammo = ammoHud,
+                LetterboxTop = letterboxTop, LetterboxBottom = letterboxBottom, Ammo = ammoHud, Score = scoreCounter,
             };
         }
 
@@ -1311,6 +1340,79 @@ namespace N89.EditorTools
             button.colors = colors;
             MainMenuSceneBuilder.Stretch(Text("Label", image.rectTransform, mono, label, 34f, Color.white, TextAlignmentOptions.Center).rectTransform);
             return button;
+        }
+
+        // Счёт и серии как в Hotline Miami: справа сверху счёт маркером с маджентовой тенью, под ним — номер
+        // серии крупно с неоновым раздвоением, очки серии и тающая полоска окна (3 с); очки над убитыми
+        private static ScoreCounter BuildScore(RectTransform canvasRect, TMP_FontAsset audiowide, Health player)
+        {
+            TMP_FontAsset marker = MainMenuSceneBuilder.GetOrCreateFontAsset("PermanentMarker-Regular");
+            Color shadowColor = new Color(0.45f, 0.05f, 0.35f);
+
+            RectTransform root = MainMenuSceneBuilder.CreateRect("Score", canvasRect);
+            MainMenuSceneBuilder.Stretch(root);
+            CanvasGroup group = Group(root.gameObject, 1f);
+            group.blocksRaycasts = false;
+
+            // Всплывающие очки — шаблон в центре холста, ScoreCounter двигает копии за убитыми
+            TextMeshProUGUI popup = Text("PopupTemplate", root, marker, "+400", 44f, Color.white, TextAlignmentOptions.Center);
+            Anchor(popup.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(400f, 70f));
+            popup.outlineWidth = 0.25f;
+            popup.outlineColor = new Color32(40, 0, 30, 255);
+
+            // Счёт
+            RectTransform scoreBox = MainMenuSceneBuilder.CreateRect("ScoreBox", root);
+            Anchor(scoreBox, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-50f, -36f), new Vector2(520f, 110f));
+            TextMeshProUGUI caption = Text("Caption", scoreBox, audiowide, "SCORE", 24f, Magenta, TextAlignmentOptions.TopRight);
+            Anchor(caption.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(400f, 30f));
+            TextMeshProUGUI scoreShadow = Text("Shadow", scoreBox, marker, "0", 72f, shadowColor, TextAlignmentOptions.TopRight);
+            Anchor(scoreShadow.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(5f, -31f), new Vector2(520f, 90f));
+            TextMeshProUGUI scoreText = Text("Value", scoreBox, marker, "0", 72f, new Color(1f, 0.92f, 0.98f), TextAlignmentOptions.TopRight);
+            Anchor(scoreText.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -26f), new Vector2(520f, 90f));
+
+            // Серия
+            // Колонка справа под счётом: «5x» крупно, под ней «COMBO» и очки серии, ниже — полоска окна
+            RectTransform comboBox = MainMenuSceneBuilder.CreateRect("Combo", root);
+            Anchor(comboBox, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-50f, -150f), new Vector2(420f, 190f));
+            CanvasGroup comboGroup = Group(comboBox.gameObject, 0f);
+            TextMeshProUGUI ghostA = Text("GhostA", comboBox, marker, "2x", 120f, new Color(1f, 0.15f, 0.4f, 0.6f), TextAlignmentOptions.TopRight);
+            TextMeshProUGUI ghostB = Text("GhostB", comboBox, marker, "2x", 120f, new Color(0.2f, 1f, 1f, 0.6f), TextAlignmentOptions.TopRight);
+            TextMeshProUGUI comboText = Text("Value", comboBox, marker, "2x", 120f, Color.white, TextAlignmentOptions.TopRight);
+            foreach (TextMeshProUGUI t in new[] { ghostA, ghostB, comboText })
+            {
+                Anchor(t.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), Vector2.zero, new Vector2(420f, 130f));
+            }
+            TextMeshProUGUI comboLabel = Text("Label", comboBox, audiowide, "COMBO", 28f, Magenta, TextAlignmentOptions.Right);
+            Anchor(comboLabel.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -128f), new Vector2(160f, 40f));
+            TextMeshProUGUI streak = Text("Streak", comboBox, marker, "+800", 38f, new Color(1f, 0.9f, 0.35f), TextAlignmentOptions.Right);
+            Anchor(streak.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-170f, -124f), new Vector2(250f, 48f));
+            Image barTrack = Img("BarTrack", comboBox, new Color(0.25f, 0.05f, 0.2f, 0.9f));
+            Anchor(barTrack.rectTransform, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(0f, -176f), new Vector2(420f, 8f));
+            Image bar = Img("Bar", barTrack.rectTransform, new Color(0.35f, 1f, 1f));
+            bar.rectTransform.anchorMin = Vector2.zero;
+            bar.rectTransform.anchorMax = Vector2.one;
+            bar.rectTransform.pivot = new Vector2(0f, 0.5f);
+            bar.rectTransform.offsetMin = Vector2.zero;
+            bar.rectTransform.offsetMax = Vector2.zero;
+
+            ScoreCounter counter = root.gameObject.AddComponent<ScoreCounter>();
+            Configure(counter, so =>
+            {
+                P(so, "_player").objectReferenceValue = player;
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_scoreText").objectReferenceValue = scoreText;
+                P(so, "_scoreShadow").objectReferenceValue = scoreShadow;
+                P(so, "_scoreBox").objectReferenceValue = scoreBox;
+                P(so, "_comboGroup").objectReferenceValue = comboGroup;
+                P(so, "_comboBox").objectReferenceValue = comboBox;
+                P(so, "_comboText").objectReferenceValue = comboText;
+                P(so, "_comboGhostA").objectReferenceValue = ghostA;
+                P(so, "_comboGhostB").objectReferenceValue = ghostB;
+                P(so, "_streakText").objectReferenceValue = streak;
+                P(so, "_comboBar").objectReferenceValue = bar.rectTransform;
+                P(so, "_popupTemplate").objectReferenceValue = popup;
+            });
+            return counter;
         }
 
         // Патроны как в Hotline Miami: «16/16rnds» на чёрной плашке справа внизу, с тёмной тенью

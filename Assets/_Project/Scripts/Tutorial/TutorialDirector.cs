@@ -113,6 +113,8 @@ namespace N89.Tutorial
                 yield break;
             }
 
+            // Счёт появится на шаге с дронами, где оператор объясняет серии
+            if (ScoreCounter.Instance != null) ScoreCounter.Instance.Visible = false;
             yield return new WaitForSeconds(0.6f);
             yield return _fader.Fade(1f, 0f, 2f);
 
@@ -203,9 +205,16 @@ namespace N89.Tutorial
         {
             foreach (Health drone in _drones) drone.gameObject.SetActive(true);
             yield return Say(Operator, "Подвижные цели. Учебные дроны. Они не стреляют.");
-            SayAsync(Operator, "Пока что.");
-            yield return WaitAllDead(_drones, "Уничтожь дронов");
-            yield return Say(Operator, "Хорошо. Ты учишься быстрее предыдущих образцов.");
+            if (ScoreCounter.Instance != null) ScoreCounter.Instance.Visible = true;
+            yield return Say(Operator, "Эффективность оценивается. Счёт — справа вверху.");
+            yield return Say(Operator, "Уничтожай цели серией: каждая следующая в серии стоит больше.");
+            SayAsync(Operator, "Пауза дольше трёх секунд обрывает серию. Ранг выставим в конце.");
+            yield return WaitAllDead(_drones, "Уничтожь дронов одной серией");
+            ScoreCounter score = ScoreCounter.Instance;
+            if (score != null && score.MaxCombo >= _drones.Length)
+                yield return Say(Operator, "Чистая серия. Ты учишься быстрее предыдущих образцов.");
+            else
+                yield return Say(Operator, "Серия прервалась. Приемлемо. Дальше — быстрее.");
         }
 
         private IEnumerator HackingStep()

@@ -41,6 +41,7 @@ namespace N89.Combat
 
         public void TakeDamage(int amount)
         {
+            if (!IsDead) N89.Core.Sfx.Play(N89.Core.Sfx.Hit, transform.position, 0.6f);
             if (IsDead)
             {
                 return;
@@ -77,6 +78,7 @@ namespace N89.Combat
 
         private void Die()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Death, transform.position);
             IsDead = true;
 
             if (_deathFxPrefab != null)

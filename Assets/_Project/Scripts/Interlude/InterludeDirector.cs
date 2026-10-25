@@ -14,12 +14,14 @@ namespace N89.Interlude
     //  Sleep (перед миссией 1) — спит на диване, ворочается, просыпается и встаёт; цель — зайти
     //  в ванную, там босс присылает брифинг в мессенджер;
     //  Braindance (перед миссией 2) — сидит на диване в гарнитуре брейнданса, снимает её, кладёт
-    //  на столик, оператор пишет прямо туда, после брифинга Рэй встаёт.
+    //  на столик, оператор пишет прямо туда, после брифинга Рэй встаёт;
+    //  Mirror (перед миссией 3) — стоит у раковины и смотрит в зеркало, свет мигает красным,
+    //  он разбивает зеркало кулаком — и тут пишет босс, после брифинга управление игроку.
     // Дальше одинаково: арсенал (выбор оружия и импланта на миссию), входная дверь, коридор
     // мегаблока, в конце коридора экран загрузки миссии.
     public class InterludeDirector : MonoBehaviour
     {
-        public enum Opening { Sleep, Braindance }
+        public enum Opening { Sleep, Braindance, Mirror }
 
         [Header("Начало")]
         [SerializeField] private Opening _opening = Opening.Sleep;
@@ -39,6 +41,16 @@ namespace N89.Interlude
         [SerializeField] private CanvasGroup _braindanceOverlay;
         [SerializeField] private TMP_Text _braindanceTimecode;
         [SerializeField] private RectTransform _braindanceProgress;
+
+        [Header("Зеркало")]
+        [Tooltip("Mirror: где Рэй стоит у раковины (поворот — лицом к зеркалу)")]
+        [SerializeField] private Transform _mirrorPoint;
+        [SerializeField] private SpriteRenderer _mirror;
+        [SerializeField] private Sprite _brokenMirrorSprite;
+        [SerializeField] private Sprite _shardSprite;
+        [Tooltip("Красная вспышка в ванной — сбой в голове, пока он смотрит в зеркало")]
+        [SerializeField] private Light2D _glitchLight;
+        [SerializeField] private float _mirrorStareDuration = 3f;
 
         [Header("Hero")]
         [SerializeField] private PlayerController _hero;
@@ -140,6 +152,11 @@ namespace N89.Interlude
                 yield return Braindance();
                 yield return StandUp(rb, standing);
             }
+            else if (_opening == Opening.Mirror)
+            {
+                yield return Mirror();
+                yield return GiveControl(rb);
+            }
             else
             {
                 yield return WakeUp();
@@ -188,6 +205,7 @@ namespace N89.Interlude
             SetControl(false, rb);
             _heroBody.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
             _elevatorDoor.Close();
+            N89.Core.Sfx.Play(N89.Core.Sfx.Elevator);
             yield return new WaitForSeconds(0.6f);
             _cameraFollow.Shake(0.04f, 0.3f);
             yield return _fader.Fade(0f, 1f, 0.5f);
@@ -329,13 +347,89 @@ namespace N89.Interlude
             yield return new WaitForSeconds(0.5f);
         }
 
+        // Перед миссией 3: Рэй у раковины смотрит в зеркало. В голове сбоит — свет мигает красным;
+        // он отводит кулак и бьёт: зеркало в трещинах, осколки летят на пол. Тяжело дышит —
+        // и тут вибрирует коммуникатор: пишет босс
+        private IEnumerator Mirror()
+        {
+            Transform root = _hero.transform;
+            Transform body = _heroBody.transform;
+            root.position = _mirrorPoint.position;
+            body.rotation = _mirrorPoint.rotation;
+            _glitchLight.enabled = false;
+            _cameraFollow.CutTo(_mirrorPoint);
+            Camera.main.orthographicSize = _closeZoom;
+
+            yield return ShowTitle();
+
+            // Смотрит на себя; на последней секунде — сбой
+            yield return Breathe(body, _mirrorStareDuration - 1f);
+            for (int i = 0; i < 5; i++)
+            {
+                _glitchLight.enabled = i % 2 == 0;
+                if (i == 2) _cameraFollow.Shake(0.03f, 0.1f);
+                yield return new WaitForSeconds(0.08f + 0.06f * i);
+            }
+            _glitchLight.enabled = false;
+            yield return new WaitForSeconds(0.4f);
+
+            // Отводит кулак — удар
+            Vector3 rest = root.position;
+            Vector3 forward = _mirrorPoint.right;
+            yield return Move(root, rest, rest - forward * 0.15f, 0.25f);
+            yield return Move(root, rest - forward * 0.15f, rest + forward * 0.3f, 0.06f);
+            _mirror.sprite = _brokenMirrorSprite;
+            N89.Core.Sfx.Play(N89.Core.Sfx.Punch, _mirror.transform.position);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Glass, _mirror.transform.position);
+            _cameraFollow.Shake(0.25f, 0.3f);
+            _glitchLight.enabled = true;
+            for (int i = 0; i < 12; i++)
+            {
+                StartCoroutine(FlyShard(_mirror.transform.position - forward * 0.2f, -forward));
+            }
+            yield return new WaitForSeconds(0.08f);
+            _glitchLight.enabled = false;
+            yield return Move(root, rest + forward * 0.3f, rest, 0.35f);
+
+            // Тяжело дышит, опустив голову
+            yield return Breathe(body, 2f);
+
+            _cameraFollow.Shake(0.05f, 0.2f);
+            yield return new WaitForSeconds(0.6f);
+            yield return BossBriefing();
+        }
+
+        // Осколок зеркала: отлетает от удара, крутясь, и остаётся лежать на полу
+        private IEnumerator FlyShard(Vector3 from, Vector3 away)
+        {
+            var shard = new GameObject("MirrorShard").AddComponent<SpriteRenderer>();
+            shard.sprite = _shardSprite;
+            shard.sortingOrder = _mirror.sortingOrder + 1;
+            float angle = Mathf.Atan2(away.y, away.x) + Random.Range(-1.3f, 1.3f);
+            Vector3 to = from + new Vector3(Mathf.Cos(angle), Mathf.Sin(angle)) * Random.Range(0.3f, 1.3f);
+            float spin = Random.Range(-720f, 720f);
+            float duration = Random.Range(0.25f, 0.45f);
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                float k = 1f - (1f - t / duration) * (1f - t / duration);
+                shard.transform.SetPositionAndRotation(Vector3.Lerp(from, to, k), Quaternion.Euler(0f, 0f, spin * t));
+                yield return null;
+            }
+            shard.transform.position = to;
+        }
+
         // Встаёт с дивана, камера отъезжает, управление — игроку
         private IEnumerator StandUp(Rigidbody2D rb, Sprite standing)
         {
             _heroBody.sprite = standing;
             _heroBody.transform.rotation = _standPoint.rotation;
             yield return Move(_hero.transform, _sitPoint.position, _standPoint.position, 0.45f);
+            yield return GiveControl(rb);
+        }
 
+        // Камера отъезжает, летербокс уходит, управление — игроку
+        private IEnumerator GiveControl(Rigidbody2D rb)
+        {
             _cameraFollow.Focus(null, 0f);
             StartCoroutine(_cameraFollow.Zoom(_roamZoom, 1.5f));
             yield return Letterbox(0f, 0.6f);

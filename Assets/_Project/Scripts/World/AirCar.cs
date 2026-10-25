@@ -27,6 +27,7 @@ namespace N89.World
         public IEnumerator TakeOff()
         {
             DisableColliders();
+            N89.Core.Sfx.Play(N89.Core.Sfx.CarStart, transform.position);
             Transform body = _body.transform;
             int order = _body.sortingOrder;
             _body.sortingOrder = 60;
@@ -45,6 +46,7 @@ namespace N89.World
             yield return new WaitForSeconds(0.3f);
 
             // Разгон вперёд и вверх
+            N89.Core.Sfx.Play(N89.Core.Sfx.CarFly, transform.position);
             float speed = 0f;
             for (float t = 0f; t < 2.2f; t += Time.deltaTime)
             {

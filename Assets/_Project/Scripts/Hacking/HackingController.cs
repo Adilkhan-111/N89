@@ -92,6 +92,7 @@ namespace N89.Hacking
 
         private void SetScanning(bool scanning)
         {
+            if (IsScanning != scanning && isActiveAndEnabled) N89.Core.Sfx.Play(scanning ? N89.Core.Sfx.ScanOn : N89.Core.Sfx.ScanOff);
             IsScanning = scanning;
             Time.timeScale = scanning ? _scanTimeScale : 1f;
             Time.fixedDeltaTime = _defaultFixedDeltaTime * Time.timeScale;
@@ -182,10 +183,12 @@ namespace N89.Hacking
             if (!_ram.TrySpend(hack.RamCost))
             {
                 HackFailed?.Invoke("НЕДОСТАТОЧНО ПАМЯТИ");
+                N89.Core.Sfx.Play(N89.Core.Sfx.HackFail);
                 return false;
             }
 
             UploadTarget = device;
+            N89.Core.Sfx.Play(N89.Core.Sfx.Hack);
             UploadHack = hack;
             UploadProgress = 0f;
             return true;
@@ -214,6 +217,7 @@ namespace N89.Hacking
 
             target.Apply(hack);
             HackCompleted?.Invoke(target, hack);
+            N89.Core.Sfx.Play(N89.Core.Sfx.HackDone);
         }
     }
 }

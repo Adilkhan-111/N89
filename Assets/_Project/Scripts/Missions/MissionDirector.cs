@@ -25,6 +25,10 @@ namespace N89.Missions
         [Header("Hero")]
         [SerializeField] private PlayerController _player;
         [SerializeField] private HackingController _hacking;
+        [Tooltip("Миссия 3: Сандевистан вместо взлома (HackingController на герое выключен). В начале — сперва подсказка про него, потом про имплант на руки")]
+        [SerializeField] private Sandevistan _sandevistan;
+        [SerializeField] private string _sandevistanTitle = "САНДЕВИСТАН";
+        [SerializeField] private string _sandevistanHint = "TAB — УСКОРЕНИЕ НА 5 С   ·   НЕ ВЫКЛЮЧИТЬ, ПОКА НЕ КОНЧИТСЯ ЭНЕРГИЯ";
         [SerializeField] private Weapon _weapon;
         [SerializeField] private SpriteRenderer _heroBody;
         [SerializeField] private CameraFollow _cameraFollow;
@@ -56,6 +60,11 @@ namespace N89.Missions
         [Tooltip("Подсказка про имплант в начале миссии (пусто — не показывать)")]
         [SerializeField] private string _implantTitle = "РУКИ ГОРИЛЛЫ";
         [SerializeField] private string _implantHint = "ПКМ — РЫВОК С УДАРОМ   ·   ЗАЖАТЬ ПКМ — БЛОК";
+        [Tooltip("Миссия 3: на герое оба импланта на руки, остаётся выбранный в арсенале (по id ImplantData), первый — по умолчанию")]
+        [SerializeField] private MonoBehaviour[] _armImplants;
+        [SerializeField] private string[] _armImplantIds;
+        [SerializeField] private string[] _armImplantTitles;
+        [SerializeField] private string[] _armImplantHints;
         [SerializeField] private string _stairsText = "Поднимись на второй этаж";
         [SerializeField] private string _floor2Text = "Убей всех, кроме цели";
         [SerializeField] private string _officeText = "Зайди в кабинет цели";
@@ -123,7 +132,8 @@ namespace N89.Missions
             _player.CanMove = false;
             _player.CanShoot = false;
             _hacking.HackingEnabled = false;
-            _hackingHud.RamVisible = true;
+            // Миссия 3: взлома нет — RAM прячется, вместо неё шкала энергии Сандевистана
+            _hackingHud.RamVisible = _sandevistan == null;
             _objective.Set(string.Empty);
             _fader.SetBlack(1f);
 
@@ -157,7 +167,7 @@ namespace N89.Missions
             yield return _fader.Fade(1f, 0f, restarted ? 0.25f : 1f);
             if (!fromCheckpoint && !restarted && _banner != null && !string.IsNullOrEmpty(_implantTitle))
             {
-                _banner.Show(_implantTitle, _implantHint, 3.5f);
+                StartCoroutine(ImplantBanners());
             }
             if (fromCheckpoint)
             {
@@ -228,6 +238,18 @@ namespace N89.Missions
             yield return _endScreen.Show();
         }
 
+        // Подсказки в начале: про Сандевистан (если есть), потом про имплант на руки
+        private IEnumerator ImplantBanners()
+        {
+            const float duration = 3.5f;
+            if (_sandevistan != null)
+            {
+                _banner.Show(_sandevistanTitle, _sandevistanHint, duration);
+                yield return new WaitForSecondsRealtime(duration + 0.6f);
+            }
+            _banner.Show(_implantTitle, _implantHint, duration);
+        }
+
         // Оружие из арсенала: параметры стрельбы и спрайт героя с этим стволом
         private void ApplyLoadout()
         {
@@ -245,6 +267,23 @@ namespace N89.Missions
             {
                 _heroBody.sprite = chosen.HeroSprite;
             }
+
+            // Имплант на руки из арсенала; остальные снимаются с героя
+            if (_armImplants == null || _armImplants.Length == 0) return;
+            int arm = 0;
+            if (Loadout.IsChosenFor(_mission))
+            {
+                for (int i = 0; i < _armImplantIds.Length; i++)
+                {
+                    if (_armImplantIds[i] == Loadout.ImplantId) arm = i;
+                }
+            }
+            for (int i = 0; i < _armImplants.Length; i++)
+            {
+                if (i != arm) Destroy(_armImplants[i]);
+            }
+            _implantTitle = _armImplantTitles[arm];
+            _implantHint = _armImplantHints[arm];
         }
 
         private IEnumerator WaitCleared(string text, Health[] group)

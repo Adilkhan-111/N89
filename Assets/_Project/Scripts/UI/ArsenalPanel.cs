@@ -11,7 +11,8 @@ using UnityEngine.UI;
 namespace N89.UI
 {
     // Арсенал перед миссией: слева барабан оружия (любое из трёх), справа барабан имплантов
-    // (на миссию доступен один, остальные видно, но взять нельзя). По краям — описания.
+    // (на миссию доступен один, остальные видно, но взять нельзя; на миссии 3 Сандевистан встроен,
+    // а на руки — выбор: Руки гориллы или Руки-лезвия). По краям — описания.
     // W/S или колесо — крутить барабан, A/D или мышь — выбрать барабан, Enter — подтвердить.
     // Выбор сохраняется в Loadout.
     public class ArsenalPanel : MonoBehaviour
@@ -91,22 +92,28 @@ namespace N89.UI
             _warningAlpha = 0f;
             _title.text = $"АРСЕНАЛ  //  МИССИЯ {mission}";
 
-            int implantIndex = 0;
+            // Барабан встаёт на первый имплант, который можно взять; встроенный (Сандевистан) — не выбор
+            int implantIndex = -1;
             for (int i = 0; i < _implants.Length; i++)
             {
-                bool available = _implants[i].Mission == mission;
-                if (available) implantIndex = i;
-                FillItem(_implantDrum.Items[i], _implants[i].Icon, available ? _implants[i].DisplayName : "ЗАБЛОКИРОВАН",
-                    available ? Color.white : _lockedTint);
+                bool available = _implants[i].IsAvailableOn(mission);
+                if (available && !_implants[i].BuiltIn && implantIndex < 0) implantIndex = i;
+                string label = !available ? "ЗАБЛОКИРОВАН" : _implants[i].BuiltIn ? "ВСТРОЕН" : _implants[i].DisplayName;
+                FillItem(_implantDrum.Items[i], _implants[i].Icon, label, available ? Color.white : _lockedTint);
             }
+            if (implantIndex < 0) implantIndex = 0;
 
-            // Если на эту миссию уже выбирали — барабан встаёт на прошлый выбор
+            // Если на эту миссию уже выбирали — барабаны встают на прошлый выбор
             int weaponIndex = 0;
             if (Loadout.IsChosenFor(mission))
             {
                 for (int i = 0; i < _weapons.Length; i++)
                 {
                     if (_weapons[i].name == Loadout.WeaponId) weaponIndex = i;
+                }
+                for (int i = 0; i < _implants.Length; i++)
+                {
+                    if (_implants[i].name == Loadout.ImplantId) implantIndex = i;
                 }
             }
 
@@ -190,9 +197,16 @@ namespace N89.UI
 
         private void TryConfirm()
         {
-            if (ChosenImplant.Mission != _mission)
+            if (ChosenImplant.BuiltIn && ChosenImplant.IsAvailableOn(_mission))
             {
-                _warning.text = $"ЭТОТ ИМПЛАНТ НЕДОСТУПЕН — ОН ОТКРОЕТСЯ НА МИССИИ {ChosenImplant.Mission}";
+                _warning.text = $"{ChosenImplant.DisplayName} УЖЕ УСТАНОВЛЕН — ВЫБЕРИ ИМПЛАНТ НА РУКИ";
+                _warningAlpha = 1.5f;
+                SetActiveDrum(true);
+                return;
+            }
+            if (!ChosenImplant.IsAvailableOn(_mission))
+            {
+                _warning.text = $"ЭТОТ ИМПЛАНТ НЕДОСТУПЕН — ОН ОТКРЫВАЕТСЯ НА МИССИИ {ChosenImplant.MissionsLabel}";
                 _warningAlpha = 1.5f;
                 SetActiveDrum(true);
                 return;
@@ -217,12 +231,23 @@ namespace N89.UI
         private void RefreshImplant()
         {
             ImplantData implant = ChosenImplant;
-            bool available = implant.Mission == _mission;
+            bool available = implant.IsAvailableOn(_mission);
+            ImplantData builtIn = BuiltInFor(_mission);
             _implantName.text = implant.DisplayName;
             _implantDescription.text = implant.Description;
-            _implantStatus.text = available
-                ? "<color=#4DFFF2>УСТАНОВЛЕН НА ЭТУ МИССИЮ</color>"
-                : $"<color=#FF5566>ЗАБЛОКИРОВАН  //  МИССИЯ {implant.Mission}</color>";
+            if (!available) _implantStatus.text = $"<color=#FF5566>ЗАБЛОКИРОВАН  //  МИССИЯ {implant.MissionsLabel}</color>";
+            else if (implant.BuiltIn) _implantStatus.text = "<color=#4DFF8C>ВСТРОЕН  //  СТАВИТСЯ САМ, ВЫБЕРИ ИМПЛАНТ НА РУКИ</color>";
+            else if (builtIn != null) _implantStatus.text = $"<color=#4DFFF2>НА РУКИ  //  + {builtIn.DisplayName}</color>";
+            else _implantStatus.text = "<color=#4DFFF2>УСТАНОВЛЕН НА ЭТУ МИССИЮ</color>";
+        }
+
+        private ImplantData BuiltInFor(int mission)
+        {
+            foreach (ImplantData implant in _implants)
+            {
+                if (implant.BuiltIn && implant.IsAvailableOn(mission)) return implant;
+            }
+            return null;
         }
 
         private void SetVisible(float alpha)

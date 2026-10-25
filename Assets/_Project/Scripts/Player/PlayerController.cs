@@ -39,6 +39,8 @@ namespace N89.Player
         public float SpeedMultiplier { get; set; } = 1f;
         // Отдельно от SpeedMultiplier (его держит блок «Рук гориллы»): ставит HackingController на время скана
         public float ScanSpeedMultiplier { get; set; } = 1f;
+        // Сандевистан: во сколько раз мир медленнее героя — скорость и разгон в реальном времени прежние
+        public float TimeCompensation { get; set; } = 1f;
         public bool ExternalVelocity { get; set; }
         public bool WeaponLocked { get; set; }
         public Vector2 AimPoint { get; private set; }
@@ -104,8 +106,9 @@ namespace N89.Player
                 return;
             }
 
-            Vector2 target = _moveInput * _moveSpeed * SpeedMultiplier * ScanSpeedMultiplier;
-            _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, target, _acceleration * Time.fixedDeltaTime);
+            float k = TimeCompensation;
+            Vector2 target = _moveInput * _moveSpeed * SpeedMultiplier * ScanSpeedMultiplier * k;
+            _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, target, _acceleration * k * k * Time.fixedDeltaTime);
         }
 
         private void OnFired()

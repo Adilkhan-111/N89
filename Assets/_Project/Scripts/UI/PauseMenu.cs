@@ -24,7 +24,12 @@ namespace N89.UI
         private bool _cursorVisible;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() => IsPaused = false;
+        private static void ResetStatics()
+        {
+            IsPaused = false;
+            // Вышли из Play Mode на паузе — звук остался бы выключенным в следующем запуске
+            AudioListener.pause = false;
+        }
 
         private void Awake()
         {

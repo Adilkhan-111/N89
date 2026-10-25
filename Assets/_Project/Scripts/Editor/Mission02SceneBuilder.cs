@@ -185,7 +185,7 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Имплант
 
         // «Руки-лезвия»: клинок на шарнире у правого предплечья (крутится вокруг него во время взмаха) и след-серп
-        private static void AddBladeArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
+        internal static void AddBladeArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
         {
             // Сноп искр при отбивании пули: белые и голубые, быстрые и короткие
             Material particleMat = MainMenuSceneBuilder.GetOrCreateMaterial("ParticleUnlit", new Material(UnlitMaterial));

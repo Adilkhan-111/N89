@@ -19,6 +19,7 @@ namespace N89.World
 
         public void Break()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Explosion, transform.position, 0.7f);
             if (IsBroken) return;
             IsBroken = true;
             _collider.enabled = false;

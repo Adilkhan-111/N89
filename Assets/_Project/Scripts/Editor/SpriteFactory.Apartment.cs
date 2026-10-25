@@ -545,6 +545,42 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Та же раковина после удара (интерлюдия 3): зеркало в трещинах от центра, куски выбиты,
+        // на осколках — синяя кровь с костяшек
+        public static Sprite SinkMirrorBroken() => Create("sink_mirror_broken", 40, 28, c =>
+        {
+            Color crack = new Color(0.92f, 1f, 1f);
+            Color hole = new Color(0.06f, 0.07f, 0.1f);
+            Color blood = new Color(0.15f, 0.45f, 1f);
+            c.Rect(1, 21, 38, 26, Magenta);
+            c.Rect(3, 22, 36, 25, new Color(0.3f, 0.42f, 0.5f));
+            c.Rect(16, 22, 23, 25, hole);
+            c.Rect(9, 23, 11, 25, hole);
+            c.Rect(29, 22, 31, 23, hole);
+            foreach (Vector2 end in new[] { new Vector2(3f, 25f), new Vector2(7f, 22f), new Vector2(12f, 25f),
+                         new Vector2(27f, 22f), new Vector2(33f, 25f), new Vector2(36f, 23f) })
+            {
+                c.Line(new Vector2(19.5f, 23.5f), end, 0.6f, crack);
+            }
+            c.Rect(17, 23, 18, 24, blood);
+            c.Rect(21, 22, 22, 22, blood);
+            c.Rect(19, 20, 19, 20, blood);
+            c.RoundRect(5, 3, 34, 20, 4, new Color(0.2f, 0.21f, 0.26f));
+            c.Ellipse(19.5f, 11f, 9f, 5.5f, MetalDark);
+            c.Rect(19, 15, 20, 20, MetalLight);
+            c.Rect(14, 9, 15, 10, new Color(0.7f, 0.95f, 1f));
+            c.Rect(23, 12, 23, 13, new Color(0.7f, 0.95f, 1f));
+            c.Rect(18, 7, 19, 7, blood);
+            c.Outline(Outline);
+        });
+
+        // Осколок зеркала: летит от удара и остаётся на полу
+        public static Sprite MirrorShard() => Create("mirror_shard", 4, 4, c =>
+        {
+            c.Rect(0, 0, 2, 1, new Color(0.7f, 0.95f, 1f));
+            c.Rect(1, 2, 2, 3, new Color(0.9f, 1f, 1f));
+        });
+
         // Коврик-голомат: тёмный, с жёлтой геометрией и бирюзовыми углами
         public static Sprite Rug() => Create("rug", 96, 64, c =>
         {

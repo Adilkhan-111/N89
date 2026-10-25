@@ -858,7 +858,7 @@ namespace N89.EditorTools
         // ---------------------------------------------------------------- Имплант
 
         // «Руки гориллы»: ПКМ — рывок с ударом, зажать ПКМ — блок на 3 попадания. Руки в блоке — спрайт перед корпусом
-        private static void AddGorillaArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
+        internal static void AddGorillaArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
         {
             Transform body = hero.transform.Find("Body");
             SpriteRenderer guard = CreateSprite("GorillaGuard", body, SpriteFactory.GorillaGuard(), new Vector2(0.38f, 0f), 11);

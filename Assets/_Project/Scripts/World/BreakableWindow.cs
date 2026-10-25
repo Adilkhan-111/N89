@@ -26,6 +26,7 @@ namespace N89.World
 
         private void Break()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Glass, transform.position);
             IsBroken = true;
             _collider.enabled = false;
             _pane.sprite = _brokenSprite;

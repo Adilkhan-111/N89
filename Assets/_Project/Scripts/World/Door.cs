@@ -32,6 +32,7 @@ namespace N89.World
 
         private void SetOpen(bool open, bool instant)
         {
+            if (!instant && IsOpen != open) N89.Core.Sfx.Play(N89.Core.Sfx.Door, transform.position, 0.5f);
             IsOpen = open;
             _collider.enabled = !open;
 

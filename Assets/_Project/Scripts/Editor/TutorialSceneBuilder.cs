@@ -1557,7 +1557,7 @@ namespace N89.EditorTools
             return img;
         }
 
-        private static void MakeFilled(Image img)
+        internal static void MakeFilled(Image img)
         {
             img.type = Image.Type.Filled;
             img.fillMethod = Image.FillMethod.Horizontal;

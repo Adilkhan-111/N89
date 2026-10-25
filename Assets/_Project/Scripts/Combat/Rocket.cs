@@ -61,6 +61,7 @@ namespace N89.Combat
 
         private void Explode(Vector2 at)
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Explosion, at);
             if (_explosionFxPrefab != null) Instantiate(_explosionFxPrefab, at, Quaternion.identity);
             if (_remainsPrefab != null) Instantiate(_remainsPrefab, at, Quaternion.Euler(0f, 0f, Random.Range(0f, 360f)));
 

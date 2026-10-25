@@ -54,6 +54,7 @@ namespace N89.World
 
         private void Explode()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Explosion, transform.position);
             if (IsGone) return;
             IsGone = true;
             Vector2 at = transform.position;

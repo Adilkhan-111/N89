@@ -124,6 +124,7 @@ namespace N89.Combat
 
         private void Begin()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Reload, transform.position, 0.7f);
             _active = true;
             _waitRelease = false;
             _weapon.Reloading = true;
@@ -146,6 +147,7 @@ namespace N89.Combat
 
         private void Succeed()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.ReloadOk, transform.position, 0.7f);
             _weapon.Refill();
             Stop();
             _weapon.Reloading = true;
@@ -158,6 +160,7 @@ namespace N89.Combat
 
         private void Fail()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.ReloadFail, transform.position, 0.7f);
             _pauseUntil = Time.unscaledTime + _failPause;
             SetFrameColor(FailColor);
             _cursor.color = FailColor;

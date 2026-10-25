@@ -24,6 +24,12 @@ EditorBuildSettings:
     path: Assets/_Project/Scenes/Mission02.unity
     guid: 769693e5dc2bf8045b2b822d1470f26c
   - enabled: 1
+    path: Assets/_Project/Scenes/Interlude03.unity
+    guid: d53aa649d601b82419984093927fea5e
+  - enabled: 1
+    path: Assets/_Project/Scenes/Mission03.unity
+    guid: a624f759bc308cf4f8c5f6362b3fdb6b
+  - enabled: 1
     path: Assets/_Project/Mission01.unity
     guid: 3ddad920a538a734bb70b103c4c475d0
   - enabled: 1

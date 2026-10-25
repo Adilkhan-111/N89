@@ -28,6 +28,8 @@ namespace N89.Combat
         public int Ammo { get; private set; }
         // Пока идёт перезарядка, ЛКМ занята мини-игрой — оружие не стреляет
         public bool Reloading { get; set; }
+        // Сандевистан: мир замедлен, а темп стрельбы героя прежний (кулдаун в игровом времени × множитель)
+        public float CooldownScale { get; set; } = 1f;
 
         private void Awake()
         {
@@ -56,7 +58,7 @@ namespace N89.Combat
                 return false;
             }
 
-            _nextShotTime = Time.time + _cooldown;
+            _nextShotTime = Time.time + _cooldown * CooldownScale;
             if (_magazineSize > 0)
             {
                 Ammo--;
@@ -74,6 +76,7 @@ namespace N89.Combat
 
         private void Shoot(Vector2 direction)
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Shot, transform.position, 0.8f);
             float angle = 0f;
             for (int i = 0; i < Mathf.Max(1, _pellets); i++)
             {

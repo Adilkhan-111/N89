@@ -103,6 +103,12 @@ namespace N89.Player
             BuildBar();
         }
 
+        // Миссия 3: на руки выбрали другой имплант — компонент убирают, шкала прячется
+        private void OnDisable()
+        {
+            if (_bar != null) _bar.gameObject.SetActive(false);
+        }
+
         private void Update()
         {
             if (N89.UI.PauseMenu.IsPaused) return;
@@ -122,6 +128,7 @@ namespace N89.Player
 
         private IEnumerator Swing()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Swing, transform.position);
             _swingStart = Time.time;
             _nextSwing = Time.time + _cooldown;
             _struck.Clear();
@@ -137,7 +144,7 @@ namespace N89.Player
             // 1. Клинок выбрасывается из предплечья, уже отведённый в начало дуги
             _blade.gameObject.SetActive(true);
             _blade.localRotation = Quaternion.Euler(0f, 0f, startAngle);
-            for (float t = 0f; t < _extendTime; t += Time.deltaTime)
+            for (float t = 0f; t < _extendTime; t += Time.deltaTime * _player.TimeCompensation)
             {
                 SetBladeLength(t / _extendTime);
                 StrikeInArc();
@@ -151,7 +158,7 @@ namespace N89.Player
             Vector3 smearScale = _smear.transform.localScale;
             _smear.transform.localScale = new Vector3(smearScale.x, Mathf.Abs(smearScale.y) * _side, 1f);
             float ghostAt = 0f;
-            for (float t = 0f; t < _swingTime; t += Time.deltaTime)
+            for (float t = 0f; t < _swingTime; t += Time.deltaTime * _player.TimeCompensation)
             {
                 float k = Mathf.SmoothStep(0f, 1f, t / _swingTime);
                 float angle = Mathf.Lerp(startAngle, endAngle, k);
@@ -174,7 +181,7 @@ namespace N89.Player
 
             // 3. Вспышка-серп во всю пройденную дугу, клинок втягивается
             _trail.enabled = true;
-            for (float t = 0f; t < _retractTime; t += Time.deltaTime)
+            for (float t = 0f; t < _retractTime; t += Time.deltaTime * _player.TimeCompensation)
             {
                 float k = t / _retractTime;
                 SetBladeLength(1f - k);
@@ -240,6 +247,7 @@ namespace N89.Player
         // Белая полоса по линии разреза поперёк удара — гаснет, вытягиваясь
         private IEnumerator CutFlash(Vector2 at, Vector2 dir)
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Slash, at);
             var line = new GameObject("CutFlash").AddComponent<SpriteRenderer>();
             line.sprite = _pixel;
             if (_material != null) line.sharedMaterial = _material;
@@ -295,6 +303,7 @@ namespace N89.Player
         // а сама пуля крупнее, светится и тянет за собой голубой хвост
         private void DeflectFx(Bullet bullet, Vector2 dir)
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Deflect, bullet.transform.position);
             Vector2 at = bullet.transform.position;
             if (_deflectFxPrefab != null)
             {

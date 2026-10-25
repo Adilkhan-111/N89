@@ -698,21 +698,32 @@ namespace N89.EditorTools
         private static ImplantData[] CreateImplants()
         {
             MainMenuSceneBuilder.EnsureFolder(ImplantsDir);
+            DeleteObsoleteImplants();
             const string key = "<color=#FFE04D>";
             return new[]
             {
+                // На миссии 3 руки — на выбор: оба импланта доступны ещё раз (extraMission)
                 CreateImplant("GorillaArms", "РУКИ ГОРИЛЛЫ", ArtOr("Implants/implant_gorilla_arms", SpriteFactory.IconGorillaArms), 1,
                     "Кибернетические руки с гидравлическим приводом.\n\n" +
                     $"{key}[ПКМ] — РЫВОК.</color> Короткий бросок вперёд с ударом в конце. Удар дробит цель и отшвыривает её далеко назад.\n\n" +
                     $"{key}[Зажать ПКМ] — БЛОК.</color> Руки закрывают тебя от пуль. Блок держит 3 попадания — шкала над героем " +
-                    "показывает запас. После третьего блок ломается и восстанавливается 7 секунд."),
+                    "показывает запас. После третьего блок ломается и восстанавливается 7 секунд.", extraMission: 3),
                 CreateImplant("BladeArms", "РУКИ-ЛЕЗВИЯ", ArtOr("Implants/implant_blade_arms", () => SpriteFactory.IconLockedImplant("implant_mission2")), 2,
                     "Выдвижные клинки в предплечьях. Кромка режет плоть и броню одинаково легко.\n\n" +
                     $"{key}[ПКМ] — УДАР ЛЕЗВИЕМ.</color> Взмах клинком перед собой. Попал по врагу — разрубает его пополам.\n\n" +
-                    $"{key}[ПКМ] по пуле — ОТБИТЬ.</color> Взмахни, когда пуля рядом, — клинок отобьёт её."),
-                CreateImplant("Mission3Implant", "ЗАСЕКРЕЧЕНО", ArtOr("Implants/implant_mission3", () => SpriteFactory.IconLockedImplant("implant_mission3")), 3,
-                    "Данные об импланте засекречены. Станет доступен перед миссией 3."),
+                    $"{key}[ПКМ] по пуле — ОТБИТЬ.</color> Взмахни, когда пуля рядом, — клинок отобьёт её.", extraMission: 3),
+                CreateImplant("Sandevistan", "САНДЕВИСТАН", ArtOr("Implants/implant_sandevistan", SpriteFactory.IconSandevistan), 3,
+                    "Военный ускоритель нервной системы. Встроен в позвоночник — на миссии 3 вместо взлома.\n\n" +
+                    $"{key}[TAB] — УСКОРЕНИЕ.</color> Мир вокруг замедляется, ты — нет: ходи, стреляй и бей имплантом на руки.\n\n" +
+                    $"{key}ЭНЕРГИЯ.</color> Хватает на 5 секунд, включённый не выключить, пока шкала не опустеет. " +
+                    "Полная перезарядка — 7 секунд.", builtIn: true),
             };
+        }
+
+        // Заглушка импланта миссии 3 из ранних сборок — теперь это Сандевистан
+        private static void DeleteObsoleteImplants()
+        {
+            AssetDatabase.DeleteAsset($"{ImplantsDir}/Mission3Implant.asset");
         }
 
         // Импортированный арт важнее временного: если PNG лежит в Art/Sprites/<path>.png — берём его,
@@ -766,13 +777,21 @@ namespace N89.EditorTools
             return weapon;
         }
 
-        private static ImplantData CreateImplant(string fileName, string displayName, Sprite icon, int mission, string description)
+        private static ImplantData CreateImplant(string fileName, string displayName, Sprite icon, int mission, string description,
+            int extraMission = 0, bool builtIn = false)
         {
             string path = $"{ImplantsDir}/{fileName}.asset";
             var implant = AssetDatabase.LoadAssetAtPath<ImplantData>(path);
             if (implant != null)
             {
                 UpdatePlaceholder(implant, "_icon", implant.Icon, icon);
+                // Где имплант доступен — правило игры, а не тюнинг: ставится всегда
+                Configure(implant, so =>
+                {
+                    P(so, "_extraMission").intValue = extraMission;
+                    P(so, "_builtIn").boolValue = builtIn;
+                });
+                EditorUtility.SetDirty(implant);
                 return implant;
             }
 
@@ -784,6 +803,8 @@ namespace N89.EditorTools
                 P(so, "_description").stringValue = description;
                 P(so, "_icon").objectReferenceValue = icon;
                 P(so, "_mission").intValue = mission;
+                P(so, "_extraMission").intValue = extraMission;
+                P(so, "_builtIn").boolValue = builtIn;
             });
             return implant;
         }

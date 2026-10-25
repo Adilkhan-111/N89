@@ -86,6 +86,12 @@ namespace N89.Player
             BuildBar();
         }
 
+        // Миссия 3: на руки выбрали другой имплант — компонент убирают, шкала прячется
+        private void OnDisable()
+        {
+            if (_bar != null) _bar.gameObject.SetActive(false);
+        }
+
         private void OnDestroy()
         {
             if (_health != null && _health.Guard == TryBlockHit) _health.Guard = null;
@@ -170,6 +176,7 @@ namespace N89.Player
             }
 
             _charges--;
+            N89.Core.Sfx.Play(N89.Core.Sfx.Block, transform.position);
             _flash = 1f;
             if (_blockFxPrefab != null)
             {
@@ -191,16 +198,19 @@ namespace N89.Player
 
         private IEnumerator Dash()
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Dash, transform.position);
             _dashing = true;
             _nextDash = Time.time + _dashCooldown;
             _player.ExternalVelocity = true;
             _player.WeaponLocked = true;
 
             Vector2 dir = _body.right;
-            float speed = _dashDistance / _dashDuration;
+            // Сандевистан: мир замедлен, а рывок — в темпе героя (TimeCompensation)
+            float pace = _player.TimeCompensation;
+            float speed = _dashDistance / _dashDuration * pace;
             float ghostAt = 0f;
             Health victim = null;
-            for (float t = 0f; t < _dashDuration && victim == null; t += Time.fixedDeltaTime)
+            for (float t = 0f; t < _dashDuration && victim == null; t += Time.fixedDeltaTime * pace)
             {
                 _rb.linearVelocity = dir * speed;
                 if (t >= ghostAt)
@@ -218,7 +228,7 @@ namespace N89.Player
                 victim = FindVictim(dir);
             }
 
-            _rb.linearVelocity = dir * 2f;
+            _rb.linearVelocity = dir * 2f * pace;
             if (victim != null)
             {
                 Strike(victim, dir);
@@ -246,6 +256,7 @@ namespace N89.Player
 
         private void Strike(Health victim, Vector2 dir)
         {
+            N89.Core.Sfx.Play(N89.Core.Sfx.Punch, victim.transform.position);
             if (_cameraFollow != null) _cameraFollow.Shake(0.45f, 0.18f);
 
             // Труп врага отлетает, крутясь, до стены и остаётся лежать (на месте удара его не оставляем)

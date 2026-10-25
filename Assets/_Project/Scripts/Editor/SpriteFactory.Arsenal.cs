@@ -82,6 +82,25 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Сандевистан: позвоночник из сегментов, по нему бежит зелёный свет
+        public static Sprite IconSandevistan() => Create("implant_sandevistan", 48, 48, c =>
+        {
+            Color metal = new Color(0.55f, 0.57f, 0.65f);
+            Color dark = new Color(0.16f, 0.17f, 0.22f);
+            Color glow = new Color(0.25f, 1f, 0.55f);
+            c.Rect(22, 4, 25, 43, glow * 0.6f);
+            for (int y = 5; y <= 39; y += 6)
+            {
+                int half = 6 + (y > 15 && y < 33 ? 2 : 0);
+                c.RoundRect(24 - half, y, 23 + half, y + 3, 1.5f, metal);
+                c.Rect(22, y + 1, 25, y + 2, dark);
+                c.Rect(23, y + 1, 24, y + 2, glow);
+                c.Rect(24 - half - 3, y + 1, 24 - half - 1, y + 2, metal);
+                c.Rect(23 + half + 1, y + 1, 23 + half + 3, y + 2, metal);
+            }
+            c.Outline(new Color(0.04f, 0.05f, 0.06f));
+        });
+
         // Заглушка засекреченного импланта: чип с вопросом
         public static Sprite IconLockedImplant(string name) => Create(name, 48, 48, c =>
         {

@@ -307,6 +307,10 @@ namespace N89.EditorTools
                 P(so, "_rb").objectReferenceValue = rb;
                 P(so, "_body").objectReferenceValue = bodyRenderer.transform;
                 P(so, "_radius").floatValue = col.radius;
+                // Идёт к герою всегда, кроме замершего прицела ракеты: его надо заманивать под обвал и к баллонам
+                P(so, "_moveSpeed").floatValue = 2f;
+                P(so, "_fireMoveSpeed").floatValue = 1f;
+                P(so, "_stopDistance").floatValue = 1.6f;
                 P(so, "_moveBlockers").intValue = (1 << WallLayer) | (1 << GlassLayer);
                 P(so, "_minigun").objectReferenceValue = minigun;
                 P(so, "_minigunGlow").objectReferenceValue = glow;

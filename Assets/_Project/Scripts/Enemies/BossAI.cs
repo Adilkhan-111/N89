@@ -24,11 +24,11 @@ namespace N89.Enemies
         [SerializeField] private Transform _body;
 
         [Header("Ходьба")]
-        [SerializeField] private float _moveSpeed = 1.4f;
+        [SerializeField] private float _moveSpeed = 2f;
         [Tooltip("Скорость, пока строчит пулемёт")]
-        [SerializeField] private float _fireMoveSpeed = 0.6f;
+        [SerializeField] private float _fireMoveSpeed = 1f;
         [Tooltip("Ближе не подходит")]
-        [SerializeField] private float _stopDistance = 2.5f;
+        [SerializeField] private float _stopDistance = 1.6f;
         [SerializeField] private float _radius = 0.75f;
         [SerializeField] private float _turnSpeed = 200f;
         [SerializeField] private LayerMask _moveBlockers;
@@ -72,6 +72,7 @@ namespace N89.Enemies
         private Health _targetHealth;
         private CameraFollow _cameraFollow;
         private Mode _mode;
+        private bool _aimLocked;
         private Vector2 _aim = Vector2.right;
         private float _immobileUntil = -1f;
         private readonly List<Vector2> _path = new List<Vector2>();
@@ -103,6 +104,7 @@ namespace N89.Enemies
         public void Stop()
         {
             IsFighting = false;
+            _aimLocked = false;
             StopAllCoroutines();
             HideDashes();
             if (_minigunGlow != null) _minigunGlow.intensity = 0f;
@@ -128,8 +130,14 @@ namespace N89.Enemies
             if (_mode == Mode.Track) _aim = RotateTowards(_aim, toTarget, _turnSpeed);
             else if (_mode == Mode.Gun) _aim = RotateTowards(_aim, toTarget, _gunTrack);
             _body.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(_aim.y, _aim.x) * Mathf.Rad2Deg);
+        }
 
-            Walk(toTarget.magnitude);
+        // Ходьба — в шаге физики: MovePosition кинематического тела срабатывает раз за шаг,
+        // и при вызове из Update на высоком FPS Босс почти стоял на месте
+        private void FixedUpdate()
+        {
+            if (!IsFighting || _target == null) return;
+            Walk(Vector2.Distance(_target.position, transform.position), Time.fixedDeltaTime);
         }
 
         private static Vector2 RotateTowards(Vector2 from, Vector2 to, float degreesPerSecond)
@@ -143,9 +151,10 @@ namespace N89.Enemies
 
         // ------------------------------------------------------------ Ходьба
 
-        private void Walk(float distance)
+        private void Walk(float distance, float dt)
         {
-            if (IsImmobilized || _mode == Mode.Telegraph || distance <= _stopDistance) return;
+            // Пока пунктир ракеты ещё следит за героем — идёт медленно, замер прицел — стоит
+            if (IsImmobilized || _aimLocked || distance <= _stopDistance) return;
 
             Vector2 position = _rb.position;
             if (Time.time >= _nextPath)
@@ -163,12 +172,18 @@ namespace N89.Enemies
                 return;
             }
 
-            float speed = _mode == Mode.Gun ? _fireMoveSpeed : _moveSpeed;
-            float step = Mathf.Min(speed * Time.deltaTime, toPoint.magnitude);
+            float speed = _mode == Mode.Track ? _moveSpeed : _fireMoveSpeed;
+            float step = Mathf.Min(speed * dt, toPoint.magnitude);
             Vector2 dir = toPoint.normalized;
-            if (!Physics2D.CircleCast(position, _radius * 0.9f, dir, step, _moveBlockers))
+            // Упёрся в угол — скользит вдоль препятствия, а не застревает
+            foreach (float turn in new[] { 0f, 40f, -40f, 80f, -80f })
             {
-                _rb.MovePosition(position + dir * step);
+                Vector2 tryDir = Quaternion.Euler(0f, 0f, turn) * dir;
+                if (!Physics2D.CircleCast(position, _radius * 0.9f, tryDir, step, _moveBlockers))
+                {
+                    _rb.MovePosition(position + tryDir * step);
+                    return;
+                }
             }
         }
 
@@ -234,6 +249,7 @@ namespace N89.Enemies
             for (float t = 0f; t < _aimTime; t += Time.deltaTime)
             {
                 bool locked = t >= _aimTime - _lockTime;
+                _aimLocked = locked;
                 if (!locked)
                 {
                     Vector2 toTarget = (Vector2)_target.position - (Vector2)_launcher.position;
@@ -248,6 +264,7 @@ namespace N89.Enemies
             Rocket rocket = Instantiate(_rocketPrefab, _launcher.position, Quaternion.identity);
             rocket.Launch(_aim, transform);
             if (_cameraFollow != null) _cameraFollow.Shake(0.15f, 0.12f);
+            _aimLocked = false;
             _mode = Mode.Track;
         }
 

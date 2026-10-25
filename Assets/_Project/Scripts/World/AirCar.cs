@@ -24,6 +24,38 @@ namespace N89.World
             foreach (Collider2D col in GetComponentsInChildren<Collider2D>()) col.enabled = false;
         }
 
+        // Обратное взлёту: машина влетает из-за кадра сзади, тормозит и опускается на место (катсцены)
+        public IEnumerator Land(float distance = 16f, float duration = 1.6f)
+        {
+            Transform body = _body.transform;
+            Vector3 target = transform.position;
+            Vector3 shadowTo = _shadow.localPosition;
+            N89.Core.Sfx.Play(N89.Core.Sfx.CarFly, target);
+            for (float t = 0f; t < duration; t += Time.deltaTime)
+            {
+                float k = 1f - (1f - t / duration) * (1f - t / duration);
+                transform.position = target - transform.right * (distance * (1f - k));
+                body.localScale = Vector3.one * Mathf.Lerp(1.45f, 1.15f, k);
+                _shadow.localPosition = shadowTo + new Vector3(0.3f, -0.45f, 0f) * (2f - k);
+                foreach (Light2D thruster in _thrusters) thruster.intensity = Random.Range(1.6f, 2.4f);
+                yield return null;
+            }
+            transform.position = target;
+
+            // Опускается на опоры
+            for (float t = 0f; t < 0.7f; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / 0.7f);
+                body.localScale = Vector3.one * Mathf.Lerp(1.15f, 1f, k);
+                _shadow.localPosition = shadowTo + new Vector3(0.3f, -0.45f, 0f) * (1f - k);
+                foreach (Light2D thruster in _thrusters) thruster.intensity = (1f - k) * Random.Range(1.2f, 1.8f);
+                yield return null;
+            }
+            body.localScale = Vector3.one;
+            _shadow.localPosition = shadowTo;
+            foreach (Light2D thruster in _thrusters) thruster.intensity = 0f;
+        }
+
         public IEnumerator TakeOff()
         {
             DisableColliders();

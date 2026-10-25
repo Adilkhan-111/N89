@@ -530,7 +530,7 @@ namespace N89.EditorTools
 
         // Панель сообщений как журнал в Cyberpunk 2077: тёмно-красный фон, красные заголовки,
         // контакт слева, справа лента с жёлтыми сообщениями и бирюзовым вложением. Занимает левые 60% экрана.
-        private static MessengerPanel BuildMessenger(RectTransform canvasRect, TMP_FontAsset mono)
+        internal static MessengerPanel BuildMessenger(RectTransform canvasRect, TMP_FontAsset mono)
         {
             Color red = new Color(1f, 0.33f, 0.33f);
             Color redDim = new Color(0.65f, 0.2f, 0.22f);

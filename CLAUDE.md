@@ -8,7 +8,7 @@
 | [Docs/Interludes.md](Docs/Interludes.md) | интерлюдии 1–2 (квартира, брифинг, мессенджер), префаб героя, анимация ног |
 | [Docs/Mission01.md](Docs/Mission01.md) | миссия 1: логово банды, 2 этажа, камеры, помощники схемы, сценарий `MissionDirector` |
 | [Docs/Mission02.md](Docs/Mission02.md) | миссия 2: «Арка Системс», подвал, бой с Боссом |
-| [Docs/Mission03.md](Docs/Mission03.md) | миссия 3: башня «Арка Системс», 4 этажа, засада из лифта, финал с relic, Сандевистан, выбор импланта на руки |
+| [Docs/Mission03.md](Docs/Mission03.md) | миссия 3: башня «Арка Системс», 4 этажа, засада из лифта, relic, переписка с Боссом и обе концовки, финал на свалке (`Ending`), Сандевистан |
 | [Docs/Arsenal.md](Docs/Arsenal.md) | оружие, перезарядка, импланты (Руки гориллы, Руки-лезвия), экран выбора, `Loadout` |
 | [Docs/Enemies.md](Docs/Enemies.md) | `EnemyAI`, NavGrid, оглушение взломом, параметры сложности, трупы |
 
@@ -26,7 +26,7 @@
 - `Assets/Welcome/` — служебная часть шаблона, игровой код туда не класть.
 - Шрифты — `Assets/_Project/Art/Fonts/` (Monoton, Audiowide, Permanent Marker). Кириллицы нет — тексты UI на английском.
 - **Сцены собираются кодом** (меню **N89 > Build … Scene**, `Scripts/Editor/*SceneBuilder.cs`; все разом — **N89 > Build All Scenes**, `BuildAllScenes.cs`); пересборка затирает ручные правки. Временные спрайты рисуются в `SpriteFactory*.cs` → `Art/Sprites/Generated/` (настоящий арт — PNG с теми же именами).
-- Порядок сцен: MainMenu → Tutorial → Interlude01 → Mission01 → Interlude02 → Mission02 → Interlude03 → Mission03 (конец — в меню).
+- Порядок сцен: MainMenu → Tutorial → Interlude01 → Mission01 → Interlude02 → Mission02 → Interlude03 → Mission03 → (отказался отдать relic) Ending → меню; (отдал) — меню.
 - В сборщиках `EditorSceneManager.NewScene` вызывается **до** загрузки ассетов, иначе в сцену пишутся пустые ссылки.
 - Перезагрузка домена при входе в Play Mode **выключена** — статические поля сбрасывать через `[RuntimeInitializeOnLoadMethod]`. Чекпоинты — `Scripts/Core/Checkpoint.cs` (статический, сброс из меню).
 - Физические слои: 6 `Wall`, 7 `Glass` (блокирует пули, но не взлом и не обзор), 8 `Player`, 9 `Enemy`, 10 `Door` (автодвери: обзор и пули, но не поиск пути). Гравитация 2D выключена.

@@ -48,6 +48,14 @@ namespace N89.Player
         // Сценарий (противостояние в финале миссии 3): шкала сразу полная
         public void Refill() => Energy = 1f;
 
+        // Катсцена (концовка миссии 3): ускорение включается само, с полной шкалой
+        public void ForceActivate()
+        {
+            if (IsActive) return;
+            Energy = 1f;
+            Activate();
+        }
+
         public event Action Activated;
         public event Action Depleted;
 

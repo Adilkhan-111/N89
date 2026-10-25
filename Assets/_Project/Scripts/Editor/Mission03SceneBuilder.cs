@@ -102,6 +102,9 @@ namespace N89.EditorTools
                 common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.ArkaGuardDead());
             GameObject dronePrefab = EnemyPrefab("ArkaDrone", "БОЕВОЙ ДРОН // АРКА", SpriteFactory.CombatDrone(), 2, 0.75f, 0.6f,
                 common.EnemyBullet, common.Muzzle, common.Explosion, common.Remains, common.ShortCircuit, common.Electric, false);
+            // Солдаты Корпорации Е: врываются в башню, если Рэй откажется отдать relic
+            GameObject soldierPrefab = EnemyPrefab("CorpSoldier", "СОЛДАТ // КОРПОРАЦИЯ Е", SpriteFactory.Guard(), 1, 0.45f, 0.5f,
+                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.GuardDead());
 
             // --- Сцена ---
             Camera cam = CreateCamera();
@@ -132,6 +135,34 @@ namespace N89.EditorTools
             Transform returnSpawn = new GameObject("ReturnSpawn").transform;
             returnSpawn.SetParent(level);
             returnSpawn.position = V(37.6f, 20.6f);
+
+            // Отказ отдать relic: корпорация занимает этажи 1–2 (группы неактивны до выбора), у входа ждёт отряд
+            GameObject corpFloor1 = SpawnCorp(level, soldierPrefab, "Corp_Floor1",
+                new Vector2(25f, 16.4f), new Vector2(30f, 16f), new Vector2(25f, 11.5f), new Vector2(30f, 4f),
+                new Vector2(14.3f, 6f), new Vector2(6f, 12f), new Vector2(6f, 20f));
+            SetLayout(Floor2Origin, SpriteFactory.HomeWall());
+            GameObject corpFloor2 = SpawnCorp(level, soldierPrefab, "Corp_Floor2",
+                new Vector2(28f, 15.9f), new Vector2(20f, 16.5f), new Vector2(12.5f, 8f), new Vector2(12.5f, 18f),
+                new Vector2(25f, 6f), new Vector2(36f, 4f), new Vector2(27f, 21.5f));
+            SetLayout(Vector2.zero, SpriteFactory.HomeWall());
+            GameObject exitSquad = SpawnCorp(level, soldierPrefab, "Corp_ExitSquad",
+                new Vector2(9.5f, -6.8f), new Vector2(12f, -7.2f), new Vector2(14.4f, -7.4f), new Vector2(16.8f, -7.2f), new Vector2(19.3f, -6.8f));
+            exitSquad.transform.position = V(14.4f, -7.2f);
+            foreach (Transform soldier in exitSquad.transform) soldier.position -= exitSquad.transform.position;
+            Transform executioner = exitSquad.transform.GetChild(2);
+            // Машины Корпорации Е: тёмные, садятся у входа в катсцене после отказа
+            var corpCars = new AirCar[2];
+            corpCars[0] = BuildAirCar(level, V(4.5f, -5.6f), 0f);
+            corpCars[1] = BuildAirCar(level, V(30.5f, -5.6f), 180f);
+            foreach (AirCar corpCar in corpCars)
+            {
+                corpCar.name = "CorpCar";
+                corpCar.transform.Find("Body").GetComponent<SpriteRenderer>().color = new Color(0.32f, 0.3f, 0.36f);
+                corpCar.gameObject.SetActive(false);
+            }
+            Transform streetCamPoint = new GameObject("StreetCamPoint").transform;
+            streetCamPoint.SetParent(level);
+            streetCamPoint.position = V(16f, -4.6f);
 
             // Верхний лифт — выход наверх: этаж зачищен — маркер загорается
             Light2D liftMarker = AddLight(level, "LiftMarker", V(37.6f, 20.6f), Cyan, 2.5f, 1.2f);
@@ -165,6 +196,7 @@ namespace N89.EditorTools
             hero.GetComponent<HackingController>().enabled = false;
             Sandevistan sandevistan = AddSandevistan(hero, (RectTransform)hud.HackingHud.transform, mono, audiowide);
             Banner banner = BuildBanner(hud.Fader.transform, mono);
+            MessengerPanel messenger = Interlude01SceneBuilder.BuildMessenger((RectTransform)hud.HackingHud.transform, mono);
             WaypointArrow waypoint = BuildWaypoint(hero.transform);
 
             MissionDirector director = new GameObject("MissionDirector").AddComponent<MissionDirector>();
@@ -258,6 +290,35 @@ namespace N89.EditorTools
                 P(so, "_returnFacing").floatValue = -90f;
                 P(so, "_returnText").stringValue = "Спустись на лифте";
                 P(so, "_carText").stringValue = "Сядь в машину";
+
+                // Спуск с relic: на третьем этаже пишет Босс — выбор, дальше концовки
+                P(so, "_messenger").objectReferenceValue = messenger;
+                P(so, "_bossContact").stringValue = "БОСС";
+                P(so, "_dialogTopic").stringValue = "RELIC";
+                SetStrings(P(so, "_dialogLines"),
+                    "Ты достал реликвию?",
+                    "Босс, а кем я был до всего этого?",
+                    "Ты всегда был и остаёшься нашим верным солдатом. Так ты раздобыл реликвию?",
+                    "Меня, кажется, звали Брайс.",
+                    "Твоя задача — раздобыть реликвию и отдать её мне. Отдашь по-хорошему?");
+                SerializedProperty fromHero = P(so, "_dialogFromHero");
+                fromHero.arraySize = 5;
+                for (int i = 0; i < 5; i++) fromHero.GetArrayElementAtIndex(i).boolValue = i % 2 == 1;
+                SetStrings(P(so, "_dialogChoices"), "Отдать relic", "Отказаться");
+                P(so, "_corpFloor2").objectReferenceValue = corpFloor2;
+                P(so, "_corpFloor1").objectReferenceValue = corpFloor1;
+                P(so, "_exitSquad").objectReferenceValue = exitSquad;
+                P(so, "_executioner").objectReferenceValue = executioner;
+                P(so, "_exitZone").rectValue = WorldRect(new Vector2(EntranceFrom - 0.5f, -3.2f), new Vector2(EntranceTo + 0.5f, -0.5f));
+                P(so, "_insidePoint").vector2Value = V((EntranceFrom + EntranceTo) * 0.5f, 3.5f);
+                P(so, "_heroLying").objectReferenceValue = SpriteFactory.HeroDead();
+                P(so, "_endingScene").stringValue = EndingSceneBuilder.SceneName;
+                SetObjects(P(so, "_corpCars"), corpCars);
+                P(so, "_streetCamPoint").objectReferenceValue = streetCamPoint;
+                P(so, "_descendText").stringValue = "Спустись на лифте";
+                P(so, "_corpArrivalLine").stringValue = "Жаль, Рэй. Ты был хорошим псом.";
+                P(so, "_heroArm").objectReferenceValue = SpriteFactory.HeroArm();
+                P(so, "_heroDying").objectReferenceValue = SpriteFactory.HeroDying();
                 P(so, "_banner").objectReferenceValue = banner;
                 P(so, "_waypoint").objectReferenceValue = waypoint;
 
@@ -1032,6 +1093,20 @@ namespace N89.EditorTools
             Lamp(lights, "Store", 28f, 4.5f, warm, 14f, 0.6f);
             Pulsing(Lamp(lights, "Lift_Low", 37.6f, 11.8f, new Color(1f, 0.2f, 0.25f), 4f, 0.5f), 0.6f, 0.2f, 0.6f);
             Lamp(lights, "Lift_Top", 37.6f, 20.6f, Cyan, 5f, 0.7f);
+        }
+
+        // Группа солдат корпорации на постах (координаты схемы — через текущий SetLayout), лицом вправо, к лифтам.
+        // Неактивна до сценария (MissionDirector включает её после отказа отдать relic)
+        private static GameObject SpawnCorp(Transform parent, GameObject soldier, string name, params Vector2[] posts)
+        {
+            Transform root = new GameObject(name).transform;
+            root.SetParent(parent);
+            foreach (Vector2 p in posts)
+            {
+                SpawnEnemy(soldier, root, V(p.x, p.y), 0f, Vector2.zero, 0f);
+            }
+            root.gameObject.SetActive(false);
+            return root.gameObject;
         }
 
         private static void SetObjects(SerializedProperty array, Object[] values)

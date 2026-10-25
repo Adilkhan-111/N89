@@ -13,7 +13,7 @@ namespace N89.EditorTools
         public static void Build()
         {
             if (!EditorUtility.DisplayDialog("N89 — пересобрать все сцены",
-                    "MainMenu, Tutorial, Interlude01, Mission01, Interlude02, Mission02, Interlude03, Mission03 будут пересозданы.\n" +
+                    "MainMenu, Tutorial, Interlude01, Mission01, Interlude02, Mission02, Interlude03, Mission03, Ending будут пересозданы.\n" +
                     "Ручные правки в этих сценах пропадут.", "Пересобрать", "Отмена"))
             {
                 return;
@@ -30,6 +30,7 @@ namespace N89.EditorTools
                 ("Mission02", Mission02SceneBuilder.Build),
                 ("Interlude03", Interlude03SceneBuilder.Build),
                 ("Mission03", Mission03SceneBuilder.Build),
+                ("Ending", EndingSceneBuilder.Build),
             };
 
             try

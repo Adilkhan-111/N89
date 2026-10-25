@@ -18,7 +18,7 @@ namespace N89.Combat
         private Transform _owner;
         private float _dieAt;
 
-        // Все летящие пули — для «Рук-лезвий», которые их отбивают
+        // Все летящие пули — для «Blade hands», которые их отбивают
         public static IReadOnlyList<Bullet> Active => s_active;
         public Transform Owner => _owner;
 
@@ -69,6 +69,10 @@ namespace N89.Combat
                 if (health != null)
                 {
                     health.TakeDamage(_damage);
+                }
+                else
+                {
+                    N89.Core.Sfx.Play(N89.Core.Sfx.Impact, hit.point, 0.6f);
                 }
 
                 if (_impactFxPrefab != null)

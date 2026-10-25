@@ -360,6 +360,8 @@ namespace N89.Tutorial
             }
 
             // Вскидывает пистолет и замирает
+            StartCoroutine(Cutscene.Lunge(_assassin.Body, (Vector2)(player.position - guard.position), 0.1f, 0.25f));
+            N89.Core.Sfx.Play(N89.Core.Sfx.Reload, guard.position, 0.7f);
             for (float t = 0f; t < 0.8f; t += Time.deltaTime)
             {
                 AimGuard(player.position, 360f);
@@ -376,6 +378,8 @@ namespace N89.Tutorial
                 Instantiate(_muzzleFxPrefab, from, _assassin.Body.rotation);
             }
             _cameraFollow.Shake(0.15f, 0.1f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Shot, from);
+            StartCoroutine(Cutscene.Recoil(_assassin.Body, 0.14f, 0.16f));
             StartCoroutine(Tracer(from, hitPoint));
             yield return new WaitForSecondsRealtime(0.12f);
 

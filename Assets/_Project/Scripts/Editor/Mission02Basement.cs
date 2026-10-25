@@ -443,6 +443,7 @@ namespace N89.EditorTools
                 P(so, "_warningSprite").objectReferenceValue = SpriteFactory.CollapseZone();
                 SetArray(so, "_rubbleSprites", SpriteFactory.Rubble("rubble_a", 3), SpriteFactory.Rubble("rubble_b", 17));
                 P(so, "_dustFxPrefab").objectReferenceValue = refs.DustFx;
+                P(so, "_sparkFxPrefab").objectReferenceValue = refs.Common.Sparks;
                 P(so, "_material").objectReferenceValue = UnlitMaterial;
                 P(so, "_cylinderPrefab").objectReferenceValue = refs.Cylinder;
                 P(so, "_caseSprite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(Interlude02SceneBuilder.CaseSpritePath);

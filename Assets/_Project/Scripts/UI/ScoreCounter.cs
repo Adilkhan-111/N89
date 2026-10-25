@@ -130,6 +130,8 @@ namespace N89.UI
             SpawnPopup(victim.transform.position, $"+{gained}", color, _combo);
             if (_combo >= 2)
             {
+                // Чем длиннее серия, тем выше сигнал
+                N89.Core.Sfx.Ui(N89.Core.Sfx.Combo, 0.8f, 1f + 0.12f * Mathf.Min(_combo - 2, 8));
                 _comboText.text = $"{_combo}x";
                 _comboGhostA.text = _comboText.text;
                 _comboGhostB.text = _comboText.text;

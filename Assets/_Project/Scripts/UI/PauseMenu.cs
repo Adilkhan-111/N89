@@ -16,6 +16,8 @@ namespace N89.UI
         [SerializeField] private Button _resumeButton;
         [SerializeField] private Button _restartButton;
         [SerializeField] private Button _menuButton;
+        [SerializeField] private Button _musicButton;
+        [SerializeField] private Button _sfxButton;
         [SerializeField] private string _menuScene = "MainMenu";
 
         public static bool IsPaused { get; private set; }
@@ -38,6 +40,16 @@ namespace N89.UI
             _resumeButton.onClick.AddListener(Resume);
             _restartButton.onClick.AddListener(Restart);
             _menuButton.onClick.AddListener(ToMenu);
+            // Громкость: клик — следующий шаг (100 → 75 → 50 → 25 → 0 %)
+            if (_musicButton != null) _musicButton.onClick.AddListener(() => { SoundSettings.Music = SoundSettings.Next(SoundSettings.Music); RefreshVolume(); });
+            if (_sfxButton != null) _sfxButton.onClick.AddListener(() => { SoundSettings.Sfx = SoundSettings.Next(SoundSettings.Sfx); RefreshVolume(); Sfx.Ui(Sfx.Shot); });
+            RefreshVolume();
+        }
+
+        private void RefreshVolume()
+        {
+            if (_musicButton != null) _musicButton.GetComponentInChildren<TMPro.TMP_Text>().text = $"МУЗЫКА {Mathf.RoundToInt(SoundSettings.Music * 100f)}%";
+            if (_sfxButton != null) _sfxButton.GetComponentInChildren<TMPro.TMP_Text>().text = $"ЗВУКИ {Mathf.RoundToInt(SoundSettings.Sfx * 100f)}%";
         }
 
         private void OnDestroy()
@@ -60,6 +72,7 @@ namespace N89.UI
             _timeScale = Time.timeScale;
             Time.timeScale = 0f;
             AudioListener.pause = true;
+            Sfx.Ui(Sfx.Pause);
             _cursorVisible = Cursor.visible;
             Cursor.visible = true;
             SetVisible(true);
@@ -69,6 +82,7 @@ namespace N89.UI
         private void Resume()
         {
             if (!IsPaused) return;
+            Sfx.Ui(Sfx.Pause, 0.7f, 1.3f);
             SetVisible(false);
             Time.timeScale = _timeScale;
             AudioListener.pause = false;

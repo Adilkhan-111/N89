@@ -74,7 +74,7 @@ namespace N89.EditorTools
             }, 0.65f, 0.32f, common, 0, SpriteFactory.HeroDead());
             // Бандиты — люди с имплантами: истекают синей кровью, взламываются «Коротким замыканием»
             GameObject banditPrefab = EnemyPrefab("Bandit", "БАНДИТ", SpriteFactory.Bandit(), 1, 0.5f, 0.7f,
-                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.BanditDead());
+                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.BanditDead(), new Color(0.13f, 0.13f, 0.14f));
 
             // --- Сцена ---
             Camera cam = CreateCamera();
@@ -136,7 +136,7 @@ namespace N89.EditorTools
                 P(so, "_maxLookAhead").floatValue = 3f;
             });
             Configure(hero.GetComponent<PlayerController>(), so => P(so, "_cameraFollow").objectReferenceValue = follow);
-            // Имплант миссии 1 фиксированный — «Руки гориллы»
+            // Имплант миссии 1 фиксированный — «Gorilla hands»
             AddGorillaArms(hero, follow, common);
             cam.transform.position = new Vector3(start.x, start.y, -10f);
 
@@ -170,6 +170,7 @@ namespace N89.EditorTools
                 P(so, "_target").objectReferenceValue = target;
                 P(so, "_targetBody").objectReferenceValue = targetBody;
                 P(so, "_targetStanding").objectReferenceValue = SpriteFactory.TargetStanding();
+                P(so, "_targetAim").objectReferenceValue = SpriteFactory.TargetAim();
                 P(so, "_targetDead").objectReferenceValue = SpriteFactory.TargetDead();
                 P(so, "_deskPoint").vector2Value = deskPoint;
                 P(so, "_bloodFxPrefab").objectReferenceValue = common.Blood;
@@ -857,7 +858,7 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- Имплант
 
-        // «Руки гориллы»: ПКМ — рывок с ударом, зажать ПКМ — блок на 3 попадания. Руки в блоке — спрайт перед корпусом
+        // «Gorilla hands»: ПКМ — рывок с ударом, зажать ПКМ — блок на 3 попадания. Руки в блоке — спрайт перед корпусом
         internal static void AddGorillaArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
         {
             Transform body = hero.transform.Find("Body");

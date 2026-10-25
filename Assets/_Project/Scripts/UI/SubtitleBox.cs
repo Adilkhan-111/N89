@@ -72,6 +72,7 @@ namespace N89.UI
             if (fresh)
             {
                 _popStart = Time.unscaledTime;
+                N89.Core.Sfx.Ui(N89.Core.Sfx.Decode);
                 StartCoroutine(Decode(speaker));
             }
             else
@@ -94,7 +95,12 @@ namespace N89.UI
                     shown = total;
                 }
 
-                _lineLabel.maxVisibleCharacters = Mathf.FloorToInt(shown);
+                int visible = Mathf.FloorToInt(shown);
+                if (visible > _lineLabel.maxVisibleCharacters && visible < total)
+                {
+                    N89.Core.Sfx.Typing(_lineLabel.textInfo.characterInfo[visible - 1].character);
+                }
+                _lineLabel.maxVisibleCharacters = visible;
             }
 
             float until = Time.unscaledTime + _holdBase + _holdPerChar * total;

@@ -37,9 +37,9 @@ namespace N89.Player
         public bool CanAim { get; set; } = true;
         // Импланты: замедление (блок), своё движение (рывок) и занятые руки (оружие молчит)
         public float SpeedMultiplier { get; set; } = 1f;
-        // Отдельно от SpeedMultiplier (его держит блок «Рук гориллы»): ставит HackingController на время скана
+        // Отдельно от SpeedMultiplier (его держит блок «Gorilla hands»): ставит HackingController на время скана
         public float ScanSpeedMultiplier { get; set; } = 1f;
-        // Сандевистан: во сколько раз мир медленнее героя — скорость и разгон в реальном времени прежние
+        // E.N.A: во сколько раз мир медленнее героя — скорость и разгон в реальном времени прежние
         public float TimeCompensation { get; set; } = 1f;
         public bool ExternalVelocity { get; set; }
         public bool WeaponLocked { get; set; }
@@ -90,7 +90,12 @@ namespace N89.Player
                 bool hackingBlocks = _hacking != null && _hacking.BlocksShooting;
                 if (_weapon != null && CanShoot && !WeaponLocked && !hackingBlocks && mouse.leftButton.isPressed)
                 {
-                    _weapon.TryFire(aim);
+                    // Пустой магазин: сухой щелчок на каждое нажатие
+                    if (!_weapon.TryFire(aim) && mouse.leftButton.wasPressedThisFrame && _weapon.MagazineSize > 0
+                        && _weapon.Ammo <= 0 && !_weapon.Reloading)
+                    {
+                        N89.Core.Sfx.Play(N89.Core.Sfx.DryFire, transform.position);
+                    }
                 }
             }
 

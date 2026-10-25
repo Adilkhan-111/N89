@@ -99,6 +99,7 @@ namespace N89.UI
 
         public void Select(int index)
         {
+            if (index != _selected) N89.Core.Sfx.Ui(N89.Core.Sfx.UiMove);
             _selected = index;
             for (int i = 0; i < _items.Length; i++)
             {
@@ -113,6 +114,7 @@ namespace N89.UI
                 return;
             }
 
+            N89.Core.Sfx.Ui(N89.Core.Sfx.UiSelect);
             switch (_items[_selected].Action)
             {
                 case MenuAction.NewGame:

@@ -48,6 +48,7 @@ namespace N89.World
             body.localScale = Vector3.one;
             _renderer.color = Color.white;
             _collider.enabled = true;
+            N89.Core.Sfx.Play(N89.Core.Sfx.Clang, transform.position, 0.8f);
             CameraFollow follow = FindAnyObjectByType<CameraFollow>();
             if (follow != null) follow.Shake(0.12f, 0.1f);
         }

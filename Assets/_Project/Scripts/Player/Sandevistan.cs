@@ -7,7 +7,7 @@ using UnityEngine.UI;
 
 namespace N89.Player
 {
-    // Сандевистан — встроенный имплант миссии 3, заменяет взлом (HackingController на герое нет).
+    // E.N.A — встроенный имплант миссии 3, заменяет взлом (HackingController на герое нет).
     // TAB при полной шкале — мир замедляется, Рэй — нет: ходит и стреляет в прежнем темпе, импланты
     // на руки работают. Включённый не выключить: держится _duration с, пока шкала не опустеет;
     // пустая шкала заполняется за _rechargeTime с. Время шкалы — реальное.
@@ -16,7 +16,7 @@ namespace N89.Player
     {
         [SerializeField] private float _duration = 3f;
         [SerializeField] private float _rechargeTime = 8f;
-        [Tooltip("Скорость мира, пока Сандевистан включён")]
+        [Tooltip("Скорость мира, пока E.N.A включён")]
         [SerializeField] private float _timeScale = 0.25f;
 
         [Header("Шлейф")]
@@ -32,7 +32,7 @@ namespace N89.Player
         [SerializeField] private Image _energyFill;
         [SerializeField] private Color _readyColor = new Color(1f, 0.85f, 0.2f);
         [SerializeField] private Color _chargingColor = new Color(0.25f, 0.6f, 1f, 0.6f);
-        [Tooltip("Синий фильтр экрана, пока Сандевистан включён")]
+        [Tooltip("Синий фильтр экрана, пока E.N.A включён")]
         [SerializeField] private CanvasGroup _overlay;
 
         private PlayerController _player;

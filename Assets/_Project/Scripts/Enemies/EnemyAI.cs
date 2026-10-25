@@ -157,6 +157,8 @@ namespace N89.Enemies
 
         private void Alert(Vector2 point)
         {
+            // Был спокоен — щелчок рации: игрок слышит, что его засекли
+            if (Time.time >= _alertUntil) N89.Core.Sfx.Play(N89.Core.Sfx.Alert, transform.position, 0.7f);
             _lastSeen = point;
             _alertUntil = Time.time + _forgetTime;
             _searching = false;

@@ -103,6 +103,22 @@ namespace N89.EditorTools
             version.rectTransform.anchoredPosition = new Vector2(-24f, 20f);
             version.rectTransform.sizeDelta = new Vector2(300f, 60f);
 
+            // Подпись джема внизу по центру
+            TextMeshProUGUI credit = CreateText("Credit", canvasRect, audiowide, "CODE VIBECODED, GAME FOR QAIRU MINI-GAMEJAM", 20f, new Color(1f, 1f, 1f, 0.55f));
+            credit.alignment = TextAlignmentOptions.Bottom;
+            credit.rectTransform.anchorMin = credit.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            credit.rectTransform.pivot = new Vector2(0.5f, 0f);
+            credit.rectTransform.anchoredPosition = new Vector2(0f, 20f);
+            credit.rectTransform.sizeDelta = new Vector2(1000f, 40f);
+
+            // Авторы — строкой выше подписи джема (у шрифта нет кириллицы — латиницей)
+            TextMeshProUGUI authors = CreateText("Authors", canvasRect, audiowide, "MADE BY YESSEN ADILKHAN & AIBEK ORYNBAYEV", 22f, new Color(0.3f, 1f, 1f, 0.8f));
+            authors.alignment = TextAlignmentOptions.Bottom;
+            authors.rectTransform.anchorMin = authors.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            authors.rectTransform.pivot = new Vector2(0.5f, 0f);
+            authors.rectTransform.anchoredPosition = new Vector2(0f, 52f);
+            authors.rectTransform.sizeDelta = new Vector2(1000f, 40f);
+
             MainMenuController controller = canvas.gameObject.AddComponent<MainMenuController>();
             var so = new SerializedObject(controller);
             SerializedProperty itemsProp = so.FindProperty("_items");

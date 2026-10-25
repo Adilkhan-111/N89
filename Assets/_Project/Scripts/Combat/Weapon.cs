@@ -28,7 +28,7 @@ namespace N89.Combat
         public int Ammo { get; private set; }
         // Пока идёт перезарядка, ЛКМ занята мини-игрой — оружие не стреляет
         public bool Reloading { get; set; }
-        // Сандевистан: мир замедлен, а темп стрельбы героя прежний (кулдаун в игровом времени × множитель)
+        // E.N.A: мир замедлен, а темп стрельбы героя прежний (кулдаун в игровом времени × множитель)
         public float CooldownScale { get; set; } = 1f;
 
         private void Awake()
@@ -76,7 +76,12 @@ namespace N89.Combat
 
         private void Shoot(Vector2 direction)
         {
-            N89.Core.Sfx.Play(N89.Core.Sfx.Shot, transform.position, 0.8f);
+            // Звук по типу ствола: дробовик (дробь), скорострельный (ПП, турель), автомат, остальное — пистолетный
+            string sound = _pellets > 1 ? N89.Core.Sfx.ShotShotgun
+                : _cooldown <= 0.1f ? N89.Core.Sfx.ShotSmg
+                : _cooldown < 0.2f ? N89.Core.Sfx.ShotRifle
+                : N89.Core.Sfx.Shot;
+            N89.Core.Sfx.Play(sound, transform.position, 0.8f);
             float angle = 0f;
             for (int i = 0; i < Mathf.Max(1, _pellets); i++)
             {

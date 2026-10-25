@@ -8,7 +8,7 @@ using UnityEngine.Rendering.Universal;
 
 namespace N89.Player
 {
-    // Киберимплант «Руки-лезвия» (миссия 2).
+    // Киберимплант «Blade hands» (миссия 2).
     // ПКМ — взмах клинком перед собой (туда, куда смотрит корпус). Анимация: клинок выбрасывается из
     // предплечья, корпус подаётся вперёд, лезвие проходит дугу ±_arc градусов, оставляя веер гаснущих копий
     // и вспышку-серп, потом втягивается обратно.
@@ -227,7 +227,7 @@ namespace N89.Player
             foreach (Collider2D hit in Physics2D.OverlapCircleAll(from, _reach, _hitMask))
             {
                 Health target = hit.GetComponentInParent<Health>();
-                if (target == null || target == _health || target.IsDead || _struck.Contains(target)) continue;
+                if (target == null || target == _health || target.IsDead || target.Invulnerable || _struck.Contains(target)) continue;
 
                 Vector2 to = hit.ClosestPoint(from) - from;
                 if (to.sqrMagnitude > 0.0001f && Vector2.Angle(forward, to) > _arc + 10f) continue;

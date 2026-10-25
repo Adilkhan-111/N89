@@ -26,6 +26,7 @@ namespace N89.Player
         private bool _flying;
         private Transform _focus;
         private float _focusSmoothing;
+        private int _zooms;
 
         private void Awake()
         {
@@ -63,6 +64,7 @@ namespace N89.Player
 
         public IEnumerator Zoom(float orthographicSize, float duration)
         {
+            _zooms++;
             float from = _camera.orthographicSize;
             for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
             {
@@ -70,6 +72,29 @@ namespace N89.Player
                 yield return null;
             }
             _camera.orthographicSize = orthographicSize;
+            _zooms--;
+        }
+
+        // Удар камерой (выстрел, попадание в катсцене): резкий наезд на долю размера кадра и плавный откат.
+        // Во время Zoom не работает — оба меняли бы размер кадра
+        public void Punch(float amount = 0.12f, float duration = 0.3f)
+        {
+            if (_zooms == 0 && isActiveAndEnabled) StartCoroutine(PunchRoutine(amount, duration));
+        }
+
+        private IEnumerator PunchRoutine(float amount, float duration)
+        {
+            _zooms++;
+            float size = _camera.orthographicSize;
+            for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+            {
+                float k = t / duration;
+                float push = k < 0.15f ? k / 0.15f : 1f - Mathf.SmoothStep(0f, 1f, (k - 0.15f) / 0.85f);
+                _camera.orthographicSize = size * (1f - amount * push);
+                yield return null;
+            }
+            _camera.orthographicSize = size;
+            _zooms--;
         }
 
         // Камера "улетает вверх": перестаёт следить за игроком, отдаляется и плывёт к точке обзора

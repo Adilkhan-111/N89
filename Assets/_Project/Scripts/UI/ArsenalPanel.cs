@@ -11,8 +11,8 @@ using UnityEngine.UI;
 namespace N89.UI
 {
     // Арсенал перед миссией: слева барабан оружия (любое из трёх), справа барабан имплантов
-    // (на миссию доступен один, остальные видно, но взять нельзя; на миссии 3 Сандевистан встроен,
-    // а на руки — выбор: Руки гориллы или Руки-лезвия). По краям — описания.
+    // (на миссию доступен один, остальные видно, но взять нельзя; на миссии 3 E.N.A встроен,
+    // а на руки — выбор: Gorilla hands или Blade hands). По краям — описания.
     // W/S или колесо — крутить барабан, A/D или мышь — выбрать барабан, Enter — подтвердить.
     // Выбор сохраняется в Loadout.
     public class ArsenalPanel : MonoBehaviour
@@ -92,7 +92,7 @@ namespace N89.UI
             _warningAlpha = 0f;
             _title.text = $"АРСЕНАЛ  //  МИССИЯ {mission}";
 
-            // Барабан встаёт на первый имплант, который можно взять; встроенный (Сандевистан) — не выбор
+            // Барабан встаёт на первый имплант, который можно взять; встроенный (E.N.A) — не выбор
             int implantIndex = -1;
             for (int i = 0; i < _implants.Length; i++)
             {
@@ -186,10 +186,12 @@ namespace N89.UI
         {
             SetActiveDrum(implant);
             (implant ? _implantDrum : _weaponDrum).Step(delta);
+            N89.Core.Sfx.Ui(N89.Core.Sfx.UiMove);
         }
 
         private void SetActiveDrum(bool implant)
         {
+            if (implant != _implantDrumActive) N89.Core.Sfx.Ui(N89.Core.Sfx.UiMove, 0.5f, 0.8f);
             _implantDrumActive = implant;
             _weaponDrum.Active = !implant;
             _implantDrum.Active = implant;
@@ -201,6 +203,7 @@ namespace N89.UI
             {
                 _warning.text = $"{ChosenImplant.DisplayName} УЖЕ УСТАНОВЛЕН — ВЫБЕРИ ИМПЛАНТ НА РУКИ";
                 _warningAlpha = 1.5f;
+                N89.Core.Sfx.Ui(N89.Core.Sfx.UiDeny);
                 SetActiveDrum(true);
                 return;
             }
@@ -208,10 +211,12 @@ namespace N89.UI
             {
                 _warning.text = $"ЭТОТ ИМПЛАНТ НЕДОСТУПЕН — ОН ОТКРЫВАЕТСЯ НА МИССИИ {ChosenImplant.MissionsLabel}";
                 _warningAlpha = 1.5f;
+                N89.Core.Sfx.Ui(N89.Core.Sfx.UiDeny);
                 SetActiveDrum(true);
                 return;
             }
 
+            N89.Core.Sfx.Ui(N89.Core.Sfx.UiSelect);
             _confirmed = true;
         }
 

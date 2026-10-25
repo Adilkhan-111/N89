@@ -77,6 +77,8 @@ namespace N89.Missions
         [SerializeField] private Sprite _warningSprite;
         [SerializeField] private Sprite[] _rubbleSprites;
         [SerializeField] private GameObject _dustFxPrefab;
+        [Tooltip("Искры из пробитого корпуса Босса в финальной катсцене")]
+        [SerializeField] private GameObject _sparkFxPrefab;
         [SerializeField] private Material _material;
 
         [Header("Газовые баллоны")]
@@ -188,6 +190,7 @@ namespace N89.Missions
             }
 
             SetControl(false);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Pickup, at);
             _cameraFollow.Shake(0.1f, 0.1f);
             _fader.Flash(new Color(0.3f, 0.9f, 1f, 0.35f), 0.4f);
             Destroy(go);
@@ -207,11 +210,28 @@ namespace N89.Missions
             StartCoroutine(_cameraFollow.Zoom(_cutsceneZoom, 1.4f));
             yield return new WaitForSeconds(1f);
 
+            // Камера перескакивает к каждой загорающейся лампе
+            var lampFocus = new GameObject("LampFocus").transform;
+            lampFocus.position = _arenaCenter.position;
+            _cameraFollow.Focus(lampFocus, 4f);
             for (int i = 0; i < _lamps.Length; i++)
             {
+                if (_lamps[i] != null) lampFocus.position = Vector2.Lerp(_arenaCenter.position, _lamps[i].transform.position, 0.45f);
                 yield return LampOn(i);
                 yield return new WaitForSeconds(0.55f);
             }
+
+            // В полном свете — Босс: камера на него, он тяжело разворачивается к Рэю и делает шаг навстречу
+            _cameraFollow.Focus(_boss.transform, 3f);
+            yield return new WaitForSeconds(0.4f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.MinigunSpin, _boss.transform.position, 0.6f, 0.6f);
+            yield return N89.Core.Cutscene.Turn(_bossBody.transform, _player.transform.position, 0.7f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Clang, _boss.transform.position, 0.8f, 0.5f);
+            _cameraFollow.Shake(0.2f, 0.25f);
+            _cameraFollow.Punch(0.08f, 0.5f);
+            yield return N89.Core.Cutscene.Lunge(_bossBody.transform, _player.transform.position - _boss.transform.position, 0.2f, 0.35f);
+            _cameraFollow.Focus(_arenaCenter, 1.6f);
+            Destroy(lampFocus.gameObject);
 
             yield return new WaitForSeconds(0.3f);
             foreach (Line line in _introLines) yield return _subtitles.Say(line.Speaker, line.Text);
@@ -227,12 +247,16 @@ namespace N89.Missions
         private IEnumerator LampOn(int index)
         {
             float[] flicker = { 0.07f, 0.12f, 0.05f, 0.18f };
+            Vector2 at = index < _lamps.Length && _lamps[index] != null ? (Vector2)_lamps[index].transform.position : (Vector2)_arenaCenter.position;
             for (int i = 0; i < flicker.Length; i++)
             {
-                SetLamp(index, i % 2 == 0 ? Random.Range(0.5f, 0.9f) : 0f);
+                bool on = i % 2 == 0;
+                SetLamp(index, on ? Random.Range(0.5f, 0.9f) : 0f);
+                if (on) N89.Core.Sfx.Play(N89.Core.Sfx.LampFlicker, at);
                 yield return new WaitForSeconds(flicker[i]);
             }
             SetLamp(index, 1f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.LampOn, at);
             _cameraFollow.Shake(0.12f, 0.15f);
         }
 
@@ -258,9 +282,27 @@ namespace N89.Missions
             StartCoroutine(_cameraFollow.Zoom(4f, 1f));
             StartCoroutine(Letterbox(120f, 0.5f));
 
+            // Шатается назад, искрит — и рушится на колени
+            Vector2 away = (Vector2)_boss.transform.position - (Vector2)_player.transform.position;
+            for (int i = 0; i < 2; i++)
+            {
+                if (_sparkFxPrefab != null) Instantiate(_sparkFxPrefab, (Vector2)_boss.transform.position + Random.insideUnitCircle * 0.6f, Quaternion.identity);
+                N89.Core.Sfx.Play(N89.Core.Sfx.LampFlicker, _boss.transform.position);
+                yield return N89.Core.Cutscene.Stagger(_boss.transform, _bossBody.transform, away, 0.25f, 0.3f);
+            }
             if (_bossDownSprite != null) _bossBody.sprite = _bossDownSprite;
+            N89.Core.Sfx.Play(N89.Core.Sfx.BodyFall, _boss.transform.position, 1f, 0.7f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Clang, _boss.transform.position, 0.6f, 0.6f);
             _cameraFollow.Shake(0.3f, 0.3f);
-            yield return new WaitForSeconds(1.2f);
+            if (_dustFxPrefab != null) Instantiate(_dustFxPrefab, _boss.transform.position, Quaternion.identity);
+            yield return new WaitForSeconds(0.8f);
+
+            // Рэй медленно подходит, пока Босс говорит
+            Vector2 close = (Vector2)_boss.transform.position - away.normalized * (_boss.Radius + 1.3f);
+            Rigidbody2D heroRb = _player.GetComponent<Rigidbody2D>();
+            if (heroRb != null) heroRb.linearVelocity = Vector2.zero;
+            StartCoroutine(N89.Core.Cutscene.Walk(_player.transform, _player.transform.Find("Body"), close, 1.2f));
+            yield return new WaitForSeconds(0.4f);
 
             foreach (Line line in _finaleLines)
             {
@@ -268,8 +310,14 @@ namespace N89.Missions
                 yield return new WaitForSeconds(0.3f);
             }
 
-            // Падает навзничь, синяя кровь растекается
+            // Падает навзничь — в замедлении, синяя кровь растекается
+            Time.timeScale = 0.35f;
+            _cameraFollow.Punch(0.12f, 0.8f);
+            yield return N89.Core.Cutscene.Stagger(_boss.transform, _bossBody.transform, away, 0.2f, 0.25f);
+            Time.timeScale = 1f;
             if (_bossDeadSprite != null) _bossBody.sprite = _bossDeadSprite;
+            N89.Core.Sfx.Play(N89.Core.Sfx.BodyFall, _boss.transform.position, 1f, 0.6f);
+            if (_dustFxPrefab != null) Instantiate(_dustFxPrefab, _boss.transform.position, Quaternion.identity);
             if (_bloodFxPrefab != null) Instantiate(_bloodFxPrefab, _boss.transform.position, Quaternion.identity);
             if (_bloodPoolPrefab != null)
             {
@@ -299,6 +347,7 @@ namespace N89.Missions
 
             // Зона на полу мигает всё чаще, с потолка сыплется пыль, пол дрожит
             SpriteRenderer warning = Decal("CollapseWarning", _warningSprite, center, _collapseRadius * 2f, -80, true);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Rumble, center);
             float nextDust = 0f;
             for (float t = 0f; t < _collapseDelay; t += Time.deltaTime)
             {
@@ -316,6 +365,7 @@ namespace N89.Missions
             Destroy(warning.gameObject);
 
             // Удар: груда обломков, облака пыли, тряска
+            N89.Core.Sfx.Play(N89.Core.Sfx.Crash, center);
             foreach (Sprite rubble in _rubbleSprites)
             {
                 for (int i = 0; i < 3; i++)

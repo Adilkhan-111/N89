@@ -3,7 +3,7 @@ using UnityEngine.SceneManagement;
 
 namespace N89.Core
 {
-    // Музыка миссий: трек из Resources/Music/<сцена в нижнем регистре>.mp3 (mission01, mission02).
+    // Музыка: трек из Resources/Music/<сцена в нижнем регистре>.mp3 (tutorial, mission01–03); главное меню и все интерлюдии — interlude.mp3.
     // Зацикливается с плавным переходом: за _crossfade секунд до конца запускается та же дорожка
     // с нуля на втором источнике, старая гаснет. Рестарт после смерти музыку не перезапускает;
     // в сцене без трека музыка затухает. Объект создаётся сам, на сцены ничего вешать не нужно.
@@ -40,7 +40,10 @@ namespace N89.Core
 
         private void OnScene(string scene)
         {
-            AudioClip clip = Resources.Load<AudioClip>("Music/" + scene.ToLowerInvariant());
+            // Все интерлюдии — один трек (interlude.mp3): между ними музыка не перезапускается
+            string track = scene.ToLowerInvariant();
+            if (track.StartsWith("interlude") || track == "mainmenu") track = "interlude";
+            AudioClip clip = Resources.Load<AudioClip>("Music/" + track);
             if (clip == _clip) return;
             _clip = clip;
             if (clip == null)
@@ -72,7 +75,8 @@ namespace N89.Core
 
             AudioSource cur = _sources[_current];
             AudioSource other = _sources[1 - _current];
-            cur.volume = Mathf.MoveTowards(cur.volume, Volume, Volume * dt / Crossfade);
+            float volume = Volume * SoundSettings.Music;
+            cur.volume = Mathf.MoveTowards(cur.volume, volume, Volume * dt / Crossfade);
             other.volume = Mathf.MoveTowards(other.volume, 0f, Volume * dt / Crossfade);
             if (other.volume <= 0f && other.isPlaying) other.Stop();
 

@@ -703,24 +703,24 @@ namespace N89.EditorTools
             return new[]
             {
                 // На миссии 3 руки — на выбор: оба импланта доступны ещё раз (extraMission)
-                CreateImplant("GorillaArms", "РУКИ ГОРИЛЛЫ", ArtOr("Implants/implant_gorilla_arms", SpriteFactory.IconGorillaArms), 1,
+                CreateImplant("GorillaArms", "GORILLA HANDS", ArtOr("Implants/implant_gorilla_arms", SpriteFactory.IconGorillaArms), 1,
                     "Кибернетические руки с гидравлическим приводом.\n\n" +
                     $"{key}[ПКМ] — РЫВОК.</color> Короткий бросок вперёд с ударом в конце. Удар дробит цель и отшвыривает её далеко назад.\n\n" +
                     $"{key}[Зажать ПКМ] — БЛОК.</color> Руки закрывают тебя от пуль. Блок держит 3 попадания — шкала над героем " +
                     "показывает запас. После третьего блок ломается и восстанавливается 7 секунд.", extraMission: 3),
-                CreateImplant("BladeArms", "РУКИ-ЛЕЗВИЯ", ArtOr("Implants/implant_blade_arms", () => SpriteFactory.IconLockedImplant("implant_mission2")), 2,
+                CreateImplant("BladeArms", "BLADE HANDS", ArtOr("Implants/implant_blade_arms", () => SpriteFactory.IconLockedImplant("implant_mission2")), 2,
                     "Выдвижные клинки в предплечьях. Кромка режет плоть и броню одинаково легко.\n\n" +
                     $"{key}[ПКМ] — УДАР ЛЕЗВИЕМ.</color> Взмах клинком перед собой. Попал по врагу — разрубает его пополам.\n\n" +
                     $"{key}[ПКМ] по пуле — ОТБИТЬ.</color> Взмахни, когда пуля рядом, — клинок отобьёт её.", extraMission: 3),
-                CreateImplant("Sandevistan", "САНДЕВИСТАН", ArtOr("Implants/implant_sandevistan", SpriteFactory.IconSandevistan), 3,
-                    "Военный ускоритель нервной системы. Встроен в позвоночник — на миссии 3 вместо взлома.\n\n" +
+                CreateImplant("Sandevistan", "E.N.A", ArtOr("Implants/implant_sandevistan", SpriteFactory.IconSandevistan), 3,
+                    "Electric Neurons Amplifier — военный ускоритель нервной системы. Встроен в позвоночник — на миссии 3 вместо взлома.\n\n" +
                     $"{key}[TAB] — УСКОРЕНИЕ.</color> Мир вокруг замедляется, ты — нет: ходи, стреляй и бей имплантом на руки.\n\n" +
                     $"{key}ЭНЕРГИЯ.</color> Хватает на 3 секунды, включённый не выключить, пока шкала не опустеет. " +
                     "Полная перезарядка — 8 секунд.", builtIn: true),
             };
         }
 
-        // Заглушка импланта миссии 3 из ранних сборок — теперь это Сандевистан
+        // Заглушка импланта миссии 3 из ранних сборок — теперь это E.N.A
         private static void DeleteObsoleteImplants()
         {
             AssetDatabase.DeleteAsset($"{ImplantsDir}/Mission3Implant.asset");
@@ -785,9 +785,11 @@ namespace N89.EditorTools
             if (implant != null)
             {
                 UpdatePlaceholder(implant, "_icon", implant.Icon, icon);
-                // Где имплант доступен — правило игры, а не тюнинг: ставится всегда
+                // Где имплант доступен и как называется — правило игры, а не тюнинг: ставится всегда
                 Configure(implant, so =>
                 {
+                    P(so, "_displayName").stringValue = displayName;
+                    P(so, "_description").stringValue = description;
                     P(so, "_extraMission").intValue = extraMission;
                     P(so, "_builtIn").boolValue = builtIn;
                 });

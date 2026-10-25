@@ -24,9 +24,9 @@ namespace N89.Missions
         [Header("Hero")]
         [SerializeField] private PlayerController _player;
         [SerializeField] private HackingController _hacking;
-        [Tooltip("Миссия 3: Сандевистан вместо взлома (HackingController на герое выключен). В начале — сперва подсказка про него, потом про имплант на руки")]
+        [Tooltip("Миссия 3: E.N.A вместо взлома (HackingController на герое выключен). В начале — сперва подсказка про него, потом про имплант на руки")]
         [SerializeField] private Sandevistan _sandevistan;
-        [SerializeField] private string _sandevistanTitle = "САНДЕВИСТАН";
+        [SerializeField] private string _sandevistanTitle = "E.N.A";
         [SerializeField] private string _sandevistanHint = "TAB — УСКОРЕНИЕ НА 3 С   ·   НЕ ВЫКЛЮЧИТЬ, ПОКА НЕ КОНЧИТСЯ ЭНЕРГИЯ";
         [SerializeField] private Weapon _weapon;
         [SerializeField] private SpriteRenderer _heroBody;
@@ -75,13 +75,13 @@ namespace N89.Missions
         }
 
         [Header("Финал миссии 3 (этаж с Finale)")]
-        [Tooltip("Стоят и целятся, пока герой не включит Сандевистан")]
+        [Tooltip("Стоят и целятся, пока герой не включит E.N.A")]
         [SerializeField] private EnemyAI[] _standoffEnemies = new EnemyAI[0];
         [Tooltip("Герой вошёл сюда — противостояние (мировые координаты)")]
         [SerializeField] private Rect _standoffZone;
         [SerializeField] private float _standoffReaction = 0.7f;
         [SerializeField] private string _standoffTitle = "ОНИ ЖДУТ";
-        [SerializeField] private string _standoffHint = "TAB — Сандевистан";
+        [SerializeField] private string _standoffHint = "TAB — E.N.A";
         [SerializeField] private string _targetSpeaker = "ГЛАВАРЬ";
         [Tooltip("Пистолет на столе цели: в катсцене она тянется к нему и разворачивается к герою (необязательно)")]
         [SerializeField] private SpriteRenderer _targetGun;
@@ -131,9 +131,11 @@ namespace N89.Missions
         [SerializeField] private Transform _executioner;
         [Tooltip("Сразу за входной дверью снаружи: герой вышел — катсцена")]
         [SerializeField] private Rect _exitZone;
-        [Tooltip("Куда Рэй ныряет обратно в здание под Сандевистаном")]
+        [Tooltip("Куда Рэй ныряет обратно в здание под E.N.A")]
         [SerializeField] private Vector2 _insidePoint;
         [SerializeField] private Sprite _heroLying;
+        [Tooltip("Рэй ловит пули: отброшен, руки разлетелись (кадр между попаданиями и падением)")]
+        [SerializeField] private Sprite _heroHit;
         [SerializeField] private string _exitText = "Выйди из здания";
         [SerializeField] private string _giveTitle = "ОКОНЧАТЕЛЬНАЯ СМЕРТЬ";
         [SerializeField] private string _giveSubtitle = "Relic у корпорации. Цепной пёс больше не нужен.";
@@ -153,7 +155,7 @@ namespace N89.Missions
         [SerializeField] private Banner _banner;
         [SerializeField] private WaypointArrow _waypoint;
         [Tooltip("Подсказка про имплант в начале миссии (пусто — не показывать)")]
-        [SerializeField] private string _implantTitle = "РУКИ ГОРИЛЛЫ";
+        [SerializeField] private string _implantTitle = "GORILLA HANDS";
         [SerializeField] private string _implantHint = "ПКМ — РЫВОК С УДАРОМ   ·   ЗАЖАТЬ ПКМ — БЛОК";
         [Tooltip("Миссия 3: на герое оба импланта на руки, остаётся выбранный в арсенале (по id ImplantData), первый — по умолчанию")]
         [SerializeField] private MonoBehaviour[] _armImplants;
@@ -171,6 +173,8 @@ namespace N89.Missions
         [SerializeField] private Transform _target;
         [SerializeField] private SpriteRenderer _targetBody;
         [SerializeField] private Sprite _targetStanding;
+        [Tooltip("Цель схватила пистолет и целится (пистолет со стола на это время прячется)")]
+        [SerializeField] private Sprite _targetAim;
         [SerializeField] private Sprite _targetDead;
         [Tooltip("Куда цель падает — середина стола (мировые координаты)")]
         [SerializeField] private Vector2 _deskPoint;
@@ -228,7 +232,7 @@ namespace N89.Missions
             _player.CanMove = false;
             _player.CanShoot = false;
             _hacking.HackingEnabled = false;
-            // Миссия 3: взлома нет — RAM прячется, вместо неё шкала энергии Сандевистана
+            // Миссия 3: взлома нет — RAM прячется, вместо неё шкала энергии E.N.A
             _hackingHud.RamVisible = _sandevistan == null;
             _objective.Set(string.Empty);
             _fader.SetBlack(1f);
@@ -442,7 +446,7 @@ namespace N89.Missions
             yield return _endScreen.Show();
         }
 
-        // Подсказки в начале: про Сандевистан (если есть), потом про имплант на руки
+        // Подсказки в начале: про E.N.A (если есть), потом про имплант на руки
         private IEnumerator ImplantBanners()
         {
             const float duration = 3.5f;
@@ -556,10 +560,14 @@ namespace N89.Missions
         private IEnumerator RideTo(Vector2 position, float facing, string checkpoint)
         {
             SetControl(false);
+            // Двери кабины, гул мотора в темноте, звонок на приезде
+            N89.Core.Sfx.Ui(N89.Core.Sfx.Elevator, 0.8f);
+            _cameraFollow.Shake(0.03f, 0.4f);
             yield return _fader.Fade(0f, 1f, 0.4f);
             MoveHero(position, facing);
             if (!string.IsNullOrEmpty(checkpoint)) Checkpoint.Set(checkpoint);
-            yield return new WaitForSeconds(0.2f);
+            yield return new WaitForSeconds(0.9f);
+            N89.Core.Sfx.Ui(N89.Core.Sfx.ElevatorDing, 0.7f);
             SetControl(true);
             yield return _fader.Fade(1f, 0f, 0.4f);
         }
@@ -589,6 +597,7 @@ namespace N89.Missions
                 _objective.Set(string.Empty);
                 yield return new WaitForSeconds(0.6f);
                 _cameraFollow.Shake(0.05f, 0.2f);
+                N89.Core.Sfx.Ui(N89.Core.Sfx.Vibrate);
                 yield return new WaitForSeconds(0.5f);
                 Cursor.visible = false;
                 // Панель закрывает левую часть экрана — камера сдвигается, чтобы Рэй остался справа
@@ -645,6 +654,13 @@ namespace N89.Missions
             foreach (AirCar corpCar in _corpCars) corpCar.gameObject.SetActive(true);
             _exitSquad.SetActive(true);
             foreach (EnemyAI ai in _exitSquad.GetComponentsInChildren<EnemyAI>()) ai.enabled = false;
+            ProtectExitSquad();
+        }
+
+        // Отряд нужен катсцене целиком (палач — один из них): до неё его не перебить ни через дверь, ни имплантом
+        private void ProtectExitSquad()
+        {
+            foreach (Health soldier in _exitSquad.GetComponentsInChildren<Health>(true)) soldier.Invulnerable = true;
         }
 
         // Катсцена после отказа: камера у входа в башню, прилетают машины Корпорации Е, из них выходят
@@ -675,34 +691,58 @@ namespace N89.Missions
                 else yield return new WaitForSeconds(0.5f);
             }
             _cameraFollow.Shake(0.12f, 0.3f);
-            N89.Core.Sfx.Play(N89.Core.Sfx.Door, _streetCamPoint.position);
-            yield return new WaitForSeconds(0.4f);
+            yield return new WaitForSeconds(0.3f);
 
-            // Выпрыгивают из машин и встают полукругом у входа
+            // Двери распахиваются — солдаты выпрыгивают из ближней к посту машины и бегом расходятся полукругом
+            // у входа; камера едет вдоль отряда
+            var pan = new GameObject("CorpPan").transform;
+            pan.position = _corpCars.Length > 0 ? Vector2.Lerp(_corpCars[0].transform.position, _streetCamPoint.position, 0.5f) : (Vector2)_streetCamPoint.position;
+            _cameraFollow.Focus(pan, 2.5f);
+            StartCoroutine(Cutscene.Walk(pan, null, _streetCamPoint.position, 2.2f));
+            float longest = 0f;
             for (int i = 0; i < soldiers.Length; i++)
             {
-                AirCar car = _corpCars[i % _corpCars.Length];
+                AirCar car = NearestCar(posts[i]);
                 Vector2 door = car.DoorFor(posts[i]);
                 soldiers[i].position = door;
                 soldiers[i].gameObject.SetActive(true);
+                Transform body = soldiers[i].Find("Body");
                 Vector2 dir = (Vector2)posts[i] - door;
-                soldiers[i].Find("Body").rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
-                StartCoroutine(Move(soldiers[i], door, posts[i], 0.9f));
-                yield return new WaitForSeconds(0.15f);
+                body.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                N89.Core.Sfx.Play(N89.Core.Sfx.Door, door, 0.4f);
+                StartCoroutine(Cutscene.Walk(soldiers[i], body, posts[i], 5f));
+                longest = Mathf.Max(longest, dir.magnitude / 5f + 0.2f - 0.2f * (soldiers.Length - 1 - i));
+                yield return new WaitForSeconds(0.2f);
             }
-            yield return new WaitForSeconds(1f);
-            // Все лицом ко входу
+            yield return new WaitForSeconds(longest + 0.2f);
+
+            // По одному разворачиваются ко входу и вскидывают оружие — лязг затворов
             foreach (Transform soldier in soldiers)
             {
-                Vector2 dir = (Vector2)_exitZone.center - (Vector2)soldier.position;
-                soldier.Find("Body").rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                Transform body = soldier.Find("Body");
+                StartCoroutine(Cutscene.Turn(body, _exitZone.center, 0.18f));
+                StartCoroutine(Cutscene.Lunge(body, (Vector2)_exitZone.center - (Vector2)soldier.position, 0.08f, 0.2f));
+                N89.Core.Sfx.Play(N89.Core.Sfx.Reload, soldier.position, 0.7f);
+                yield return new WaitForSeconds(0.12f);
             }
+            _cameraFollow.Punch(0.08f, 0.5f);
             if (_corpArrivalLine.Length > 0) _subtitles.Say(_bossContact, _corpArrivalLine);
             yield return new WaitForSeconds(2.2f);
 
             // Затемняет и возвращает камеру к герою уже лифт (RideTo)
             StartCoroutine(Letterbox(0f, 0.3f));
             _cameraFollow.Focus(null, 0f);
+            Destroy(pan.gameObject);
+        }
+
+        private AirCar NearestCar(Vector2 point)
+        {
+            AirCar best = _corpCars[0];
+            foreach (AirCar car in _corpCars)
+            {
+                if (Vector2.Distance(car.transform.position, point) < Vector2.Distance(best.transform.position, point)) best = car;
+            }
+            return best;
         }
 
         private IEnumerator GoOutside()
@@ -718,18 +758,27 @@ namespace N89.Missions
         private IEnumerator SquadOpensFire(int volleys)
         {
             _exitSquad.SetActive(true);
+            ProtectExitSquad();
             EnemyAI[] squad = _exitSquad.GetComponentsInChildren<EnemyAI>();
             foreach (EnemyAI ai in squad) ai.enabled = false;
+            // Вскидывают стволы на Рэя — каждый со своей задержкой
+            foreach (EnemyAI ai in squad)
+            {
+                StartCoroutine(Cutscene.Turn(ai.transform.Find("Body"), _player.transform.position, Random.Range(0.08f, 0.2f)));
+            }
+            yield return new WaitForSecondsRealtime(0.22f);
             for (int v = 0; v < volleys; v++)
             {
                 foreach (EnemyAI ai in squad)
                 {
+                    Transform body = ai.transform.Find("Body");
                     Vector2 dir = (Vector2)(_player.transform.position - ai.transform.position);
-                    ai.transform.Find("Body").rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+                    body.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + Random.Range(-3f, 3f));
                     if (ai.TryGetComponent(out Weapon weapon)) weapon.ForceFire(dir.normalized);
+                    StartCoroutine(Cutscene.Recoil(body, 0.1f, 0.12f));
                 }
                 _cameraFollow.Shake(0.15f, 0.15f);
-                yield return new WaitForSecondsRealtime(0.18f);
+                yield return new WaitForSecondsRealtime(Random.Range(0.14f, 0.22f));
             }
         }
 
@@ -758,20 +807,32 @@ namespace N89.Missions
             _cameraFollow.Focus(focus, 3f);
         }
 
-        // Отдал relic: залп — Рэй падает. Окончательная смерть
+        // Отдал relic: залп — каждое попадание отбрасывает Рэя назад, на последнем время замедляется,
+        // он заваливается навзничь; камера медленно наезжает на тело. Окончательная смерть
         private IEnumerator GiveEnding()
         {
             BeginEnding();
             yield return new WaitForSeconds(0.4f);
             StartCoroutine(SquadOpensFire(4));
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSecondsRealtime(0.3f);
+            Vector2 squad = _exitSquad.transform.position;
+            if (_heroHit != null) _heroBody.sprite = _heroHit;
             for (int i = 0; i < 3; i++)
             {
-                HeroHit(_exitSquad.transform.position);
-                yield return new WaitForSeconds(0.15f);
+                HeroHit(squad);
+                yield return Cutscene.Stagger(_player.transform, _heroBody.transform, (Vector2)_player.transform.position - squad, 0.22f, 0.13f);
             }
-            LayHeroDown(_exitSquad.transform.position);
+            Time.timeScale = 0.3f;
+            _cameraFollow.Punch(0.15f, 0.7f);
             N89.Core.Sfx.Play(N89.Core.Sfx.Death, _player.transform.position);
+            yield return FallHero(squad);
+            yield return new WaitForSecondsRealtime(0.4f);
+            Time.timeScale = 1f;
+
+            var bodyFocus = new GameObject("BodyFocus").transform;
+            bodyFocus.position = _player.transform.position;
+            _cameraFollow.Focus(bodyFocus, 1.2f);
+            StartCoroutine(_cameraFollow.Zoom(Camera.main.orthographicSize * 0.7f, 3f));
             yield return new WaitForSeconds(2.5f);
             yield return _fader.Fade(0f, 1f, 1.2f);
             yield return _fader.ShowTitle(_giveTitle, _giveSubtitle);
@@ -780,18 +841,24 @@ namespace N89.Missions
             SceneManager.LoadScene(_menuScene);
         }
 
-        // Отказал: залп, Рэй ранен — Сандевистан, назад в здание; лёжа вставляет relic, солдат добивает
+        // Отказал: залп, Рэй ранен — E.N.A, назад в здание; лёжа вставляет relic, солдат добивает
         private IEnumerator RefuseEnding()
         {
             BeginEnding();
             yield return new WaitForSeconds(0.3f);
             StartCoroutine(SquadOpensFire(6));
-            yield return new WaitForSeconds(0.1f);
-            HeroHit(_exitSquad.transform.position);
-            yield return new WaitForSeconds(0.2f);
-            HeroHit(_exitSquad.transform.position);
+            yield return new WaitForSecondsRealtime(0.3f);
+            Vector2 squad = _exitSquad.transform.position;
+            Sprite standing = _heroBody.sprite;
+            if (_heroHit != null) _heroBody.sprite = _heroHit;
+            HeroHit(squad);
+            yield return Cutscene.Stagger(_player.transform, _heroBody.transform, (Vector2)_player.transform.position - squad, 0.22f, 0.13f);
+            HeroHit(squad);
+            yield return Cutscene.Stagger(_player.transform, _heroBody.transform, (Vector2)_player.transform.position - squad, 0.16f, 0.12f);
 
-            // Сандевистан — мир замирает, Рэй ныряет обратно в здание
+            // E.N.A — мир замирает, Рэй ныряет обратно в здание
+            _heroBody.sprite = standing;
+            _cameraFollow.Punch(0.12f, 0.4f);
             if (_sandevistan != null) _sandevistan.ForceActivate();
             Vector2 from = _player.transform.position;
             Vector2 to = _insidePoint;
@@ -815,9 +882,10 @@ namespace N89.Missions
             yield return new WaitUntil(() => _sandevistan == null || !_sandevistan.IsActive);
             Time.timeScale = 1f;
 
-            // Падает, тяжело ранен
-            LayHeroDown(_exitSquad.transform.position);
-            _cameraFollow.Shake(0.1f, 0.2f);
+            // Ноги подкашиваются: спотыкается и падает лицом вперёд, проезжая по полу
+            if (_heroHit != null) _heroBody.sprite = _heroHit;
+            yield return Cutscene.Stagger(_player.transform, _heroBody.transform, run, 0.25f, 0.18f);
+            yield return FallHero((Vector2)_player.transform.position - run);
             yield return new WaitForSeconds(1f);
             foreach (string line in _dyingLines)
             {
@@ -829,21 +897,30 @@ namespace N89.Missions
             yield return InsertRelic();
             yield return new WaitForSeconds(1.2f);
 
-            // Солдат медленно подходит и стреляет в голову
+            // Солдат медленно, шаг за шагом подходит, передёргивает затвор, целится — время тянется — выстрел в голову
             Transform killer = _executioner;
+            Transform killerBody = killer.Find("Body");
             Vector2 stand = (Vector2)_player.transform.position + new Vector2(0.9f, -0.6f);
-            Vector2 walk = stand - (Vector2)killer.position;
-            killer.Find("Body").rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(walk.y, walk.x) * Mathf.Rad2Deg);
             var killerFocus = new GameObject("KillerFocus").transform;
             killerFocus.position = Vector2.Lerp(_player.transform.position, killer.position, 0.5f);
             _cameraFollow.Focus(killerFocus, 2f);
-            yield return Move(killer, killer.position, stand, 3.5f);
+            float walkSpeed = Mathf.Max(1f, Vector2.Distance(killer.position, stand) / 3.2f);
+            yield return Cutscene.Walk(killer, killerBody, stand, walkSpeed);
             Vector2 aim = ((Vector2)_player.transform.position - stand).normalized;
-            killer.Find("Body").rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
-            yield return new WaitForSeconds(1.5f);
+            yield return Cutscene.Turn(killerBody, _player.transform.position, 0.4f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Reload, killer.position);
+            yield return Cutscene.Lunge(killerBody, aim, 0.1f, 0.25f);
+            killerFocus.position = Vector2.Lerp(_player.transform.position, killer.position, 0.4f);
+            StartCoroutine(_cameraFollow.Zoom(Camera.main.orthographicSize * 0.75f, 1.6f));
+            Time.timeScale = 0.4f;
+            yield return new WaitForSecondsRealtime(1.6f);
+            Time.timeScale = 1f;
             if (killer.TryGetComponent(out Weapon gun)) gun.ForceFire(aim);
+            StartCoroutine(Cutscene.Recoil(killerBody, 0.14f, 0.15f));
             Vector2 head = (Vector2)_player.transform.position + (Vector2)_heroBody.transform.right * 0.34f;
             if (_bloodFxPrefab != null) Instantiate(_bloodFxPrefab, head, Quaternion.Euler(0f, 0f, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg));
+            _fader.Flash(Color.white, 0.08f);
+            yield return new WaitForSecondsRealtime(0.06f);
             _fader.SetBlack(1f);
             yield return new WaitForSecondsRealtime(2f);
             Checkpoint.Clear();
@@ -913,15 +990,20 @@ namespace N89.Missions
             }
         }
 
-        // Рэй лежит навзничь, головой от стрелков
-        private void LayHeroDown(Vector2 shooters)
+        // Рэй заваливается головой от стрелков и проезжает по полу; под ним растекается кровь
+        private IEnumerator FallHero(Vector2 shooters)
         {
-            if (_heroLying != null) _heroBody.sprite = _heroLying;
             Vector2 away = ((Vector2)_player.transform.position - shooters).normalized;
-            _heroBody.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(away.y, away.x) * Mathf.Rad2Deg);
             Transform legs = _player.transform.Find("Legs");
             if (legs != null) legs.gameObject.SetActive(false);
-            if (_bloodPoolPrefab != null) Instantiate(_bloodPoolPrefab, _player.transform.position, Quaternion.Euler(0f, 0f, Random.Range(0f, 360f)));
+            yield return Cutscene.Fall(_player.transform, _heroBody, _heroLying, away, 0.4f, 0.4f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.BodyFall, _player.transform.position);
+            _cameraFollow.Shake(0.1f, 0.2f);
+            if (_bloodPoolPrefab != null)
+            {
+                GameObject pool = Instantiate(_bloodPoolPrefab, _player.transform.position, Quaternion.Euler(0f, 0f, Random.Range(0f, 360f)));
+                StartCoroutine(Grow(pool.transform, 1.3f, 3f));
+            }
         }
 
         // Этаж выше второго: охрана оживает через _floor2Grace, засада ждёт, пока герой выйдет из кабины
@@ -942,7 +1024,7 @@ namespace N89.Missions
         // ------------------------------------------------------------ Финал миссии 3
 
         // Герой входит в лабораторию — охрана стоит и целится в него, но не стреляет. Стрелять нельзя,
-        // пока не включён Сандевистан (TAB, шкала заполняется заранее); включил — все оживают разом
+        // пока не включён E.N.A (TAB, шкала заполняется заранее); включил — все оживают разом
         private IEnumerator Standoff()
         {
             yield return new WaitUntil(() => _over || _standoffZone.Contains(_player.transform.position));
@@ -952,6 +1034,17 @@ namespace N89.Missions
             _player.CanShoot = false;
             if (_sandevistan != null) _sandevistan.Refill();
             _cameraFollow.Shake(0.05f, 0.2f);
+            _cameraFollow.Punch(0.08f, 0.5f);
+            // Охрана по очереди вскидывает стволы на Рэя — лязг затворов волной по залу
+            foreach (EnemyAI ai in _standoffEnemies)
+            {
+                if (ai == null || ai.GetComponent<Health>().IsDead) continue;
+                Transform body = ai.transform.Find("Body");
+                StartCoroutine(Cutscene.Turn(body, _player.transform.position, 0.15f));
+                StartCoroutine(Cutscene.Lunge(body, _player.transform.position - ai.transform.position, 0.08f, 0.2f));
+                N89.Core.Sfx.Play(N89.Core.Sfx.Reload, ai.transform.position, 0.6f);
+                yield return new WaitForSeconds(0.07f);
+            }
             if (_banner != null) _banner.Show(_standoffTitle, _standoffHint, 4f);
             _objective.Set(_standoffHint);
 
@@ -1005,7 +1098,7 @@ namespace N89.Missions
             Announce("НАЧАЛЬНИК МЁРТВ", _keyText.ToUpper(), _keyItem.transform.position);
             yield return new WaitUntil(() => _over || Vector2.Distance(_player.transform.position, _keyItem.transform.position) <= _pickupRadius);
             if (_over) yield break;
-            N89.Core.Sfx.Play(N89.Core.Sfx.ReloadOk, _keyItem.transform.position);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Pickup, _keyItem.transform.position);
             _keyItem.gameObject.SetActive(false);
 
             _objective.Set(_safeText);
@@ -1024,21 +1117,42 @@ namespace N89.Missions
             N89.Core.Sfx.Play(N89.Core.Sfx.Door, _safe.position);
             _safeBody.sprite = _safeOpen;
             _cameraFollow.Shake(0.05f, 0.15f);
+            // Relic выплывает из ячейки: раскрывается с перелётом, покачивается и медленно вращается
             _relicItem.gameObject.SetActive(true);
-            yield return new WaitForSeconds(1.2f);
+            Transform relicTransform = _relicItem.transform;
+            Vector3 relicRest = relicTransform.position;
+            Vector3 relicScale = relicTransform.localScale;
+            Quaternion relicRotation = relicTransform.rotation;
+            for (float t = 0f; t < 1.4f; t += Time.deltaTime)
+            {
+                float pop = Mathf.Clamp01(t / 0.35f);
+                float overshoot = pop < 1f ? Mathf.Sin(pop * Mathf.PI * 0.75f) / Mathf.Sin(Mathf.PI * 0.75f) : 1f;
+                relicTransform.localScale = relicScale * Mathf.Lerp(0.2f, 1f, overshoot);
+                relicTransform.position = relicRest + Vector3.up * (0.08f * Mathf.Sin(t * 5f) + 0.12f * pop);
+                relicTransform.rotation = relicRotation * Quaternion.Euler(0f, 0f, 10f * Mathf.Sin(t * 3f));
+                yield return null;
+            }
+            relicTransform.localScale = relicScale;
+            relicTransform.rotation = relicRotation;
 
+            // Срывается к Рэю по дуге, закручиваясь, — его отбрасывает импульсом
             Vector3 from = _relicItem.transform.position;
             Vector3 startScale = _relicItem.transform.localScale;
-            for (float t = 0f; t < 0.6f; t += Time.deltaTime)
+            Vector3 arc = Vector2.Perpendicular(_player.transform.position - from).normalized * 0.5f;
+            for (float t = 0f; t < 0.5f; t += Time.deltaTime)
             {
-                float k = Mathf.SmoothStep(0f, 1f, t / 0.6f);
-                _relicItem.transform.position = Vector3.Lerp(from, _player.transform.position, k);
+                float k = t / 0.5f;
+                k *= k;
+                _relicItem.transform.position = Vector3.Lerp(from, _player.transform.position, k) + arc * Mathf.Sin(k * Mathf.PI);
                 _relicItem.transform.localScale = startScale * (1f - 0.8f * k);
+                _relicItem.transform.rotation = relicRotation * Quaternion.Euler(0f, 0f, 720f * k);
                 yield return null;
             }
             _relicItem.gameObject.SetActive(false);
             N89.Core.Sfx.Play(N89.Core.Sfx.HackDone, _player.transform.position);
             _fader.Flash(new Color(0.3f, 1f, 1f, 0.35f), 0.3f);
+            _cameraFollow.Punch(0.1f, 0.4f);
+            StartCoroutine(Cutscene.Stagger(_player.transform, _heroBody.transform, _player.transform.position - from, 0.15f, 0.2f));
             if (_banner != null) _banner.Show(_relicTitle, _relicSubtitle, 3f);
             foreach (string line in _relicLines)
             {
@@ -1128,60 +1242,88 @@ namespace N89.Missions
             _cameraFollow.Focus(focus, 0.25f);
             StartCoroutine(Letterbox(120f, 0.5f));
 
-            // Герой разворачивается к цели
+            // Герой разворачивается к цели, камера медленно наезжает
+            float zoom = Camera.main.orthographicSize;
+            StartCoroutine(_cameraFollow.Zoom(zoom * 0.8f, 1.4f));
             yield return Turn(_heroBody.transform, _target.position, 0.35f);
             yield return new WaitForSeconds(0.3f);
 
-            // Цель встаёт: отодвигает стул и поворачивается к герою
+            // Цель вскакивает: кресло со скрежетом отлетает назад, руки бьют по столу
             if (_targetStanding != null) _targetBody.sprite = _targetStanding;
             Vector2 seat = _target.position;
             Vector2 stand = seat + (seat - _deskPoint).normalized * 0.3f;
-            yield return Move(_target, seat, stand, 0.35f);
-            yield return Turn(_targetBody.transform, _player.transform.position, 0.25f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Crawl, seat, 0.8f, 1.4f);
+            yield return Move(_target, seat, stand, 0.2f);
+            _cameraFollow.Shake(0.06f, 0.15f);
+            yield return Turn(_targetBody.transform, _player.transform.position, 0.2f);
 
+            // Каждая реплика — с выпадом в сторону Рэя
             foreach (string line in _targetLines)
             {
                 _subtitles.Say(_targetSpeaker, line);
+                StartCoroutine(Cutscene.Lunge(_targetBody.transform, _player.transform.position - _target.position, 0.12f, 0.3f));
                 yield return new WaitForSeconds(1.3f);
             }
 
-            // Тянется к пистолету на столе, хватает и разворачивается к герою — тут его и снимают
+            // Бросается к пистолету на столе, хватает и разворачивается к герою — время замедляется, тут его и снимают
             if (_targetGun != null)
             {
                 Transform gun = _targetGun.transform;
-                yield return Turn(_targetBody.transform, gun.position, 0.2f);
-                yield return Move(gun, gun.position, (Vector2)_target.position + (Vector2)_targetBody.transform.right * 0.35f, 0.25f);
-                gun.SetParent(_targetBody.transform, true);
-                yield return Turn(_targetBody.transform, _player.transform.position, 0.2f);
-                yield return new WaitForSeconds(0.15f);
+                yield return Turn(_targetBody.transform, gun.position, 0.12f);
+                yield return Cutscene.Lunge(_targetBody.transform, gun.position - _target.position, 0.2f, 0.18f);
+                N89.Core.Sfx.Play(N89.Core.Sfx.Reload, gun.position);
+                if (_targetAim != null)
+                {
+                    _targetGun.gameObject.SetActive(false);
+                    _targetBody.sprite = _targetAim;
+                }
+                else
+                {
+                    gun.position = (Vector2)_target.position + (Vector2)_targetBody.transform.right * 0.35f;
+                    gun.SetParent(_targetBody.transform, true);
+                }
+                Time.timeScale = 0.3f;
+                _cameraFollow.Punch(0.1f, 0.6f);
+                yield return Turn(_targetBody.transform, _player.transform.position, 0.22f);
             }
 
-            // Выстрел
+            // Выстрел: стоп-кадр на вылете пули
             Vector2 dir = ((Vector2)_target.position - (Vector2)_player.transform.position).normalized;
             _heroBody.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
             Collider2D targetCollider = _target.GetComponent<Collider2D>();
             if (targetCollider != null) targetCollider.enabled = false;
             _weapon.ForceFire(dir);
             _cameraFollow.Shake(0.3f, 0.15f);
-            yield return new WaitForSeconds(0.06f);
+            Time.timeScale = 1f;
+            yield return Cutscene.HitStop(0.07f);
 
-            // Попадание: синяя кровь, цель валится вперёд на стол
+            // Попадание: синяя кровь, цель отбрасывает и разворачивает, она валится вперёд на стол
             if (_bloodFxPrefab != null)
             {
                 Instantiate(_bloodFxPrefab, _target.position, Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg));
             }
-            if (_targetDead != null) _targetBody.sprite = _targetDead;
-            // Пистолет выпадает из руки и остаётся лежать
-            if (_targetGun != null && _targetGun.transform.parent == _targetBody.transform)
+            _fader.Flash(new Color(1f, 1f, 1f, 0.25f), 0.12f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Hit, _target.position);
+            // Пистолет вылетает из руки и, кувыркаясь, падает на пол
+            if (_targetGun != null)
             {
+                Vector2 hand = (Vector2)_target.position + (Vector2)_targetBody.transform.right * 0.35f;
                 _targetGun.transform.SetParent(_target.parent, true);
-                _targetGun.transform.position = (Vector2)_target.position - dir * 0.5f;
+                _targetGun.gameObject.SetActive(true);
+                _targetGun.transform.position = hand;
+                // Выбит вбок, за край стола — на полу его видно, а не под телом
+                Vector2 side = Vector2.Perpendicular(dir) * (Random.value < 0.5f ? -1.1f : 1.1f);
+                StartCoroutine(TossGun(_targetGun.transform, hand + dir * 0.3f + side));
             }
+            yield return Cutscene.Stagger(_target, _targetBody.transform, dir, 0.18f, 0.12f);
+            if (_targetDead != null) _targetBody.sprite = _targetDead;
             // Лежит головой к дальнему краю стола
             Vector2 fall = _deskPoint - (Vector2)_target.position;
             _targetBody.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(fall.y, fall.x) * Mathf.Rad2Deg);
-            yield return Move(_target, _target.position, _deskPoint, 0.25f);
+            yield return Move(_target, _target.position, _deskPoint, 0.22f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.BodyFall, _deskPoint);
             _cameraFollow.Shake(0.15f, 0.2f);
+            StartCoroutine(_cameraFollow.Zoom(zoom, 2.5f));
 
             // Кровь растекается по столу
             if (_bloodPoolPrefab != null)
@@ -1252,7 +1394,8 @@ namespace N89.Missions
             // К ближайшей двери — и внутрь
             Vector2 door = _car.DoorFor(_player.transform.position);
             yield return Turn(_heroBody.transform, door, 0.15f);
-            yield return Move(_player.transform, _player.transform.position, door, 0.35f);
+            yield return Cutscene.Walk(_player.transform, _heroBody.transform, door, 3.5f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Door, door, 0.6f);
             _player.gameObject.SetActive(false);
             _cameraFollow.Shake(0.05f, 0.15f);
             yield return new WaitForSeconds(0.6f);
@@ -1262,6 +1405,13 @@ namespace N89.Missions
 
             yield return new WaitForSeconds(0.4f);
             yield return Letterbox(0f, 0.5f);
+        }
+
+        // Выбитый пистолет кувыркается по дуге и звякает об пол
+        private static IEnumerator TossGun(Transform gun, Vector2 to)
+        {
+            yield return Cutscene.Toss(gun, to, Random.Range(500f, 800f), 0.45f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Clang, to, 0.4f, 1.8f);
         }
 
         private static IEnumerator Turn(Transform body, Vector2 lookAt, float duration)

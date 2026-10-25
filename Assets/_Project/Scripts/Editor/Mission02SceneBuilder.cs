@@ -65,7 +65,7 @@ namespace N89.EditorTools
             }, 0.65f, 0.32f, common, 0, SpriteFactory.HeroDead());
             // Охрана «Арки» — люди с имплантами (синяя кровь, замыкание оглушает), реакция как у охраны Корпорации Е
             GameObject guardPrefab = EnemyPrefab("ArkaGuard", "ОХРАНА // АРКА СИСТЕМС", SpriteFactory.ArkaGuard(), 1, 0.5f, 0.6f,
-                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.ArkaGuardDead());
+                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.ArkaGuardDead(), new Color(0.2f, 0.22f, 0.27f));
             // Боевой дрон из туториала: облетает периметр холла, с маршрута не уходит
             GameObject dronePrefab = EnemyPrefab("ArkaDrone", "БОЕВОЙ ДРОН // АРКА", SpriteFactory.CombatDrone(), 2, 0.75f, 0.6f,
                 common.EnemyBullet, common.Muzzle, common.Explosion, common.Remains, common.ShortCircuit, common.Electric, false);
@@ -119,7 +119,7 @@ namespace N89.EditorTools
                 P(so, "_maxLookAhead").floatValue = 3f;
             });
             Configure(hero.GetComponent<PlayerController>(), so => P(so, "_cameraFollow").objectReferenceValue = follow);
-            // Имплант миссии 2 фиксированный — «Руки-лезвия»
+            // Имплант миссии 2 фиксированный — «Blade hands»
             AddBladeArms(hero, follow, common);
             cam.transform.position = new Vector3(start.x, start.y, -10f);
 
@@ -153,7 +153,7 @@ namespace N89.EditorTools
                 P(so, "_floor2Facing").floatValue = basement.SpawnFacing;
                 P(so, "_bossFight").objectReferenceValue = bossFight;
                 P(so, "_checkpoint").stringValue = "mission02_basement";
-                P(so, "_implantTitle").stringValue = "РУКИ-ЛЕЗВИЯ";
+                P(so, "_implantTitle").stringValue = "BLADE HANDS";
                 P(so, "_implantHint").stringValue = "ПКМ — УДАР ЛЕЗВИЕМ   ·   ПО ПУЛЕ — ОТБИТЬ";
                 P(so, "_banner").objectReferenceValue = banner;
                 P(so, "_waypoint").objectReferenceValue = waypoint;
@@ -184,7 +184,7 @@ namespace N89.EditorTools
 
         // ---------------------------------------------------------------- Имплант
 
-        // «Руки-лезвия»: клинок на шарнире у правого предплечья (крутится вокруг него во время взмаха) и след-серп
+        // «Blade hands»: клинок на шарнире у правого предплечья (крутится вокруг него во время взмаха) и след-серп
         internal static void AddBladeArms(GameObject hero, CameraFollow follow, CommonPrefabs common)
         {
             // Сноп искр при отбивании пули: белые и голубые, быстрые и короткие

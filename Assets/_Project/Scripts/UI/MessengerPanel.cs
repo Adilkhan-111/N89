@@ -69,13 +69,14 @@ namespace N89.UI
 
                 GameObject bubble = Instantiate(_bubbleTemplate, _thread);
                 bubble.SetActive(true);
+                N89.Core.Sfx.Ui(N89.Core.Sfx.MsgIn);
                 TMP_Text label = bubble.GetComponentInChildren<TMP_Text>();
                 label.text = message;
                 label.ForceMeshUpdate();
                 int total = label.textInfo.characterCount;
                 for (float shown = 0f; shown < total && !skip; shown += _charsPerSecond * Time.unscaledDeltaTime)
                 {
-                    label.maxVisibleCharacters = Mathf.FloorToInt(shown);
+                    TypeTo(label, Mathf.FloorToInt(shown));
                     skip = EnterPressed();
                     yield return null;
                 }
@@ -148,10 +149,11 @@ namespace N89.UI
                     isHero ? new Color(0.02f, 0.08f, 0.1f, 1f) : (Color?)null, isHero ? new Color(0.3f, 1f, 1f) : (Color?)null);
                 label.ForceMeshUpdate();
                 int total = label.textInfo.characterCount;
+                N89.Core.Sfx.Ui(isHero ? N89.Core.Sfx.MsgOut : N89.Core.Sfx.MsgIn);
                 yield return null;
                 for (float shown = 0f; shown < total; shown += _charsPerSecond * Time.unscaledDeltaTime)
                 {
-                    label.maxVisibleCharacters = Mathf.FloorToInt(shown);
+                    TypeTo(label, Mathf.FloorToInt(shown));
                     if (EnterPressed()) break;
                     yield return null;
                 }
@@ -182,6 +184,7 @@ namespace N89.UI
             {
                 Keyboard kb = Keyboard.current;
                 Mouse mouse = Mouse.current;
+                int was = selected;
                 if (kb != null)
                 {
                     if (kb.wKey.wasPressedThisFrame || kb.upArrowKey.wasPressedThisFrame) selected = (selected + choices.Length - 1) % choices.Length;
@@ -190,6 +193,7 @@ namespace N89.UI
                     if (kb.digit2Key.wasPressedThisFrame && choices.Length > 1) { selected = 1; break; }
                 }
                 if (mouse != null && Mathf.Abs(mouse.scroll.ReadValue().y) > 0.01f) selected = (selected + 1) % choices.Length;
+                if (selected != was) N89.Core.Sfx.Ui(N89.Core.Sfx.UiMove);
                 if (EnterPressed()) break;
 
                 for (int i = 0; i < choices.Length; i++)
@@ -203,6 +207,7 @@ namespace N89.UI
             }
 
             Choice = selected;
+            N89.Core.Sfx.Ui(N89.Core.Sfx.UiSelect);
             yield return new WaitForSecondsRealtime(0.25f);
             yield return Slide(false);
         }
@@ -233,9 +238,20 @@ namespace N89.UI
             return label;
         }
 
+        // Буквы пузыря появляются по одной — каждая с тихим щелчком клавиатуры
+        private static void TypeTo(TMP_Text label, int visible)
+        {
+            if (visible > label.maxVisibleCharacters && visible > 0 && visible <= label.textInfo.characterCount)
+            {
+                N89.Core.Sfx.Typing(label.textInfo.characterInfo[visible - 1].character, 0.7f);
+            }
+            label.maxVisibleCharacters = visible;
+        }
+
         private IEnumerator Slide(bool open)
         {
             float width = _panel.rect.width;
+            N89.Core.Sfx.Ui(open ? N89.Core.Sfx.MsgOut : N89.Core.Sfx.Pause, 0.6f);
             for (float t = 0f; t < _slideDuration; t += Time.unscaledDeltaTime)
             {
                 float k = Mathf.SmoothStep(0f, 1f, t / _slideDuration);

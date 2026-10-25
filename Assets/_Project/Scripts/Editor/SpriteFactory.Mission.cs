@@ -263,7 +263,7 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
-        // «Руки гориллы» в блоке: два массивных кибер-предплечья сомкнуты перед героем (вид сверху, вперёд — +x),
+        // «Gorilla hands» в блоке: два массивных кибер-предплечья сомкнуты перед героем (вид сверху, вперёд — +x),
         // гидравлика светится оранжевым
         public static Sprite GorillaGuard() => Create("gorilla_guard", 20, 32, c =>
         {
@@ -363,6 +363,24 @@ namespace N89.EditorTools
             c.Circle(o + 33f, 16f, 4.2f, BossHair);
             c.Rect((int)o + 35, 18, (int)o + 36, 18, new Color(0.25f, 0.22f, 0.2f));
             c.Line(new Vector2(o + 29f, 13f), new Vector2(o + 30f, 19f), 1f, Gold);
+            c.Outline(Outline);
+        });
+
+        // Схватил пистолет со стола и навёл на Рэя: обе руки вытянуты вперёд, ствол на линии прицела (y = 16)
+        public static Sprite TargetAim() => Create("target_aim", 32, 32, c =>
+        {
+            Vector2 grip = new Vector2(22.5f, 16f);
+            c.Line(new Vector2(12f, 9f), grip - new Vector2(0f, 0.9f), 2.6f, BossSuitShade);
+            c.Line(new Vector2(12f, 23f), new Vector2(12f, 9f), 8f, BossSuit);
+            c.Line(new Vector2(9.5f, 23f), new Vector2(9.5f, 9f), 2f, BossSuitShade);
+            c.Line(new Vector2(13f, 23f), grip + new Vector2(0f, 0.9f), 2.6f, BossSuit);
+            c.Circle(grip.x, grip.y, 2.1f, BossSkin);
+            // Пистолет: воронёный, хромированный затвор
+            c.Rect(24, 15, 30, 17, new Color(0.18f, 0.18f, 0.22f));
+            c.Rect(25, 17, 29, 17, new Color(0.6f, 0.62f, 0.7f));
+            c.Line(new Vector2(15f, 20f), new Vector2(17f, 16f), 1f, Gold);
+            c.Line(new Vector2(17f, 16f), new Vector2(15f, 12f), 1f, Gold);
+            DrawBossHead(c, 12f);
             c.Outline(Outline);
         });
 

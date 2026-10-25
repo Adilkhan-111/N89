@@ -66,11 +66,14 @@ namespace N89.UI
             _subtitle.maxVisibleCharacters = 0;
             _subtitle.ForceMeshUpdate();
             int total = _subtitle.textInfo.characterCount;
+            N89.Core.Sfx.Ui(N89.Core.Sfx.Stinger);
 
             yield return new WaitForSecondsRealtime(0.8f);
             for (float shown = 0f; shown < total; shown += _subtitleCharsPerSecond * Time.unscaledDeltaTime)
             {
-                _subtitle.maxVisibleCharacters = Mathf.FloorToInt(shown);
+                int visible = Mathf.FloorToInt(shown);
+                if (visible > _subtitle.maxVisibleCharacters && visible > 0) N89.Core.Sfx.Typing(_subtitle.textInfo.characterInfo[visible - 1].character);
+                _subtitle.maxVisibleCharacters = visible;
                 yield return null;
             }
 

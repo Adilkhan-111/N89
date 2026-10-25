@@ -21,8 +21,21 @@ namespace N89.UI
                 return;
             }
 
+            // Новая задача — короткий сигнал (обновление счётчика «N/13» — тоже, но тише)
+            if (text.Length > 0)
+            {
+                bool counterOnly = _label.text.Length > 0 && CommonPrefix(_label.text, text) >= Mathf.Min(_label.text.Length, text.Length) - 5;
+                N89.Core.Sfx.Ui(N89.Core.Sfx.Objective, counterOnly ? 0.35f : 0.8f);
+            }
             _label.text = text;
             _flashUntil = Time.unscaledTime + 0.4f;
+        }
+
+        private static int CommonPrefix(string a, string b)
+        {
+            int n = 0;
+            while (n < a.Length && n < b.Length && a[n] == b[n]) n++;
+            return n;
         }
 
         private void Update()

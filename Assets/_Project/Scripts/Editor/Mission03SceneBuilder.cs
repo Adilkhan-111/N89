@@ -20,7 +20,7 @@ namespace N89.EditorTools
     // Собирает миссию 3 — башня «Арка Системс»: 4 этажа широких коридоров, охрана и дроны, наверху лаборатория с реликвией.
     // Этажи по схемам от команды: герой приезжает на машине, заходит с улицы снизу (в отводок коридора), зачищает этаж,
     // на верхнем лифте поднимается на второй (BuildFloor2), третий (BuildFloor3, засада) и в лабораторию (BuildFloor4:
-    // противостояние, начальник, сейф с relic), потом на лифте вниз и к машине. Камер на этой миссии нет. Взлома нет — вместо него Сандевистан (TAB, шкала энергии вместо RAM).
+    // противостояние, начальник, сейф с relic), потом на лифте вниз и к машине. Камер на этой миссии нет. Взлома нет — вместо него E.N.A (TAB, шкала энергии вместо RAM).
     // Координаты — в юнитах схемы, как в миссиях 1–2 (1 юнит = 24 px, мир = схема × S = 0.6), левый нижний угол — (0, 0).
     // Этаж 40.8 x 25: слева зал с ковром буквой Г (сверху уходит вправо широким коридором), посередине коридор к лифтам
     // с отводком вниз, справа снизу склад буквой Г (ящики, скамья). Справа — две кабины лифта: верхняя (выход наверх) и нижняя — не работает, створки закрыты.
@@ -99,7 +99,7 @@ namespace N89.EditorTools
                 SpriteFactory.HeroLegs("hero_legs_pass", 2f), SpriteFactory.HeroLegs("hero_legs_right", -9f),
             }, 0.65f, 0.32f, common, 0, SpriteFactory.HeroDead());
             GameObject guardPrefab = EnemyPrefab("ArkaGuard", "ОХРАНА // АРКА СИСТЕМС", SpriteFactory.ArkaGuard(), 1, 0.5f, 0.6f,
-                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.ArkaGuardDead());
+                common.EnemyBullet, common.Muzzle, common.Blood, common.BloodPool, common.ShortCircuit, common.Electric, true, SpriteFactory.ArkaGuardDead(), new Color(0.2f, 0.22f, 0.27f));
             GameObject dronePrefab = EnemyPrefab("ArkaDrone", "БОЕВОЙ ДРОН // АРКА", SpriteFactory.CombatDrone(), 2, 0.75f, 0.6f,
                 common.EnemyBullet, common.Muzzle, common.Explosion, common.Remains, common.ShortCircuit, common.Electric, false);
             // Солдаты Корпорации Е: врываются в башню, если Рэй откажется отдать relic
@@ -192,7 +192,7 @@ namespace N89.EditorTools
 
             // --- UI и сценарий ---
             HudRefs hud = BuildHud(hero.GetComponent<HackingController>(), mono, audiowide, "МИССИЯ 3 ВЫПОЛНЕНА", "MainMenu");
-            // Сандевистан вместо взлома: HackingController выключен (TAB и 1–3 его не будят), RAM в HUD прячет MissionDirector
+            // E.N.A вместо взлома: HackingController выключен (TAB и 1–3 его не будят), RAM в HUD прячет MissionDirector
             hero.GetComponent<HackingController>().enabled = false;
             Sandevistan sandevistan = AddSandevistan(hero, (RectTransform)hud.HackingHud.transform, mono, audiowide);
             Banner banner = BuildBanner(hud.Fader.transform, mono);
@@ -214,7 +214,7 @@ namespace N89.EditorTools
 
                 SetArray(so, "_armImplants", new Object[] { hero.GetComponent<GorillaArms>(), hero.GetComponent<BladeArms>() });
                 SetStrings(P(so, "_armImplantIds"), "GorillaArms", "BladeArms");
-                SetStrings(P(so, "_armImplantTitles"), "РУКИ ГОРИЛЛЫ", "РУКИ-ЛЕЗВИЯ");
+                SetStrings(P(so, "_armImplantTitles"), "GORILLA HANDS", "BLADE HANDS");
                 SetStrings(P(so, "_armImplantHints"), "ПКМ — РЫВОК С УДАРОМ   ·   ЗАЖАТЬ ПКМ — БЛОК", "ПКМ — УДАР ЛЕЗВИЕМ   ·   ПО ПУЛЕ — ОТБИТЬ");
 
                 P(so, "_title").stringValue = "МИССИЯ 3";
@@ -261,10 +261,11 @@ namespace N89.EditorTools
                 SetArray(so, "_standoffEnemies", floor4.Standoff);
                 P(so, "_standoffZone").rectValue = floor4.StandoffZone;
                 P(so, "_standoffTitle").stringValue = "ОНИ ЖДУТ";
-                P(so, "_standoffHint").stringValue = "TAB — Сандевистан";
+                P(so, "_standoffHint").stringValue = "TAB — E.N.A";
                 P(so, "_target").objectReferenceValue = floor4.Target;
                 P(so, "_targetBody").objectReferenceValue = floor4.TargetBody;
                 P(so, "_targetStanding").objectReferenceValue = SpriteFactory.TargetStanding();
+                P(so, "_targetAim").objectReferenceValue = SpriteFactory.TargetAim();
                 P(so, "_targetDead").objectReferenceValue = SpriteFactory.TargetDead();
                 P(so, "_deskPoint").vector2Value = floor4.DeskPoint;
                 P(so, "_bloodFxPrefab").objectReferenceValue = common.Blood;
@@ -312,6 +313,7 @@ namespace N89.EditorTools
                 P(so, "_exitZone").rectValue = WorldRect(new Vector2(EntranceFrom - 0.5f, -3.2f), new Vector2(EntranceTo + 0.5f, -0.5f));
                 P(so, "_insidePoint").vector2Value = V((EntranceFrom + EntranceTo) * 0.5f, 3.5f);
                 P(so, "_heroLying").objectReferenceValue = SpriteFactory.HeroDead();
+                P(so, "_heroHit").objectReferenceValue = SpriteFactory.HeroHit();
                 P(so, "_endingScene").stringValue = EndingSceneBuilder.SceneName;
                 SetObjects(P(so, "_corpCars"), corpCars);
                 P(so, "_streetCamPoint").objectReferenceValue = streetCamPoint;
@@ -339,7 +341,7 @@ namespace N89.EditorTools
             Debug.Log($"[N89] Миссия 3 собрана: {path}");
         }
 
-        // ---------------------------------------------------------------- Сандевистан
+        // ---------------------------------------------------------------- E.N.A
 
         // Компонент на героя и его HUD: на месте RAM (слева снизу) — панель со шкалой энергии,
         // на весь экран — синий фильтр с подписью, пока ускорение включено
@@ -354,7 +356,7 @@ namespace N89.EditorTools
             tint.rectTransform.SetAsFirstSibling();
             CanvasGroup overlay = Group(tint.gameObject, 0f);
             overlay.blocksRaycasts = false;
-            TextMeshProUGUI overlayLabel = Text("Label", tint.rectTransform, mono, "САНДЕВИСТАН // УСКОРЕНИЕ", 26f, yellow, TextAlignmentOptions.Center);
+            TextMeshProUGUI overlayLabel = Text("Label", tint.rectTransform, mono, "E.N.A // УСКОРЕНИЕ", 26f, yellow, TextAlignmentOptions.Center);
             Anchor(overlayLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(800f, 40f));
 
             RectTransform panel = Anchor(MainMenuSceneBuilder.CreateRect("Sandevistan", canvasRect), Vector2.zero, Vector2.zero, new Vector2(40f, 40f), new Vector2(width, 80f));
@@ -362,7 +364,7 @@ namespace N89.EditorTools
             Anchor(back.rectTransform, Vector2.zero, Vector2.zero, new Vector2(-16f, -14f), new Vector2(width + 26f, 112f));
             Image edge = Img("Edge", panel, blue);
             Anchor(edge.rectTransform, Vector2.zero, Vector2.zero, new Vector2(-16f, -14f), new Vector2(4f, 112f));
-            TextMeshProUGUI header = Text("Header", panel, mono, "ВОЕННЫЙ ИМПЛАНТ // САНДЕВИСТАН", 16f, blue, TextAlignmentOptions.BottomLeft);
+            TextMeshProUGUI header = Text("Header", panel, mono, "E.N.A // ELECTRIC NEURONS AMPLIFIER", 16f, blue, TextAlignmentOptions.BottomLeft);
             Anchor(header.rectTransform, Vector2.zero, Vector2.zero, new Vector2(0f, 72f), new Vector2(width, 22f));
             TextMeshProUGUI label = Text("Label", panel, audiowide, "TAB  //  ЭНЕРГИЯ", 26f, Cyan, TextAlignmentOptions.BottomLeft);
             Anchor(label.rectTransform, Vector2.zero, Vector2.zero, new Vector2(0f, 30f), new Vector2(width, 40f));

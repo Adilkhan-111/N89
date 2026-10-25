@@ -15,24 +15,71 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
-        // Финал: Рэй на свалке — без рук и имплантов, ползёт (голова вправо, +x). На плечах — пустые разъёмы,
-        // ноги волочатся позади
-        public static Sprite HeroCrawl() => Create("hero_crawl", 40, 24, c =>
+        private static readonly Color HeroBlood = new Color(0.5f, 0.03f, 0.06f);
+        private static readonly Color HeroBloodLight = new Color(0.75f, 0.08f, 0.1f);
+
+        // Финал: Рэй на свалке, едва живой — без рук и имплантов, ползёт на животе, отталкиваясь ногами
+        // (голова вправо, +x). Кадры: 0 — ноги подтянуты, 1 — толкается левой, 2 — вытянулся вперёд,
+        // 3 — толкается правой. Куртка в дырах и крови, из плечевых разъёмов сыплются искры
+        public static Sprite HeroCrawl(int frame) => Create(frame == 0 ? "hero_crawl" : $"hero_crawl_{frame}", 48, 28, c =>
         {
-            c.Line(new Vector2(4f, 9f), new Vector2(17f, 10.5f), 4.5f, HeroPants);
-            c.Line(new Vector2(3f, 15.5f), new Vector2(17f, 13.5f), 4.5f, HeroPants);
-            c.Ellipse(2.5f, 9f, 2.2f, 2.4f, HeroBoots);
-            c.Ellipse(2f, 15.5f, 2.2f, 2.4f, HeroBoots);
-            c.Ellipse(23f, 12f, 8f, 6.5f, HeroShirt);
-            c.Line(new Vector2(18f, 12f), new Vector2(29f, 12f), 2f, HeroJacketShade);
-            // Обрубки рук: тёмный металл и искрящий разъём
-            c.Circle(26f, 5.5f, 2.2f, new Color(0.2f, 0.2f, 0.24f));
-            c.Circle(26f, 18.5f, 2.2f, new Color(0.2f, 0.2f, 0.24f));
-            c.Rect(26, 4, 26, 4, new Color(0.3f, 1f, 1f));
-            c.Rect(26, 19, 26, 19, new Color(0.3f, 1f, 1f));
-            c.Circle(33f, 12f, 4.4f, HeroHair);
-            c.Rect(35, 11, 36, 13, HeroHairLight);
+            // Ноги: бедро → колено → стопа. Нижняя нога — y < 14, верхняя — y > 14
+            Vector2[] bent = { new Vector2(18f, 11f), new Vector2(12f, 4.5f), new Vector2(6f, 8.5f) };
+            Vector2[] straight = { new Vector2(18f, 11f), new Vector2(10f, 10.5f), new Vector2(2.5f, 10.5f) };
+            Vector2[] low = frame == 0 || frame == 3 ? bent : straight;
+            Vector2[] high = frame == 0 || frame == 1 ? bent : straight;
+            foreach (Vector2[] leg in new[] { low, Mirror(high) })
+            {
+                c.Line(leg[0], leg[1], 4f, HeroPants);
+                c.Line(leg[1], leg[2], 3.6f, HeroPants);
+                c.Ellipse(leg[2].x, leg[2].y, 2.2f, 2f, HeroBoots);
+            }
+            c.Rect((int)low[1].x, (int)low[1].y, (int)low[1].x + 1, (int)low[1].y, HeroBlood);
+
+            // Корпус: вытянулся — чуть длиннее и дальше вперёд
+            float shift = frame == 2 ? 1f : frame == 0 ? -1f : 0f;
+            float cx = 27f + shift;
+            c.Ellipse(cx, 14f, frame == 2 ? 8.6f : 7.8f, 6.4f, HeroJacket);
+            c.Line(new Vector2(cx - 6f, 14f), new Vector2(cx + 5f, 14f), 1.6f, HeroJacketShade);
+            // Дыры от пуль и кровь на спине
+            c.Circle(cx - 2f, 10.5f, 1.6f, HeroBlood);
+            c.Circle(cx + 3f, 17.5f, 1.3f, HeroBlood);
+            c.Rect((int)cx - 2, 10, (int)cx - 2, 10, HeroBloodLight);
+            c.Rect((int)cx + 3, 17, (int)cx + 3, 17, HeroBloodLight);
+            c.Rect((int)cx - 5, 16, (int)cx - 4, 17, HeroShirt);
+
+            // Обрубки рук: тёмный металл, оборванные провода, искра мигает через кадр
+            Color steel = new Color(0.2f, 0.2f, 0.24f);
+            c.Circle(cx + 3f, 7.5f, 2.3f, steel);
+            c.Circle(cx + 3f, 20.5f, 2.3f, steel);
+            c.Line(new Vector2(cx + 4f, 6f), new Vector2(cx + 6f, 4f), 1f, new Color(0.9f, 0.3f, 0.2f));
+            c.Line(new Vector2(cx + 4f, 22f), new Vector2(cx + 5.5f, 24f), 1f, new Color(0.3f, 0.5f, 0.9f));
+            Color spark = frame % 2 == 0 ? new Color(0.3f, 1f, 1f) : CpYellow;
+            c.Rect((int)cx + 3, 6 - frame % 2, (int)cx + 3, 6 - frame % 2, spark);
+            c.Rect((int)cx + 2, 22 + frame % 2, (int)cx + 2, 22 + frame % 2, spark);
+
+            // Голова опущена; у виска — бирюзовый relic
+            float hx = 36.5f + shift;
+            c.Circle(hx, 14f, 4.4f, HeroHair);
+            c.Rect((int)hx, 12, (int)hx + 2, 13, HeroHairLight);
+            c.Rect((int)hx + 1, 17, (int)hx + 2, 17, new Color(0.3f, 1f, 1f));
             c.Outline(Outline);
+        });
+
+        private static Vector2[] Mirror(Vector2[] points)
+        {
+            var result = new Vector2[points.Length];
+            for (int i = 0; i < points.Length; i++) result[i] = new Vector2(points[i].x, 28f - points[i].y);
+            return result;
+        }
+
+        // Кровавый след за ползущим Рэем (вдоль +x): мазок и пара капель
+        public static Sprite HeroBloodSmear() => Create("hero_blood_smear", 14, 10, c =>
+        {
+            c.Ellipse(6.5f, 5f, 5.5f, 2.4f, new Color(HeroBlood.r, HeroBlood.g, HeroBlood.b, 0.85f));
+            c.Ellipse(8f, 5.5f, 3f, 1.2f, new Color(HeroBloodLight.r, HeroBloodLight.g, HeroBloodLight.b, 0.8f));
+            c.Rect(1, 8, 1, 8, HeroBlood);
+            c.Rect(12, 1, 12, 1, HeroBlood);
         });
 
         // Лежащий Рэй для вставки relic: как hero_dead (DrawCorpse), но без правой руки — её рисует сценарий

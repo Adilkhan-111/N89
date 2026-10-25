@@ -64,7 +64,7 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
-        // Заглушка "Руки гориллы": механический кулак с жёлтыми гидравлическими поршнями
+        // Заглушка "Gorilla hands": механический кулак с жёлтыми гидравлическими поршнями
         public static Sprite IconGorillaArms() => Create("implant_gorilla_arms", 48, 48, c =>
         {
             Color steel = new Color(0.45f, 0.46f, 0.52f);
@@ -82,7 +82,7 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
-        // Сандевистан: позвоночник из сегментов, по нему бежит зелёный свет
+        // E.N.A: позвоночник из сегментов, по нему бежит зелёный свет
         public static Sprite IconSandevistan() => Create("implant_sandevistan", 48, 48, c =>
         {
             Color metal = new Color(0.55f, 0.57f, 0.65f);

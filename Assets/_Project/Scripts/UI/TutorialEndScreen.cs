@@ -82,6 +82,7 @@ namespace N89.UI
             {
                 float k = 1f - Mathf.Pow(1f - t / 1.2f, 3f);
                 SetScore(Mathf.RoundToInt(score.Score * k));
+                if (score.Score > 0) N89.Core.Sfx.Ui(N89.Core.Sfx.ScoreTick, 1f, 1f + 0.5f * k);
                 yield return null;
             }
             SetScore(score.Score);
@@ -105,6 +106,7 @@ namespace N89.UI
             rankRoot.localScale = Vector3.one;
             rankRoot.localRotation = Quaternion.Euler(0f, 0f, -8f);
             // Удар: короткая тряска печати
+            N89.Core.Sfx.Ui(N89.Core.Sfx.RankStamp);
             Vector3 home = rankRoot.localPosition;
             for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
             {

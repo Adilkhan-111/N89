@@ -852,7 +852,7 @@ namespace N89.EditorTools
         // Враг корпорации Е: видит, реагирует, стреляет; взламывается «Коротким замыканием»
         internal static GameObject EnemyPrefab(string name, string deviceName, Sprite sprite, int health, float cooldown, float reaction,
             Bullet bullet, GameObject muzzleFx, GameObject deathFx, GameObject remains, QuickhackData shortCircuit, GameObject electricFx,
-            bool chases, Sprite corpse = null)
+            bool chases, Sprite corpse = null, Color? pants = null)
         {
             var root = new GameObject(name) { layer = EnemyLayer };
             Rigidbody2D rb = root.AddComponent<Rigidbody2D>();
@@ -862,6 +862,12 @@ namespace N89.EditorTools
 
             SpriteRenderer body = CreateSprite("Body", root.transform, sprite, Vector2.zero, 10);
             body.gameObject.layer = EnemyLayer;
+            // Люди ходят ногами (шаг анимируется и в патруле, и в катсценах); дроны летают
+            if (chases)
+            {
+                Sprite[] legs = SpriteFactory.EnemyLegs(name.ToLowerInvariant(), pants ?? new Color(0.1f, 0.1f, 0.13f));
+                AddLegs(root, rb, legs[0], legs[1], legs[2], legs[3], 0.42f);
+            }
             Transform muzzle = new GameObject("Muzzle").transform;
             muzzle.SetParent(body.transform, false);
             muzzle.localPosition = new Vector3(0.6f, 0f, 0f);
@@ -1310,8 +1316,10 @@ namespace N89.EditorTools
             Button resume = PauseButton(panel.rectTransform, mono, "ПРОДОЛЖИТЬ", 40f);
             Button restart = PauseButton(panel.rectTransform, mono, "ЗАНОВО", -60f);
             Button menu = PauseButton(panel.rectTransform, mono, "ГЛАВНОЕ МЕНЮ", -160f);
+            Button music = PauseButton(panel.rectTransform, mono, "МУЗЫКА 100%", -260f);
+            Button sfx = PauseButton(panel.rectTransform, mono, "ЗВУКИ 100%", -360f);
             TextMeshProUGUI hint = Text("Hint", panel.rectTransform, mono, "ESC — продолжить", 22f, new Color(1f, 0.7f, 0.9f, 0.6f), TextAlignmentOptions.Center);
-            Anchor(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -260f), new Vector2(600f, 30f));
+            Anchor(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -450f), new Vector2(600f, 30f));
 
             PauseMenu pause = panel.gameObject.AddComponent<PauseMenu>();
             Configure(pause, so =>
@@ -1320,6 +1328,8 @@ namespace N89.EditorTools
                 P(so, "_resumeButton").objectReferenceValue = resume;
                 P(so, "_restartButton").objectReferenceValue = restart;
                 P(so, "_menuButton").objectReferenceValue = menu;
+                P(so, "_musicButton").objectReferenceValue = music;
+                P(so, "_sfxButton").objectReferenceValue = sfx;
             });
             return pause;
         }

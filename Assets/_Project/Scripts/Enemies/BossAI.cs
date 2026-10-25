@@ -97,6 +97,8 @@ namespace N89.Enemies
             _target = target;
             _targetHealth = target.GetComponent<Health>();
             _cameraFollow = FindAnyObjectByType<CameraFollow>();
+            // Катсцена могла развернуть корпус — прицел начинается оттуда, без рывка
+            _aim = _body.right;
             IsFighting = true;
             StartCoroutine(Fight());
         }
@@ -222,6 +224,7 @@ namespace N89.Enemies
         {
             _mode = Mode.Gun;
             Vector3 rest = _body.localPosition;
+            N89.Core.Sfx.Play(N89.Core.Sfx.MinigunSpin, transform.position, 1f, 0.8f / Mathf.Max(0.2f, _spinUp));
             for (float t = 0f; t < _spinUp; t += Time.deltaTime)
             {
                 if (_minigunGlow != null) _minigunGlow.intensity = Mathf.Lerp(0f, 1.6f, t / _spinUp);
@@ -263,6 +266,7 @@ namespace N89.Enemies
             HideDashes();
             Rocket rocket = Instantiate(_rocketPrefab, _launcher.position, Quaternion.identity);
             rocket.Launch(_aim, transform);
+            N89.Core.Sfx.Play(N89.Core.Sfx.RocketLaunch, _launcher.position);
             if (_cameraFollow != null) _cameraFollow.Shake(0.15f, 0.12f);
             _aimLocked = false;
             _mode = Mode.Track;

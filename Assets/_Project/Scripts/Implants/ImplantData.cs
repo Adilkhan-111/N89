@@ -3,7 +3,7 @@ using UnityEngine;
 namespace N89.Implants
 {
     // Киберимплант: на миссиях 1–2 даётся ровно один — тот, у которого совпадает номер миссии.
-    // На миссии 3 Сандевистан встроен (_builtIn), а на руки — выбор из имплантов с _extraMission = 3.
+    // На миссии 3 E.N.A встроен (_builtIn), а на руки — выбор из имплантов с _extraMission = 3.
     [CreateAssetMenu(menuName = "N89/Implant", fileName = "Implant")]
     public class ImplantData : ScriptableObject
     {

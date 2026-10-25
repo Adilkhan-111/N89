@@ -1,4 +1,5 @@
 using N89.Missions;
+using N89.UI;
 using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -83,8 +84,15 @@ namespace N89.EditorTools
             Vector2 start = new Vector2(0f, Area.yMax - 11f);
             Transform hero = new GameObject("Bryce").transform;
             hero.position = start;
-            SpriteRenderer body = CreateSprite("Body", hero, SpriteFactory.HeroCrawl(), start, 10, true, 90f);
+            var crawlFrames = new Sprite[4];
+            for (int i = 0; i < crawlFrames.Length; i++) crawlFrames[i] = SpriteFactory.HeroCrawl(i);
+            SpriteRenderer body = CreateSprite("Body", hero, crawlFrames[0], Vector2.zero, 10, true, 90f);
             body.transform.localScale = Vector3.one * 1.3f;
+            // Лужа под ним — там, где очнулся; дальше за ним тянется след (EndingDirector)
+            CreateSprite("BloodPool", yard, SpriteFactory.HeroBloodSmear(), start + new Vector2(0f, -0.3f), 5, true, 80f)
+                .transform.localScale = new Vector3(2.4f, 2f, 1f);
+            // Маркер «куда ползти»: стрелка у героя и маркер над светом
+            WaypointArrow waypoint = Mission01SceneBuilder.BuildWaypoint(hero);
             // Relic в голове светится бирюзовым — по нему Рэя и видно в темноте
             Mission01SceneBuilder.Pulsing(AddLight(hero, "RelicGlow", start, new Color(0.3f, 1f, 1f), 2.6f, 0.9f), 1.5f, 0.6f, 1f);
             cam.transform.position = new Vector3(start.x, start.y + 1.5f, -10f);
@@ -110,6 +118,11 @@ namespace N89.EditorTools
             {
                 P(so, "_hero").objectReferenceValue = hero;
                 P(so, "_heroBody").objectReferenceValue = body.transform;
+                SerializedProperty frames = P(so, "_crawlFrames");
+                frames.arraySize = crawlFrames.Length;
+                for (int i = 0; i < crawlFrames.Length; i++) frames.GetArrayElementAtIndex(i).objectReferenceValue = crawlFrames[i];
+                P(so, "_bloodSmear").objectReferenceValue = SpriteFactory.HeroBloodSmear();
+                P(so, "_waypoint").objectReferenceValue = waypoint;
                 P(so, "_camera").objectReferenceValue = cam;
                 P(so, "_area").rectValue = Area;
                 P(so, "_lightPoint").objectReferenceValue = lightPoint;

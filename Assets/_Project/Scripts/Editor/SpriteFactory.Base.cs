@@ -262,6 +262,42 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Ноги охраны и бандитов для анимации шага, как у героя (смотрят вправо, +x): стоит, левый шаг,
+        // проход, правый шаг. Бёдра — под плечами стрелка (DrawShooter)
+        public static Sprite[] EnemyLegs(string prefix, Color pants) => new[]
+        {
+            EnemyLeg($"{prefix}_legs_idle", 0f, pants),
+            EnemyLeg($"{prefix}_legs_left", 8f, pants),
+            EnemyLeg($"{prefix}_legs_pass", 2f, pants),
+            EnemyLeg($"{prefix}_legs_right", -8f, pants),
+        };
+
+        private static Sprite EnemyLeg(string name, float stride, Color pants) => Create(name, 32, 32, c =>
+        {
+            Color boots = new Color(0.06f, 0.06f, 0.07f);
+            DrawLeg(c, new Vector2(11f, 19.5f), new Vector2(12f + stride, 20.5f), 4.5f, pants, boots, 3f, 2.2f);
+            DrawLeg(c, new Vector2(11f, 12.5f), new Vector2(12f - stride, 11.5f), 4.5f, pants, boots, 3f, 2.2f);
+            c.Outline(Outline);
+        });
+
+        // Рэй ловит пули: отброшен назад, руки разлетелись, спереди — брызги крови (вид сверху, лицом +x)
+        public static Sprite HeroHit() => Create("hero_hit", 32, 32, c =>
+        {
+            c.Line(new Vector2(12f, 25f), new Vector2(6f, 29.5f), 3f, HeroJacket);
+            c.Circle(5f, 30f, 1.6f, HeroSkin);
+            c.Line(new Vector2(12f, 7f), new Vector2(18.5f, 3f), 3f, HeroJacketShade);
+            c.Circle(19.5f, 2.5f, 1.6f, HeroSkinShade);
+            DrawHeroTorso(c, 12f);
+            c.Rect(16, 17, 17, 18, HeroBlood);
+            c.Rect(17, 12, 18, 12, HeroBlood);
+            c.Outline(Outline);
+            // Брызги — без обводки, летят вперёд от ран
+            c.Rect(20, 19, 20, 19, HeroBloodLight);
+            c.Rect(22, 15, 22, 15, HeroBloodLight);
+            c.Rect(21, 11, 21, 11, HeroBlood);
+            c.Rect(24, 17, 24, 17, HeroBlood);
+        });
+
         // Рэй: бордовая куртка, чёрные волосы, неоновый имплант на виске
         public static Sprite HeroDead() => Create("hero_dead", 48, 32, c =>
         {

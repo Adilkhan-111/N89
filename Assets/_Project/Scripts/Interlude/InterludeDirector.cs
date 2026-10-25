@@ -217,6 +217,7 @@ namespace N89.Interlude
             _heroBody.transform.rotation = _streetSpawn.rotation;
             _cameraFollow.SnapToTarget();
 
+            N89.Core.Sfx.Ui(N89.Core.Sfx.ElevatorDing, 0.7f);
             yield return _fader.Fade(1f, 0f, 0.5f);
             _streetDoor.Open();
             yield return new WaitForSeconds(0.4f);
@@ -242,9 +243,8 @@ namespace N89.Interlude
             StartCoroutine(Letterbox(_letterboxHeight, 0.5f));
 
             Vector2 door = _car.DoorFor(_hero.transform.position);
-            Vector2 dir = door - (Vector2)_hero.transform.position;
-            _heroBody.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
-            yield return Move(_hero.transform, _hero.transform.position, door, 0.35f);
+            yield return N89.Core.Cutscene.Walk(_hero.transform, _heroBody.transform, door, 3.5f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.Door, door, 0.6f);
             _hero.gameObject.SetActive(false);
             _cameraFollow.Shake(0.05f, 0.15f);
             yield return new WaitForSeconds(0.6f);
@@ -320,6 +320,7 @@ namespace N89.Interlude
             }
 
             // Запись рвётся помехами — гарнитура снята
+            N89.Core.Sfx.Ui(N89.Core.Sfx.HackFail, 0.8f);
             for (int i = 0; i < 6; i++)
             {
                 _braindanceOverlay.alpha = i % 2 == 0 ? 0.15f : 1f;
@@ -337,10 +338,12 @@ namespace N89.Interlude
             Vector3 table = headset.position;
             _headsetOnTable.enabled = true;
             yield return Move(headset, _sitPoint.position + _sitPoint.right * 0.3f, table, 0.6f);
+            N89.Core.Sfx.Play(N89.Core.Sfx.DryFire, table);
             yield return new WaitForSeconds(0.9f);
 
             // Вибрация импланта-коммуникатора: пишет оператор
             _cameraFollow.Shake(0.05f, 0.2f);
+            N89.Core.Sfx.Ui(N89.Core.Sfx.Vibrate);
             yield return new WaitForSeconds(0.6f);
             yield return BossBriefing();
             _cameraFollow.Focus(_sitPoint, 4f);
@@ -367,6 +370,7 @@ namespace N89.Interlude
             for (int i = 0; i < 5; i++)
             {
                 _glitchLight.enabled = i % 2 == 0;
+                if (i % 2 == 0) N89.Core.Sfx.Ui(N89.Core.Sfx.LampFlicker, 0.6f);
                 if (i == 2) _cameraFollow.Shake(0.03f, 0.1f);
                 yield return new WaitForSeconds(0.08f + 0.06f * i);
             }
@@ -395,6 +399,7 @@ namespace N89.Interlude
             yield return Breathe(body, 2f);
 
             _cameraFollow.Shake(0.05f, 0.2f);
+            N89.Core.Sfx.Ui(N89.Core.Sfx.Vibrate);
             yield return new WaitForSeconds(0.6f);
             yield return BossBriefing();
         }

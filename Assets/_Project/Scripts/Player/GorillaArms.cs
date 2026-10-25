@@ -6,7 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace N89.Player
 {
-    // Киберимплант «Руки гориллы» (миссия 1).
+    // Киберимплант «Gorilla hands» (миссия 1).
     // Нажать ПКМ — рывок вперёд (туда, куда смотрит корпус) с ударом в конце: удар дробит врага насмерть
     // и отшвыривает тело далеко назад, до стены.
     // Зажать ПКМ — блок: руки закрывают от пуль, держит 3 попадания (каждое — треть шкалы), после третьего
@@ -205,7 +205,7 @@ namespace N89.Player
             _player.WeaponLocked = true;
 
             Vector2 dir = _body.right;
-            // Сандевистан: мир замедлен, а рывок — в темпе героя (TimeCompensation)
+            // E.N.A: мир замедлен, а рывок — в темпе героя (TimeCompensation)
             float pace = _player.TimeCompensation;
             float speed = _dashDistance / _dashDuration * pace;
             float ghostAt = 0f;
@@ -247,7 +247,7 @@ namespace N89.Player
             foreach (Collider2D hit in Physics2D.OverlapCircleAll(point, _strikeRadius, _enemyMask))
             {
                 Health health = hit.GetComponentInParent<Health>();
-                if (health == null || health == _health || health.IsDead) continue;
+                if (health == null || health == _health || health.IsDead || health.Invulnerable) continue;
                 if (Physics2D.Linecast(from, health.transform.position, _wallMask)) continue;
                 return health;
             }

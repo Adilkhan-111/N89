@@ -179,6 +179,7 @@ namespace N89.Enemies
         {
             EnemyAI[] enemies = _enemiesRoot != null ? _enemiesRoot.GetComponentsInChildren<EnemyAI>() : FindObjectsByType<EnemyAI>();
             Vector2 spotted = _target.position;
+            N89.Core.Sfx.Play(N89.Core.Sfx.Alarm, transform.position);
             foreach (EnemyAI enemy in enemies)
             {
                 bool inRange = _alarmRadius <= 0f || Vector2.Distance(enemy.transform.position, spotted) <= _alarmRadius;

@@ -24,11 +24,13 @@ namespace N89.Combat
         // Доля оставшегося здоровья 0..1 (полоса здоровья босса)
         public float Fraction => _maxHealth <= 0 ? 0f : Mathf.Clamp01((float)_health / _maxHealth);
         public Sprite CorpseSprite => _corpseSprite;
-        // Выключить, если тело уложит кто-то другой (катсцена, удар «Рук гориллы» отшвыривает его сам)
+        // Выключить, если тело уложит кто-то другой (катсцена, удар «Gorilla hands» отшвыривает его сам)
         public bool SpawnCorpse { get; set; } = true;
         public event Action<Health> Died;
-        // Защита (блок «Рук гориллы»): вернула true — удар поглощён, урона нет
+        // Защита (блок «Gorilla hands»): вернула true — удар поглощён, урона нет
         public Func<bool> Guard { get; set; }
+        // Сценарная неуязвимость (отряд у входа ждёт катсцену): ни пули, ни добивания имплантами
+        public bool Invulnerable { get; set; }
 
         private void Awake()
         {
@@ -47,7 +49,7 @@ namespace N89.Combat
                 return;
             }
 
-            if (Guard != null && Guard())
+            if (Invulnerable || (Guard != null && Guard()))
             {
                 return;
             }
@@ -67,7 +69,7 @@ namespace N89.Combat
         // Сценарная смерть — мимо блока
         public void Kill()
         {
-            if (IsDead)
+            if (IsDead || Invulnerable)
             {
                 return;
             }

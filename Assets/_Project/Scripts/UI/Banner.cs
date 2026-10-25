@@ -30,6 +30,7 @@ namespace N89.UI
         {
             _title.text = title;
             _subtitle.text = subtitle;
+            N89.Core.Sfx.Ui(N89.Core.Sfx.Banner, 0.8f);
 
             for (float t = 0f; t < 0.25f; t += Time.unscaledDeltaTime)
             {

@@ -2,6 +2,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 namespace N89.UI
 {
@@ -19,6 +20,10 @@ namespace N89.UI
         [SerializeField] private GameObject _bubbleTemplate;
         [SerializeField] private GameObject _attachment;
         [SerializeField] private TMP_Text _attachmentLabel;
+        [Tooltip("Фото во вложении (перед файлом); нет фото — не показывается")]
+        [SerializeField] private GameObject _photo;
+        [SerializeField] private Image _photoImage;
+        [SerializeField] private TMP_Text _photoLabel;
         [SerializeField] private TMP_Text _typingLabel;
         [SerializeField] private CanvasGroup _closeHint;
         [SerializeField] private float _charsPerSecond = 45f;
@@ -30,15 +35,18 @@ namespace N89.UI
             _group.alpha = 0f;
             _bubbleTemplate.SetActive(false);
             _attachment.SetActive(false);
+            if (_photo != null) _photo.SetActive(false);
         }
 
-        public IEnumerator Show(string contact, string topic, string[] messages, string attachment)
+        public IEnumerator Show(string contact, string topic, string[] messages, string attachment,
+            Sprite photo = null, string photoCaption = null)
         {
             foreach (Transform child in _thread)
             {
-                if (child.gameObject != _bubbleTemplate && child.gameObject != _attachment) Destroy(child.gameObject);
+                if (child.gameObject != _bubbleTemplate && child.gameObject != _attachment && child.gameObject != _photo) Destroy(child.gameObject);
             }
             _attachment.SetActive(false);
+            if (_photo != null) _photo.SetActive(false);
             _contactLabel.text = contact;
             _topicLabel.text = topic;
             _typingLabel.text = string.Empty;
@@ -72,6 +80,15 @@ namespace N89.UI
                     yield return null;
                 }
                 label.maxVisibleCharacters = total;
+            }
+
+            if (photo != null && _photo != null)
+            {
+                if (!skip) yield return new WaitForSecondsRealtime(0.5f);
+                _photoImage.sprite = photo;
+                if (_photoLabel != null) _photoLabel.text = photoCaption;
+                _photo.transform.SetAsLastSibling();
+                _photo.SetActive(true);
             }
 
             if (!string.IsNullOrEmpty(attachment))
@@ -113,6 +130,7 @@ namespace N89.UI
         // Дальше / закрыть: Enter, Space или ЛКМ
         private static bool EnterPressed()
         {
+            if (N89.UI.PauseMenu.IsPaused) return false;
             Keyboard kb = Keyboard.current;
             Mouse mouse = Mouse.current;
             return (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame))

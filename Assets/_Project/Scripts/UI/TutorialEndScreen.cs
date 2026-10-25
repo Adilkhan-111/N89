@@ -54,6 +54,7 @@ namespace N89.UI
 
         private void Update()
         {
+            if (N89.UI.PauseMenu.IsPaused) return;
             Keyboard kb = Keyboard.current;
             if (_shown && kb != null && (kb.enterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame))
             {

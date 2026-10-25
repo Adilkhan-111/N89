@@ -2,8 +2,10 @@ using System.Collections;
 using N89.Player;
 using N89.UI;
 using N89.World;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 namespace N89.Interlude
@@ -11,20 +13,32 @@ namespace N89.Interlude
     // Интерлюдия в квартире героя (кличка — Рэй). Начало зависит от _opening:
     //  Sleep (перед миссией 1) — спит на диване, ворочается, просыпается и встаёт; цель — зайти
     //  в ванную, там босс присылает брифинг в мессенджер;
-    //  WatchTv (перед миссией 2) — сидит на диване и смотрит телевизор, босс пишет прямо туда,
-    //  после брифинга Рэй встаёт.
+    //  Braindance (перед миссией 2) — сидит на диване в гарнитуре брейнданса, снимает её, кладёт
+    //  на столик, оператор пишет прямо туда, после брифинга Рэй встаёт.
     // Дальше одинаково: арсенал (выбор оружия и импланта на миссию), входная дверь, коридор
     // мегаблока, в конце коридора экран загрузки миссии.
     public class InterludeDirector : MonoBehaviour
     {
-        public enum Opening { Sleep, WatchTv }
+        public enum Opening { Sleep, Braindance }
 
         [Header("Начало")]
         [SerializeField] private Opening _opening = Opening.Sleep;
-        [Tooltip("WatchTv: откуда камера смотрит в начале — диван и телевизор в кадре")]
-        [SerializeField] private Transform _tvCamPoint;
-        [Tooltip("WatchTv: сколько Рэй смотрит телевизор, пока камера наезжает на него")]
-        [SerializeField] private float _tvDuration = 6f;
+        [Tooltip("Braindance: откуда камера смотрит в начале — диван и столик в кадре")]
+        [SerializeField] private Transform _openingCamPoint;
+        [Tooltip("Braindance: сколько Рэй смотрит запись, пока камера наезжает на него")]
+        [SerializeField] private float _braindanceDuration = 6f;
+
+        [Header("Брейнданс")]
+        [Tooltip("Сидит в гарнитуре")]
+        [SerializeField] private Sprite _braindanceSprite;
+        [Tooltip("Гарнитура на столике: спрятана, пока она на голове")]
+        [SerializeField] private SpriteRenderer _headsetOnTable;
+        [Tooltip("Розовое свечение гарнитуры у головы")]
+        [SerializeField] private Light2D _braindanceLight;
+        [Tooltip("Экран записи: розовый фильтр, подпись, таймлайн")]
+        [SerializeField] private CanvasGroup _braindanceOverlay;
+        [SerializeField] private TMP_Text _braindanceTimecode;
+        [SerializeField] private RectTransform _braindanceProgress;
 
         [Header("Hero")]
         [SerializeField] private PlayerController _hero;
@@ -81,6 +95,9 @@ namespace N89.Interlude
             "Местоположение — в файле. Не подведи.",
         };
         [SerializeField] private string _briefingFile = "ЛОГОВО_БАНДЫ.loc";
+        [Tooltip("Фото во вложении брифинга (необязательно)")]
+        [SerializeField] private Sprite _briefingPhoto;
+        [SerializeField, TextArea] private string _briefingPhotoCaption;
 
         [Header("UI")]
         [SerializeField] private ScreenFader _fader;
@@ -107,9 +124,9 @@ namespace N89.Interlude
             Cursor.visible = false;
             _fader.SetBlack(1f);
 
-            if (_opening == Opening.WatchTv)
+            if (_opening == Opening.Braindance)
             {
-                yield return WatchTv();
+                yield return Braindance();
                 yield return StandUp(rb, standing);
             }
             else
@@ -178,22 +195,56 @@ namespace N89.Interlude
             yield return new WaitForSeconds(1.8f);
         }
 
-        // Перед миссией 2: сидит на диване лицом к телевизору, камера медленно наезжает на него.
-        // Приходит сообщение — брифинг прямо на диване
-        private IEnumerator WatchTv()
+        // Перед миссией 2: сидит на диване в гарнитуре брейнданса, экран в розовом фильтре записи,
+        // камера медленно наезжает. Запись обрывается помехами, Рэй снимает гарнитуру и кладёт
+        // на столик — и тут пишет оператор: брифинг прямо на диване
+        private IEnumerator Braindance()
         {
-            _heroBody.sprite = _sittingSprite;
+            _heroBody.sprite = _braindanceSprite;
             _hero.transform.position = _sitPoint.position;
             _heroBody.transform.rotation = _sitPoint.rotation;
-            _cameraFollow.CutTo(_tvCamPoint);
+            _headsetOnTable.enabled = false;
+            _braindanceLight.enabled = true;
+            _braindanceOverlay.alpha = 0f;
+            _cameraFollow.CutTo(_openingCamPoint);
             Camera.main.orthographicSize = _roamZoom;
 
             yield return ShowTitle();
 
             _cameraFollow.Focus(_sitPoint, 0.5f);
-            yield return _cameraFollow.Zoom(_closeZoom, _tvDuration);
+            StartCoroutine(_cameraFollow.Zoom(_closeZoom, _braindanceDuration));
+            for (float t = 0f; t < _braindanceDuration; t += Time.deltaTime)
+            {
+                float k = t / _braindanceDuration;
+                _braindanceOverlay.alpha = Mathf.Clamp01(t / 1.2f) * (0.85f + 0.15f * Mathf.Sin(t * 3f));
+                _braindanceLight.intensity = 0.9f + 0.4f * Mathf.Sin(t * 4f);
+                int seconds = 192 + (int)(t * 4f);
+                _braindanceTimecode.text = $"REC  00:{seconds / 60:00}:{seconds % 60:00}  >>  ЗАПИСЬ 7/12";
+                _braindanceProgress.anchorMax = new Vector2(Mathf.Lerp(0.24f, 0.61f, k), 1f);
+                yield return null;
+            }
 
-            // Вибрация импланта-коммуникатора: сообщение от босса
+            // Запись рвётся помехами — гарнитура снята
+            for (int i = 0; i < 6; i++)
+            {
+                _braindanceOverlay.alpha = i % 2 == 0 ? 0.15f : 1f;
+                _braindanceLight.intensity = i % 2 == 0 ? 0f : 1.6f;
+                yield return new WaitForSeconds(0.05f + 0.03f * i);
+            }
+            _braindanceOverlay.alpha = 0f;
+            _braindanceLight.enabled = false;
+            _heroBody.sprite = _sittingSprite;
+            _cameraFollow.Shake(0.04f, 0.15f);
+            yield return new WaitForSeconds(0.7f);
+
+            // Кладёт гарнитуру на столик
+            Transform headset = _headsetOnTable.transform;
+            Vector3 table = headset.position;
+            _headsetOnTable.enabled = true;
+            yield return Move(headset, _sitPoint.position + _sitPoint.right * 0.3f, table, 0.6f);
+            yield return new WaitForSeconds(0.9f);
+
+            // Вибрация импланта-коммуникатора: пишет оператор
             _cameraFollow.Shake(0.05f, 0.2f);
             yield return new WaitForSeconds(0.6f);
             yield return BossBriefing();
@@ -244,18 +295,9 @@ namespace N89.Interlude
             _cameraFollow.Focus(_messageCamPoint, 4f);
 
             yield return new WaitForSeconds(0.4f);
-            yield return _messenger.Show(_bossName, _briefingTopic, _briefing, _briefingFile);
+            yield return _messenger.Show(_bossName, _briefingTopic, _briefing, _briefingFile, _briefingPhoto, _briefingPhotoCaption);
 
             _cameraFollow.Focus(null, 0f);
-        }
-
-        private void Update()
-        {
-            Keyboard kb = Keyboard.current;
-            if (kb != null && kb.escapeKey.wasPressedThisFrame)
-            {
-                SceneManager.LoadScene(_menuScene);
-            }
         }
 
         // Грудь медленно поднимается и опускается

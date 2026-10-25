@@ -115,7 +115,13 @@ namespace N89.EditorTools
             Vector2 deskPoint = V(31.1f, 4.4f);
             Rect officeZone = WorldRect(new Vector2(19.2f, 0.5f), new Vector2(45.5f, 11.1f));
             Vector2 officeDoor = V(34.1f, 11.6f);
+            // Верхний пролёт лестницы второго этажа — обратно вниз после катсцены
+            Rect floor2Stairs = WorldRect(new Vector2(2.7f, 24.2f), new Vector2(4.7f, 26.7f));
             s_origin = Vector2.zero;
+            // Внизу герой появляется рядом с лестницей первого этажа, но вне её зоны
+            Transform returnSpawn = new GameObject("ReturnSpawn").transform;
+            returnSpawn.SetParent(level);
+            returnSpawn.position = V(6.4f, 25.4f);
 
             Transform gameplay = new GameObject("Gameplay").transform;
             Vector2 start = V(5.5f, -2.5f);
@@ -176,6 +182,12 @@ namespace N89.EditorTools
                 P(so, "_subtitles").objectReferenceValue = hud.Subtitles;
                 P(so, "_letterboxTop").objectReferenceValue = hud.LetterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = hud.LetterboxBottom;
+
+                // Отход: со второго этажа по лестнице вниз, во двор к машине (припаркована справа от E1)
+                BuildAirCar(gameplay, V(16f, -4.6f), 0f, so);
+                P(so, "_returnZone").rectValue = floor2Stairs;
+                P(so, "_returnSpawn").objectReferenceValue = returnSpawn;
+                P(so, "_returnFacing").floatValue = -90f;
             });
 
             ValidateQuickhacks();
@@ -183,6 +195,36 @@ namespace N89.EditorTools
             AddSceneToBuildSettings(ScenePath, Interlude01SceneBuilder.SceneName);
             AssetDatabase.SaveAssets();
             Debug.Log($"[N89] Миссия 1 собрана: {ScenePath}");
+        }
+
+        // ---------------------------------------------------------------- Машина
+
+        // Летающая машина Рэя на улице (мировые координаты, нос — по angle): кузов на слое Glass (не пройти,
+        // поверх видно), тень, четыре голубые опоры-двигателя (гаснут, пока стоит). Для отхода в конце миссии
+        internal static void BuildAirCar(Transform parent, Vector2 position, float angle, SerializedObject director)
+        {
+            var root = new GameObject("AirCar") { layer = GlassLayer };
+            root.transform.SetParent(parent);
+            root.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, 0f, angle));
+            root.AddComponent<BoxCollider2D>().size = new Vector2(2.5f, 1.2f);
+
+            // CreateSprite ставит локальные координаты — относительно корня машины
+            SpriteRenderer shadow = CreateSprite("Shadow", root.transform, SpriteFactory.AirCarShadow(), new Vector2(0.06f, -0.08f), 2, false);
+            SpriteRenderer body = CreateSprite("Body", root.transform, SpriteFactory.AirCar(), Vector2.zero, 6, true);
+
+            var thrusters = new Light2D[4];
+            Vector2[] pods = { new Vector2(-0.78f, -0.58f), new Vector2(-0.78f, 0.58f), new Vector2(0.78f, -0.55f), new Vector2(0.78f, 0.55f) };
+            for (int i = 0; i < pods.Length; i++)
+            {
+                thrusters[i] = AddLight(body.transform, "Thruster", root.transform.TransformPoint(pods[i]), new Color(0.3f, 1f, 1f), 1.3f, 0f);
+            }
+            // Фары: свет вперёд, чтобы машину было видно в темноте двора
+            AddLight(body.transform, "Headlight", root.transform.TransformPoint(new Vector2(1.8f, 0f)), new Color(0.85f, 1f, 1f), 2.2f, 0.7f);
+
+            P(director, "_car").objectReferenceValue = root.transform;
+            P(director, "_carBody").objectReferenceValue = body;
+            P(director, "_carShadow").objectReferenceValue = shadow.transform;
+            SetArray(director, "_carThrusters", thrusters);
         }
 
         // ---------------------------------------------------------------- Здание

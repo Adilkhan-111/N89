@@ -141,6 +141,7 @@ namespace N89.UI
         // Пропустить реплику: Enter, Space или ЛКМ
         private static bool SkipPressed()
         {
+            if (N89.UI.PauseMenu.IsPaused) return false;
             Keyboard kb = Keyboard.current;
             Mouse mouse = Mouse.current;
             return (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame))

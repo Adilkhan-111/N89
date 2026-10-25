@@ -15,6 +15,7 @@ namespace N89.EditorTools
         private static readonly Color BruteSteelLight = new Color(0.55f, 0.58f, 0.64f);
         private static readonly Color BruteNeon = new Color(1f, 0.3f, 0.15f);
         private static readonly Color BrutePants = new Color(0.27f, 0.3f, 0.2f);
+        private static readonly Color CyberGlow = new Color(0.25f, 0.9f, 1f);
 
         // Вид сверху, смотрит вправо (+x), 2 x 2 юнита. Правая рука (снизу) — пулемёт, ствол на (62, 12);
         // левая (сверху) — ракетница, срез на (58, 51); за спиной ранец с лентой
@@ -36,8 +37,12 @@ namespace N89.EditorTools
             DrawBossTorso(c);
             // Голова опущена — видна макушка с татуировкой
             c.Circle(37f, 32f, 6.5f, BruteSkinShade);
-            c.Line(new Vector2(32f, 30f), new Vector2(42f, 34f), 1.4f, BruteTattoo);
-            c.Rect(42, 31, 43, 32, new Color(0.45f, 0.08f, 0.05f));
+            c.Line(new Vector2(32f, 35f), new Vector2(42f, 37f), 1.4f, BruteTattoo);
+            c.RoundRect(31, 26, 43, 31, 2, BruteSteelDark);
+            c.Rect(33, 28, 33, 28, BruteSteelLight);
+            c.Rect(37, 28, 37, 28, BruteSteelLight);
+            c.Rect(42, 29, 43, 30, new Color(0.45f, 0.08f, 0.05f));
+            c.Line(new Vector2(23f, 32f), new Vector2(30f, 32f), 1f, new Color(0.1f, 0.35f, 0.4f));
             c.Outline(Outline);
         });
 
@@ -50,71 +55,132 @@ namespace N89.EditorTools
             c.Circle(10f, 47f, 4f, new Color(0.06f, 0.06f, 0.07f));
             c.Line(new Vector2(36f, 32f), new Vector2(66f, 32f), 22f, BruteSkin);
             c.Line(new Vector2(40f, 24f), new Vector2(62f, 40f), 3f, new Color(0.12f, 0.1f, 0.08f));
-            for (int i = 0; i < 4; i++) c.Line(new Vector2(44f + i * 5, 22f), new Vector2(46f + i * 5, 42f), 1.4f, BruteTattoo);
+            for (int i = 0; i < 4; i++) c.Line(new Vector2(44f + i * 5, 32f), new Vector2(46f + i * 5, 42f), 1.4f, BruteTattoo);
+            // Броня правой половины торса и погасшие швы имплантов
+            c.RoundRect(38, 21, 66, 31, 3, BruteSteel);
+            c.Line(new Vector2(40f, 30f), new Vector2(64f, 30f), 1f, new Color(0.1f, 0.35f, 0.4f));
+            c.Line(new Vector2(48f, 21f), new Vector2(48f, 31f), 1f, BruteSteelDark);
+            c.Line(new Vector2(56f, 21f), new Vector2(56f, 31f), 1f, BruteSteelDark);
             c.Line(new Vector2(62f, 44f), new Vector2(74f, 58f), 7f, BruteSkinShade);
             c.RoundRect(70, 52, 88, 62, 2, BruteSteelDark);
             c.Line(new Vector2(62f, 20f), new Vector2(70f, 8f), 7f, BruteSteel);
             c.RoundRect(74, 1, 94, 11, 2, BruteSteelDark);
             for (int i = 0; i < 3; i++) c.Rect(78, 3 + i * 3, 94, 3 + i * 3, BruteSteelLight);
             c.Circle(76f, 32f, 8f, BruteSkin);
-            c.Line(new Vector2(70f, 30f), new Vector2(82f, 34f), 1.6f, BruteTattoo);
-            c.Rect(81, 35, 82, 36, new Color(0.4f, 0.06f, 0.04f));
+            c.Line(new Vector2(70f, 34f), new Vector2(82f, 37f), 1.6f, BruteTattoo);
+            c.RoundRect(69, 25, 83, 31, 2, BruteSteel);
+            c.Rect(72, 27, 72, 27, BruteSteelLight);
+            c.Rect(81, 28, 82, 29, new Color(0.4f, 0.06f, 0.04f));
             c.Outline(Outline);
         });
 
         private static void DrawBossBody(PixelCanvas c, bool eyeLit)
         {
             DrawBossPack(c);
-            // Правая рука — кибер-рука с пулемётом: шесть стволов в кожухе
-            c.Line(new Vector2(31f, 15f), new Vector2(44f, 12f), 7f, BruteSteel);
-            c.Line(new Vector2(33f, 13f), new Vector2(42f, 11f), 2f, BruteSteelLight);
-            c.RoundRect(42, 5, 62, 19, 3, BruteSteelDark);
-            for (int i = 0; i < 3; i++) c.Rect(46, 8 + i * 4, 63, 9 + i * 4, BruteSteelLight);
-            c.Rect(42, 5, 45, 19, BruteSteel);
+            // Правая рука — целиком механическая: плечевой шарнир, сегменты с поршнем, локоть-сфера, пулемёт
+            c.Line(new Vector2(30f, 14f), new Vector2(38f, 12f), 6f, BruteSteelDark);
+            c.Line(new Vector2(30f, 15f), new Vector2(38f, 13f), 1.4f, CyberGlow);
+            c.Circle(39f, 12f, 3.6f, BruteSteel);
+            c.Circle(39f, 12f, 1.4f, CyberGlow);
+            c.Line(new Vector2(39f, 12f), new Vector2(45f, 12f), 5f, BruteSteel);
+            c.Line(new Vector2(33f, 9f), new Vector2(44f, 8f), 1.2f, BruteSteelLight);
+            c.RoundRect(43, 5, 62, 19, 3, BruteSteelDark);
+            for (int i = 0; i < 3; i++) c.Rect(47, 8 + i * 4, 63, 9 + i * 4, BruteSteelLight);
+            c.Rect(43, 5, 46, 19, BruteSteel);
+            c.Rect(44, 7, 45, 17, CyberGlow);
             c.Rect(60, 11, 61, 13, BruteNeon);
-            // Левая рука — живая, татуированная, на предплечье ракетница с двумя трубами
-            c.Line(new Vector2(31f, 49f), new Vector2(42f, 52f), 7f, BruteSkin);
-            c.Line(new Vector2(34f, 51f), new Vector2(37f, 52f), 1.6f, BruteTattoo);
+            // Левая рука — живой татуированный бицепс, ниже локтя — стальное предплечье-ракетница
+            c.Line(new Vector2(30f, 50f), new Vector2(39f, 52f), 7f, BruteSkin);
+            c.Line(new Vector2(31f, 52f), new Vector2(38f, 53.5f), 2f, BruteSkinShade);
+            c.Line(new Vector2(32f, 50f), new Vector2(36f, 51f), 1.4f, BruteTattoo);
+            c.Line(new Vector2(36f, 49f), new Vector2(40f, 50f), 1f, CyberGlow);
+            c.Ring(40f, 51f, 3f, 4f, BruteSteelLight);
             c.RoundRect(40, 44, 58, 58, 3, BruteSteel);
+            c.Rect(41, 45, 57, 46, BruteSteelLight);
             c.Ring(55f, 48.5f, 1.2f, 2.6f, BruteSteelDark);
             c.Ring(55f, 54f, 1.2f, 2.6f, BruteSteelDark);
             c.Circle(55f, 48.5f, 1.2f, BruteNeon);
             c.Circle(55f, 54f, 1.2f, BruteNeon);
             c.Rect(42, 50, 50, 51, new Color(1f, 0.55f, 0.15f));
             DrawBossTorso(c);
-            // Лысая голова в татуировках, красный кибер-глаз
-            c.Circle(34f, 32f, 7f, BruteSkin);
-            c.Line(new Vector2(28f, 28f), new Vector2(36f, 25.5f), 1.6f, BruteTattoo);
-            c.Line(new Vector2(28f, 36f), new Vector2(36f, 38.5f), 1.6f, BruteTattoo);
-            c.Rect(38, 30, 41, 35, BruteSkinShade);
-            c.Rect(39, 34, 41, 35, eyeLit ? new Color(1f, 0.15f, 0.1f) : new Color(0.4f, 0.06f, 0.04f));
-            c.Rect(30, 37, 33, 39, BruteSteelLight);
+            DrawBossHead(c, eyeLit);
         }
 
-        // Ранец за спиной: тёмный металл, оранжевая полоса, лента к пулемёту
+        // Лысая голова: левая половина — кожа в татуировках, правая — стальная черепная пластина с заклёпками,
+        // большой красный кибер-глаз, железная челюсть, кабели от затылка к позвоночнику
+        private static void DrawBossHead(PixelCanvas c, bool eyeLit)
+        {
+            c.Line(new Vector2(22f, 29f), new Vector2(29f, 30f), 1.6f, BruteSteelDark);
+            c.Line(new Vector2(22f, 35f), new Vector2(29f, 34f), 1.6f, BruteSteelDark);
+            c.Line(new Vector2(23f, 32f), new Vector2(28f, 32f), 1f, CyberGlow);
+            c.Circle(34f, 32f, 7f, BruteSkin);
+            c.Line(new Vector2(28f, 36f), new Vector2(36f, 38.5f), 1.6f, BruteTattoo);
+            c.Line(new Vector2(29f, 33.5f), new Vector2(35f, 35f), 1f, BruteTattoo);
+            // Стальная половина черепа (правая сторона — к пулемёту)
+            for (int x = 27; x <= 41; x++)
+            for (int y = 25; y <= 31; y++)
+            {
+                float dx = x + 0.5f - 34f, dy = y + 0.5f - 32f;
+                if (dx * dx + dy * dy <= 49f) c.Rect(x, y, x, y, BruteSteel);
+            }
+            c.Line(new Vector2(28f, 31.5f), new Vector2(40f, 31.5f), 1f, BruteSteelDark);
+            c.Rect(30, 27, 30, 27, BruteSteelLight);
+            c.Rect(34, 26, 34, 26, BruteSteelLight);
+            c.Rect(32, 29, 32, 29, CyberGlow);
+            // Нижняя челюсть-протез и глаза: живой слева, кибер-глаз справа со свечением
+            c.Rect(39, 31, 42, 34, BruteSteelDark);
+            c.Rect(41, 32, 42, 33, BruteSteelLight);
+            c.Rect(38, 34, 39, 35, BruteTattoo);
+            Color eye = eyeLit ? new Color(1f, 0.15f, 0.1f) : new Color(0.4f, 0.06f, 0.04f);
+            c.Circle(38.5f, 28.5f, 2f, BruteSteelDark);
+            c.Circle(38.5f, 28.5f, 1.3f, eye);
+            if (eyeLit) c.Rect(40, 28, 41, 28, new Color(1f, 0.45f, 0.35f));
+        }
+
+        // Позвоночный имплант вместо ранца: стальные позвонки вдоль спины, светящиеся разъёмы, барабан с лентой к пулемёту
         private static void DrawBossPack(PixelCanvas c)
         {
-            c.RoundRect(5, 17, 21, 47, 4, BruteSteelDark);
-            c.RoundRect(7, 19, 19, 45, 3, BruteSteel);
-            c.Rect(8, 30, 18, 33, new Color(1f, 0.55f, 0.15f));
-            c.Line(new Vector2(14f, 18f), new Vector2(24f, 9f), 2.6f, new Color(0.65f, 0.55f, 0.2f));
+            c.RoundRect(9, 20, 18, 30, 3, BruteSteelDark);
+            c.Circle(13.5f, 25f, 3f, BruteSteel);
+            c.Circle(13.5f, 25f, 1.2f, new Color(1f, 0.55f, 0.15f));
+            c.Line(new Vector2(13f, 20f), new Vector2(24f, 9f), 2.6f, new Color(0.65f, 0.55f, 0.2f));
             c.Line(new Vector2(24f, 9f), new Vector2(40f, 8f), 2.6f, new Color(0.65f, 0.55f, 0.2f));
+            for (int i = 0; i < 6; i++)
+            {
+                int y = 17 + i * 6;
+                c.RoundRect(16, y, 21, y + 4, 1, BruteSteel);
+                c.Rect(18, y + 2, 19, y + 2, CyberGlow);
+            }
         }
 
-        // Широкие плечи и голая грудь в татуировках, ремень портупеи наискосок, стальные пластины на плечах
+        // Широкие плечи: правое — массивный стальной наплечник с болтами, левое — живое, татуированное;
+        // по коже грудной клетки — светящиеся швы имплантов и стальные рёбра-пластины
         private static void DrawBossTorso(PixelCanvas c)
         {
             c.Line(new Vector2(29f, 52f), new Vector2(29f, 12f), 20f, BruteSkin);
-            c.Line(new Vector2(22f, 50f), new Vector2(22f, 14f), 4f, BruteSkinShade);
-            for (int i = 0; i < 4; i++)
+            c.Line(new Vector2(21f, 50f), new Vector2(21f, 14f), 3f, BruteSkinShade);
+            // Правая половина торса затянута бронёй
+            c.RoundRect(20, 10, 39, 30, 4, BruteSteel);
+            c.Line(new Vector2(22f, 18f), new Vector2(38f, 18f), 1f, BruteSteelDark);
+            c.Line(new Vector2(22f, 24f), new Vector2(38f, 24f), 1f, BruteSteelDark);
+            c.Line(new Vector2(22f, 29f), new Vector2(38f, 29f), 1.4f, CyberGlow);
+            // Татуировки на живой половине и швы, где железо вживлено в кожу
+            for (int i = 0; i < 3; i++)
             {
-                float y = 18f + i * 8f;
-                c.Line(new Vector2(25f, y), new Vector2(36f, y + 3f), 1.6f, BruteTattoo);
+                float y = 35f + i * 5f;
+                c.Line(new Vector2(25f, y), new Vector2(36f, y + 2f), 1.4f, BruteTattoo);
             }
-            c.Line(new Vector2(22f, 48f), new Vector2(37f, 16f), 2.6f, new Color(0.12f, 0.1f, 0.08f));
-            c.RoundRect(23, 6, 35, 14, 2, BruteSteel);
-            c.RoundRect(23, 50, 35, 58, 2, BruteSteelDark);
-            c.Rect(26, 9, 32, 10, BruteNeon);
+            c.Line(new Vector2(23f, 33f), new Vector2(23f, 46f), 1f, CyberGlow);
+            c.Rect(36, 41, 38, 46, BruteSteelLight);
+            // Наплечники
+            c.RoundRect(21, 4, 37, 15, 3, BruteSteelDark);
+            c.RoundRect(23, 6, 35, 13, 2, BruteSteel);
+            c.Rect(25, 9, 33, 10, BruteNeon);
+            c.Rect(23, 6, 23, 6, BruteSteelLight);
+            c.Rect(35, 6, 35, 6, BruteSteelLight);
+            c.RoundRect(24, 51, 34, 57, 2, BruteSkin);
+            c.Line(new Vector2(26f, 53f), new Vector2(33f, 55f), 1.4f, BruteTattoo);
+            c.Rect(24, 51, 34, 52, BruteSteelLight);
         }
 
         // ---------------------------------------------------------------- Арена

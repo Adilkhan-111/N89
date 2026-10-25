@@ -53,6 +53,7 @@ namespace N89.Combat
 
         private void Update()
         {
+            if (N89.UI.PauseMenu.IsPaused) return;
             if (_weapon == null || _weapon.MagazineSize <= 0)
             {
                 return;

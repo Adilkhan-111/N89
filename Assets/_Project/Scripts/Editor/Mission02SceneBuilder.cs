@@ -95,6 +95,10 @@ namespace N89.EditorTools
             Light2D stairsMarker = AddLight(level, "StairsMarker", V(44.3f, 7.2f), Cyan, 2.5f, 1.2f);
             Pulsing(stairsMarker, 3f, 0.4f, 1.4f);
             Rect stairsZone = WorldRect(new Vector2(42.6f, 5.9f), new Vector2(46.3f, 8.5f));
+            // Из подвала герой поднимается сюда — рядом с лестницей, но вне её зоны
+            Transform returnSpawn = new GameObject("ReturnSpawn").transform;
+            returnSpawn.SetParent(level);
+            returnSpawn.position = V(41.4f, 7.2f);
 
             // --- Подвал с Боссом: отдельная коробка далеко внизу мира, со своей схемой ---
             SetLayout(Mission02Basement.Origin, SpriteFactory.Wall());
@@ -161,6 +165,13 @@ namespace N89.EditorTools
                 P(so, "_subtitles").objectReferenceValue = hud.Subtitles;
                 P(so, "_letterboxTop").objectReferenceValue = hud.LetterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = hud.LetterboxBottom;
+
+                // Отход: из подвала по лестнице в холл, на тротуар к машине (справа от входа)
+                Mission01SceneBuilder.BuildAirCar(gameplay, V(15f, -4.5f), 0f, so);
+                P(so, "_returnZone").rectValue = basement.ReturnZone;
+                P(so, "_returnSpawn").objectReferenceValue = returnSpawn;
+                P(so, "_returnFacing").floatValue = 180f;
+                P(so, "_returnText").stringValue = "Поднимись из подвала";
             });
 
             ValidateQuickhacks();

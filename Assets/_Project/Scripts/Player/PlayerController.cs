@@ -53,6 +53,7 @@ namespace N89.Player
 
         private void Update()
         {
+            if (N89.UI.PauseMenu.IsPaused) return;
             if (_health != null && _health.IsDead)
             {
                 return;

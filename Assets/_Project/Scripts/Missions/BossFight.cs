@@ -86,6 +86,13 @@ namespace N89.Missions
         [SerializeField] private int _waveSize = 3;
         [SerializeField] private float _waveDelay = 2f;
 
+        [Header("Кейс с компроматом")]
+        [Tooltip("Выпадает из-под тела Босса после финала; подобрать — миссия выполнена")]
+        [SerializeField] private Sprite _caseSprite;
+        [SerializeField] private float _caseSize = 1.1f;
+        [SerializeField] private float _pickupRadius = 1.3f;
+        [SerializeField] private string _caseObjective = "Забери кейс с компроматом";
+
         [Header("Тексты")]
         [SerializeField] private string _enterObjective = "Осмотри подвал";
         [SerializeField] private string _fightObjective = "Убей Босса";
@@ -140,6 +147,51 @@ namespace N89.Missions
 
             _hud.Hide();
             yield return Finale();
+            yield return PickUpCase();
+        }
+
+        // Из-под тела Босса виден кейс: светится, покачивается — подойти и забрать
+        private IEnumerator PickUpCase()
+        {
+            if (_caseSprite == null) yield break;
+
+            // Труп Босса не должен мешать подойти к кейсу
+            foreach (Collider2D col in _boss.GetComponentsInChildren<Collider2D>()) col.enabled = false;
+
+            var go = new GameObject("KompromatCase");
+            Vector3 at = _boss.transform.position;
+            go.transform.position = at;
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = _caseSprite;
+            sr.sortingLayerID = _bossBody.sortingLayerID;
+            sr.sortingOrder = _bossBody.sortingOrder + 2;
+            if (_material != null) sr.sharedMaterial = _material;
+            float scale = _caseSize / Mathf.Max(0.01f, _caseSprite.bounds.size.x);
+            var glow = go.AddComponent<Light2D>();
+            glow.lightType = Light2D.LightType.Point;
+            glow.color = new Color(0.3f, 0.9f, 1f);
+            glow.pointLightOuterRadius = 2.2f;
+
+            _objective.Set(_caseObjective);
+            _fader.Flash(new Color(0.3f, 0.9f, 1f, 0.2f), 0.3f);
+            SetControl(true);
+
+            // Выскальзывает из-под тела и дальше пульсирует, пока герой не подойдёт
+            for (float t = 0f; ; t += Time.deltaTime)
+            {
+                float pop = Mathf.Clamp01(t / 0.35f);
+                go.transform.localScale = Vector3.one * scale * (Mathf.SmoothStep(0.3f, 1f, pop) + 0.05f * Mathf.Sin(t * 4f));
+                glow.intensity = 0.8f + 0.5f * Mathf.Sin(t * 5f);
+                if (HeroDead) yield break;
+                if (pop >= 1f && Vector2.Distance(_player.transform.position, at) <= _pickupRadius) break;
+                yield return null;
+            }
+
+            SetControl(false);
+            _cameraFollow.Shake(0.1f, 0.1f);
+            _fader.Flash(new Color(0.3f, 0.9f, 1f, 0.35f), 0.4f);
+            Destroy(go);
+            yield return new WaitForSeconds(0.6f);
         }
 
         // ------------------------------------------------------------ Катсцены

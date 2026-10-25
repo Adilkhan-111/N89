@@ -121,9 +121,10 @@ namespace N89.EditorTools
             MessengerPanel messenger = BuildMessenger(canvasRect, mono);
             ArsenalPanel arsenal = BuildArsenal(canvasRect, mono, CreateWeapons(), CreateImplants());
             Crosshair crosshair = BuildCrosshair(canvasRect, null, null);
-            BuildHint(canvasRect, mono, "WASD — ходьба    SHIFT — осмотреться    ESC — меню");
+            BuildHint(canvasRect, mono, "WASD — ходьба    SHIFT — осмотреться    ESC — пауза");
             ScreenFader fader = BuildFader(canvasRect, mono, new Color(1f, 0.85f, 0.97f));
             LoadingScreen loading = BuildLoadingScreen(canvasRect, mono);
+            BuildPauseMenu(canvasRect, mono);
 
             // --- Режиссёр ---
             InterludeDirector director = new GameObject("InterludeDirector").AddComponent<InterludeDirector>();
@@ -478,6 +479,19 @@ namespace N89.EditorTools
             TextMeshProUGUI attachmentInfo = Text("Info", attachment.rectTransform, mono, "ФАЙЛ ПОЛУЧЕН  //  КООРДИНАТЫ ЦЕЛИ", 16f, new Color(0.4f, 1f, 0.95f, 0.6f), TextAlignmentOptions.TopLeft);
             Anchor(attachmentInfo.rectTransform, new Vector2(0f, 0.5f), new Vector2(0f, 1f), new Vector2(96f, -4f), new Vector2(500f, 24f));
 
+            // Вложение-фото (только если режиссёр его передал): снимок в бирюзовой рамке и подпись
+            Image photo = Img("Photo", thread, new Color(0.02f, 0.1f, 0.11f, 1f));
+            photo.gameObject.AddComponent<Outline>().effectColor = cyan;
+            photo.gameObject.AddComponent<LayoutElement>().preferredHeight = 330f;
+            Image photoImage = Img("Image", photo.rectTransform, Color.white);
+            Anchor(photoImage.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(16f, -16f), new Vector2(290f, 290f));
+            photoImage.rectTransform.pivot = new Vector2(0f, 1f);
+            photoImage.preserveAspect = true;
+            TextMeshProUGUI photoLabel = Text("Caption", photo.rectTransform, mono, string.Empty, 22f, cyan, TextAlignmentOptions.TopLeft);
+            Anchor(photoLabel.rectTransform, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(322f, -20f), new Vector2(300f, 290f));
+            photoLabel.rectTransform.pivot = new Vector2(0f, 1f);
+            photoLabel.textWrappingMode = TextWrappingModes.Normal;
+
             // Индикатор "печатает" и подсказка закрытия
             TextMeshProUGUI typing = Text("Typing", panelRect, mono, string.Empty, 20f, redDim, TextAlignmentOptions.BottomLeft);
             Anchor(typing.rectTransform, Vector2.zero, Vector2.zero, new Vector2(460f, 60f), new Vector2(500f, 30f));
@@ -503,11 +517,15 @@ namespace N89.EditorTools
                 P(so, "_bubbleTemplate").objectReferenceValue = bubble.gameObject;
                 P(so, "_attachment").objectReferenceValue = attachment.gameObject;
                 P(so, "_attachmentLabel").objectReferenceValue = attachmentLabel;
+                P(so, "_photo").objectReferenceValue = photo.gameObject;
+                P(so, "_photoImage").objectReferenceValue = photoImage;
+                P(so, "_photoLabel").objectReferenceValue = photoLabel;
                 P(so, "_typingLabel").objectReferenceValue = typing;
                 P(so, "_closeHint").objectReferenceValue = closeGroup;
             });
             bubble.gameObject.SetActive(false);
             attachment.gameObject.SetActive(false);
+            photo.gameObject.SetActive(false);
             return messenger;
         }
 

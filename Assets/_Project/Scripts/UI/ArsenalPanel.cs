@@ -144,6 +144,7 @@ namespace N89.UI
 
         private void HandleInput()
         {
+            if (N89.UI.PauseMenu.IsPaused) return;
             // Клавиатурой управляет только сам арсенал: кликнутая стрелка не остаётся «выбранной»
             if (EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
             {

@@ -34,6 +34,7 @@ namespace N89.EditorTools
         {
             public Transform Spawn;
             public float SpawnFacing;
+            public Rect ReturnZone;
             public BossAI Boss;
             public SpriteRenderer BossBody;
             public Light2D[] Lamps;
@@ -66,6 +67,8 @@ namespace N89.EditorTools
             points.SetParent(root);
             refs.Spawn = Point(points, "BasementSpawn", new Vector2(49f, 19f));
             refs.SpawnFacing = 45f;
+            // Лестница наверх — обратно в холл после боя
+            refs.ReturnZone = WorldRect(new Vector2(46.9f, 11.15f), new Vector2(51.15f, 17.4f));
             refs.ArenaCenter = Point(points, "ArenaCenter", new Vector2(22.8f, 15.6f));
             refs.ArenaEntry = WorldRect(new Vector2(41.8f, 20.6f), new Vector2(45f, 24.8f));
             refs.DropPoints = new[]
@@ -442,6 +445,7 @@ namespace N89.EditorTools
                 P(so, "_dustFxPrefab").objectReferenceValue = refs.DustFx;
                 P(so, "_material").objectReferenceValue = UnlitMaterial;
                 P(so, "_cylinderPrefab").objectReferenceValue = refs.Cylinder;
+                P(so, "_caseSprite").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Sprite>(Interlude02SceneBuilder.CaseSpritePath);
                 SerializedProperty drops = P(so, "_dropPoints");
                 drops.arraySize = refs.DropPoints.Length;
                 for (int i = 0; i < refs.DropPoints.Length; i++) drops.GetArrayElementAtIndex(i).vector2Value = refs.DropPoints[i];

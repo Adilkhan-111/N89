@@ -93,6 +93,7 @@ namespace N89.Player
 
         private void Update()
         {
+            if (N89.UI.PauseMenu.IsPaused) return;
             Mouse mouse = Mouse.current;
             bool canAct = !_health.IsDead && _player.CanMove && _player.CanAim;
             if (mouse == null || !canAct)

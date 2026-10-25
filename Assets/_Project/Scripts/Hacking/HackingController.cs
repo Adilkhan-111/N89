@@ -48,6 +48,7 @@ namespace N89.Hacking
 
         private void Update()
         {
+            if (N89.UI.PauseMenu.IsPaused) return;
             Keyboard kb = Keyboard.current;
             bool tabHeld = kb != null && kb.tabKey.isPressed;
             if (!tabHeld)

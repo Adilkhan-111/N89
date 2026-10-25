@@ -1215,7 +1215,7 @@ namespace N89.EditorTools
             Crosshair crosshair = BuildCrosshair(canvasRect, hacking.GetComponent<Weapon>(), hacking);
             Image crosshairImage = crosshair.GetComponent<Image>();
 
-            BuildHint(canvasRect, mono, "ESC — меню    ENTER / SPACE / ЛКМ — пропустить реплику");
+            BuildHint(canvasRect, mono, "ESC — пауза    ENTER / SPACE / ЛКМ — пропустить реплику");
 
             // Затемнение и экран смерти — поверх всего
             ScreenFader screenFader = BuildFader(canvasRect, mono, new Color(1f, 0.2f, 0.3f));
@@ -1257,11 +1257,60 @@ namespace N89.EditorTools
                 P(so, "_nextScene").stringValue = nextScene;
             });
 
+            BuildPauseMenu(canvasRect, mono);
+
             return new HudRefs
             {
                 Subtitles = subtitleBox, Objective = objectivePanel, HackingHud = hackingHud, Fader = screenFader, EndScreen = endScreen,
                 LetterboxTop = letterboxTop, LetterboxBottom = letterboxBottom, Ammo = ammoHud,
             };
+        }
+
+        // Пауза по Esc — поверх всего: тёмная вуаль, заголовок и три кнопки в стиле итогового экрана
+        internal static PauseMenu BuildPauseMenu(RectTransform canvasRect, TMP_FontAsset mono)
+        {
+            Image panel = Img("PauseMenu", canvasRect, new Color(0.02f, 0f, 0.05f, 0.8f));
+            MainMenuSceneBuilder.Stretch(panel.rectTransform);
+            panel.raycastTarget = true;
+            CanvasGroup group = Group(panel.gameObject, 0f);
+
+            TextMeshProUGUI title = Text("Title", panel.rectTransform, mono, "ПАУЗА", 80f, new Color(1f, 0.85f, 0.97f), TextAlignmentOptions.Center);
+            Anchor(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 200f), new Vector2(1000f, 100f));
+            Anchor(Img("Divider", panel.rectTransform, Magenta).rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 135f), new Vector2(560f, 3f));
+
+            Button resume = PauseButton(panel.rectTransform, mono, "ПРОДОЛЖИТЬ", 40f);
+            Button restart = PauseButton(panel.rectTransform, mono, "ЗАНОВО", -60f);
+            Button menu = PauseButton(panel.rectTransform, mono, "ГЛАВНОЕ МЕНЮ", -160f);
+            TextMeshProUGUI hint = Text("Hint", panel.rectTransform, mono, "ESC — продолжить", 22f, new Color(1f, 0.7f, 0.9f, 0.6f), TextAlignmentOptions.Center);
+            Anchor(hint.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -260f), new Vector2(600f, 30f));
+
+            PauseMenu pause = panel.gameObject.AddComponent<PauseMenu>();
+            Configure(pause, so =>
+            {
+                P(so, "_group").objectReferenceValue = group;
+                P(so, "_resumeButton").objectReferenceValue = resume;
+                P(so, "_restartButton").objectReferenceValue = restart;
+                P(so, "_menuButton").objectReferenceValue = menu;
+            });
+            return pause;
+        }
+
+        private static Button PauseButton(RectTransform parent, TMP_FontAsset mono, string label, float y)
+        {
+            Image image = Img(label, parent, Color.white);
+            image.raycastTarget = true;
+            Anchor(image.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, y), new Vector2(460f, 76f));
+            image.gameObject.AddComponent<Outline>().effectColor = Magenta;
+            Button button = image.gameObject.AddComponent<Button>();
+            button.targetGraphic = image;
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(0.12f, 0.04f, 0.16f, 0.95f);
+            colors.highlightedColor = new Color(0.75f, 0.15f, 0.6f, 1f);
+            colors.selectedColor = colors.highlightedColor;
+            colors.pressedColor = new Color(0.5f, 0.1f, 0.4f, 1f);
+            button.colors = colors;
+            MainMenuSceneBuilder.Stretch(Text("Label", image.rectTransform, mono, label, 34f, Color.white, TextAlignmentOptions.Center).rectTransform);
+            return button;
         }
 
         // Патроны как в Hotline Miami: «16/16rnds» на чёрной плашке справа внизу, с тёмной тенью

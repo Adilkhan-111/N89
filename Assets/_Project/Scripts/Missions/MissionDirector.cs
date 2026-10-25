@@ -73,6 +73,21 @@ namespace N89.Missions
         [SerializeField] private GameObject _bloodPoolPrefab;
         [SerializeField] private string[] _targetLines = { "Стой... Стой! Кто тебя прислал?", "Корпорация? Я заплачу вдвое больше!" };
 
+        [Header("Отход к машине (необязательно)")]
+        [Tooltip("Летающая машина Рэя у входа: цель выполнена — вернись к ней и улетай, только тогда миссия окончена")]
+        [SerializeField] private Transform _car;
+        [SerializeField] private SpriteRenderer _carBody;
+        [SerializeField] private Transform _carShadow;
+        [SerializeField] private Light2D[] _carThrusters;
+        [Tooltip("Насколько близко к центру машины подойти, чтобы сесть")]
+        [SerializeField] private float _carReach = 1.9f;
+        [Tooltip("Лестница обратно на первый этаж (на втором этаже / в подвале, мировые координаты); пусто — герой уже внизу")]
+        [SerializeField] private Rect _returnZone;
+        [SerializeField] private Transform _returnSpawn;
+        [SerializeField] private float _returnFacing = -90f;
+        [SerializeField] private string _returnText = "Спустись на первый этаж";
+        [SerializeField] private string _carText = "Вернись к машине";
+
         [Header("UI")]
         [SerializeField] private ScreenFader _fader;
         [SerializeField] private ObjectivePanel _objective;
@@ -209,6 +224,7 @@ namespace N89.Missions
             }
 
             Time.timeScale = 1f;
+            if (_car != null) yield return Extract();
             _player.CanShoot = false;
             _hacking.HackingEnabled = false;
             yield return _endScreen.Show();
@@ -399,6 +415,102 @@ namespace N89.Missions
             yield return new WaitForSeconds(1f);
         }
 
+        // ------------------------------------------------------------ Отход
+
+        // Цель выполнена, но миссия ещё нет: вниз по лестнице (если герой наверху / в подвале), на улицу
+        // к машине — сел и улетел за кадр
+        private IEnumerator Extract()
+        {
+            // Катсцена цели держала камеру на ней — возвращаем камеру герою
+            _cameraFollow.Focus(null, 0f);
+            SetControl(true);
+            _player.CanAim = true;
+
+            if (_returnSpawn != null && _returnZone.width > 0f)
+            {
+                _objective.Set(_returnText);
+                Announce("ЦЕЛЬ ВЫПОЛНЕНА", _returnText.ToUpper(), _returnZone.center);
+                yield return new WaitUntil(() => _returnZone.Contains(_player.transform.position));
+
+                SetControl(false);
+                yield return _fader.Fade(0f, 1f, 0.4f);
+                if (_waypoint != null) _waypoint.Hide();
+                MoveHero(_returnSpawn.position, _returnFacing);
+                yield return new WaitForSeconds(0.2f);
+                SetControl(true);
+                yield return _fader.Fade(1f, 0f, 0.4f);
+                _objective.Set(_carText);
+                if (_waypoint != null) _waypoint.Show(_car.position);
+            }
+            else
+            {
+                _objective.Set(_carText);
+                Announce("ЦЕЛЬ ВЫПОЛНЕНА", _carText.ToUpper(), _car.position);
+            }
+
+            yield return new WaitUntil(() => Vector2.Distance(_player.transform.position, _car.position) <= _carReach);
+            if (_waypoint != null) _waypoint.Hide();
+            yield return FlyAway();
+        }
+
+        // Герой садится в машину, двигатели вспыхивают, машина поднимается (растёт, тень уходит в сторону)
+        // и, разгоняясь, улетает за кадр — камера остаётся на месте
+        private IEnumerator FlyAway()
+        {
+            SetControl(false);
+            _player.CanAim = false;
+            _objective.Set(string.Empty);
+            foreach (Collider2D col in _car.GetComponentsInChildren<Collider2D>()) col.enabled = false;
+
+            var focus = new GameObject("CarFocus").transform;
+            focus.position = _car.position;
+            _cameraFollow.Focus(focus, 0.5f);
+            StartCoroutine(Letterbox(120f, 0.5f));
+
+            // К ближайшей двери — и внутрь
+            Vector2 side = _car.up * (Vector2.Dot(_player.transform.position - _car.position, _car.up) >= 0f ? 0.8f : -0.8f);
+            Vector2 door = (Vector2)_car.position + side;
+            yield return Turn(_heroBody.transform, door, 0.15f);
+            yield return Move(_player.transform, _player.transform.position, door, 0.35f);
+            _player.gameObject.SetActive(false);
+            _cameraFollow.Shake(0.05f, 0.15f);
+            yield return new WaitForSeconds(0.6f);
+
+            // Двигатели и взлёт
+            Transform body = _carBody.transform;
+            int order = _carBody.sortingOrder;
+            _carBody.sortingOrder = 60;
+            Vector3 shadowFrom = _carShadow.localPosition;
+            for (float t = 0f; t < 1.3f; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / 1.3f);
+                foreach (Light2D thruster in _carThrusters) thruster.intensity = k * Random.Range(1.2f, 1.8f);
+                body.localScale = Vector3.one * (1f + 0.15f * k);
+                body.localPosition = new Vector3(0f, 0.04f * Mathf.Sin(t * 9f), 0f);
+                _carShadow.localPosition = shadowFrom + new Vector3(0.3f, -0.45f, 0f) * k;
+                _carShadow.localScale = Vector3.one * (1f - 0.15f * k);
+                yield return null;
+            }
+            _cameraFollow.Shake(0.12f, 0.3f);
+            yield return new WaitForSeconds(0.3f);
+
+            // Разгон вперёд и вверх
+            float speed = 0f;
+            for (float t = 0f; t < 2.2f; t += Time.deltaTime)
+            {
+                speed += 24f * Time.deltaTime;
+                _car.position += _car.right * (speed * Time.deltaTime);
+                body.localScale = Vector3.one * (1.15f + 0.3f * Mathf.Clamp01(t / 2.2f));
+                _carShadow.localPosition = shadowFrom + new Vector3(0.3f, -0.45f, 0f) * (1f + t);
+                foreach (Light2D thruster in _carThrusters) thruster.intensity = Random.Range(1.6f, 2.4f);
+                yield return null;
+            }
+            _carBody.sortingOrder = order;
+
+            yield return new WaitForSeconds(0.4f);
+            yield return Letterbox(0f, 0.5f);
+        }
+
         private static IEnumerator Turn(Transform body, Vector2 lookAt, float duration)
         {
             Vector2 dir = lookAt - (Vector2)body.position;
@@ -498,13 +610,7 @@ namespace N89.Missions
                 Reload();
                 return;
             }
-
-            if (kb != null && kb.escapeKey.wasPressedThisFrame)
-            {
-                Time.timeScale = 1f;
-                Checkpoint.Clear();
-                SceneManager.LoadScene(_menuScene);
-            }
+            // Esc — пауза (PauseMenu)
         }
     }
 }

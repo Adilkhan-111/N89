@@ -75,6 +75,57 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Сидит в гарнитуре брейнданса (как в Cyberpunk 2077): розовая рамка у висков, пластины на глазах,
+        // золотые кабели назад
+        public static Sprite HeroSittingBraindance() => Create("hero_sitting_bd", 48, 32, c =>
+        {
+            c.Line(new Vector2(17f, 12.5f), new Vector2(31f, 12f), 5f, HeroPants);
+            c.Line(new Vector2(17f, 19.5f), new Vector2(31f, 20f), 5f, HeroPants);
+            c.Ellipse(34f, 12f, 2.6f, 2.8f, HeroBoots);
+            c.Ellipse(34f, 20f, 2.6f, 2.8f, HeroBoots);
+            DrawHeroTorso(c, 13f);
+            c.Line(new Vector2(14f, 25f), new Vector2(25f, 22.5f), 3f, HeroJacket);
+            c.Line(new Vector2(14f, 7f), new Vector2(25f, 9.5f), 3f, HeroJacketShade);
+            c.Circle(26.5f, 22f, 1.7f, HeroSkin);
+            c.Circle(26.5f, 10f, 1.7f, HeroSkinShade);
+            DrawBraindanceRig(c, 13f, 16f);
+            c.Outline(Outline);
+        });
+
+        // Гарнитура брейнданса, лежит на столе: розовая С-образная рамка, пластины, свёрнутые кабели
+        public static Sprite BraindanceHeadset() => Create("bd_headset", 20, 16, c =>
+        {
+            c.Line(new Vector2(13f, 3f), new Vector2(7f, 2.5f), 1.4f, BdPink);
+            c.Line(new Vector2(7f, 2.5f), new Vector2(4f, 5f), 1.4f, BdPink);
+            c.Line(new Vector2(4f, 5f), new Vector2(4f, 11f), 1.4f, BdPink);
+            c.Line(new Vector2(4f, 11f), new Vector2(7f, 13.5f), 1.4f, BdPink);
+            c.Line(new Vector2(7f, 13.5f), new Vector2(13f, 13f), 1.4f, BdPink);
+            c.Rect(12, 2, 15, 4, BdPink);
+            c.Rect(12, 11, 15, 13, BdPink);
+            c.Rect(13, 3, 14, 3, BdGlow);
+            c.Rect(13, 12, 14, 12, BdGlow);
+            c.Line(new Vector2(4f, 3f), new Vector2(1f, 8f), 1f, BdCable);
+            c.Line(new Vector2(1f, 8f), new Vector2(4f, 13f), 1f, BdCable);
+            c.Outline(Outline);
+        });
+
+        private static readonly Color BdPink = new Color(1f, 0.2f, 0.6f);
+        private static readonly Color BdGlow = new Color(1f, 0.7f, 0.9f);
+        private static readonly Color BdCable = new Color(0.85f, 0.7f, 0.3f);
+
+        // Гарнитура на голове (голова в (x, y), смотрит вправо): рамка вокруг лба, пластины на глазах, кабели назад
+        private static void DrawBraindanceRig(PixelCanvas c, float x, float y)
+        {
+            c.Line(new Vector2(x - 6f, y - 9f), new Vector2(x - 1f, y - 5f), 1f, BdCable);
+            c.Line(new Vector2(x - 6f, y + 9f), new Vector2(x - 1f, y + 5f), 1f, BdCable);
+            c.Line(new Vector2(x - 8f, y - 5f), new Vector2(x - 2f, y - 4f), 1f, BdCable);
+            c.Line(new Vector2(x - 1f, y - 5f), new Vector2(x + 4f, y - 3.5f), 1.6f, BdPink);
+            c.Line(new Vector2(x - 1f, y + 5f), new Vector2(x + 4f, y + 3.5f), 1.6f, BdPink);
+            c.Line(new Vector2(x + 4.5f, y - 3f), new Vector2(x + 4.5f, y + 3f), 1.2f, BdGlow);
+            c.Rect((int)x + 3, (int)y - 4, (int)x + 5, (int)y - 3, BdPink);
+            c.Rect((int)x + 3, (int)y + 3, (int)x + 5, (int)y + 4, BdPink);
+        }
+
         // Рэй в миссии: боевая стойка с выбранным в арсенале оружием (вид сверху, ствол вправо)
         public static Sprite HeroSmg() => Create("hero_smg", 32, 32, c => DrawHeroArmed(c, gun =>
         {

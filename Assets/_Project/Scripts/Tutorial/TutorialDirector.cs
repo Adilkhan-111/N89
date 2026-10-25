@@ -625,14 +625,7 @@ namespace N89.Tutorial
                 SceneManager.LoadScene(SceneManager.GetActiveScene().name);
                 return;
             }
-
-            // Esc — выйти в меню (удобно при тестах)
-            if (kb != null && kb.escapeKey.wasPressedThisFrame && !_finale)
-            {
-                Time.timeScale = 1f;
-                Checkpoint.Clear();
-                SceneManager.LoadScene(_menuScene);
-            }
+            // Esc — пауза (PauseMenu)
         }
 
         private IEnumerator WaitAllDead(Health[] group, string objective)

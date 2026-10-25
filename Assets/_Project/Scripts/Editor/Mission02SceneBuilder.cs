@@ -167,7 +167,7 @@ namespace N89.EditorTools
                 P(so, "_letterboxBottom").objectReferenceValue = hud.LetterboxBottom;
 
                 // Отход: из подвала по лестнице в холл, на тротуар к машине (справа от входа)
-                Mission01SceneBuilder.BuildAirCar(gameplay, V(15f, -4.5f), 0f, so);
+                P(so, "_car").objectReferenceValue = Mission01SceneBuilder.BuildAirCar(gameplay, V(15f, -4.5f), 0f);
                 P(so, "_returnZone").rectValue = basement.ReturnZone;
                 P(so, "_returnSpawn").objectReferenceValue = returnSpawn;
                 P(so, "_returnFacing").floatValue = 180f;

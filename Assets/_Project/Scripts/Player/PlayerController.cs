@@ -37,6 +37,8 @@ namespace N89.Player
         public bool CanAim { get; set; } = true;
         // Импланты: замедление (блок), своё движение (рывок) и занятые руки (оружие молчит)
         public float SpeedMultiplier { get; set; } = 1f;
+        // Отдельно от SpeedMultiplier (его держит блок «Рук гориллы»): ставит HackingController на время скана
+        public float ScanSpeedMultiplier { get; set; } = 1f;
         public bool ExternalVelocity { get; set; }
         public bool WeaponLocked { get; set; }
         public Vector2 AimPoint { get; private set; }
@@ -102,7 +104,7 @@ namespace N89.Player
                 return;
             }
 
-            Vector2 target = _moveInput * _moveSpeed * SpeedMultiplier;
+            Vector2 target = _moveInput * _moveSpeed * SpeedMultiplier * ScanSpeedMultiplier;
             _rb.linearVelocity = Vector2.MoveTowards(_rb.linearVelocity, target, _acceleration * Time.fixedDeltaTime);
         }
 

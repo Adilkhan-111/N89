@@ -17,6 +17,10 @@ namespace N89.Hacking
         [Tooltip("Что закрывает обзор для взлома. Стекло сюда не входит — сквозь него взламывать можно")]
         [SerializeField] private LayerMask _sightBlockers;
 
+        [Tooltip("Скорость героя при сканировании (поверх замедления времени)")]
+        [SerializeField] private float _scanMoveMultiplier = 0.15f;
+
+        private N89.Player.PlayerController _player;
         private Camera _camera;
         private float _defaultFixedDeltaTime;
 
@@ -38,6 +42,7 @@ namespace N89.Hacking
         private void Awake()
         {
             _camera = Camera.main;
+            _player = GetComponent<N89.Player.PlayerController>();
             _defaultFixedDeltaTime = Time.fixedDeltaTime;
         }
 
@@ -90,6 +95,9 @@ namespace N89.Hacking
             IsScanning = scanning;
             Time.timeScale = scanning ? _scanTimeScale : 1f;
             Time.fixedDeltaTime = _defaultFixedDeltaTime * Time.timeScale;
+            // Скан — не для того, чтобы бегать в замедленном мире: герой еле ползёт
+            if (_player == null) _player = GetComponent<N89.Player.PlayerController>();
+            if (_player != null) _player.ScanSpeedMultiplier = scanning ? _scanMoveMultiplier : 1f;
         }
 
         private void AbortScan()

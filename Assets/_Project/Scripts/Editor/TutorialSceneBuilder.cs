@@ -575,7 +575,7 @@ namespace N89.EditorTools
         }
 
         // angle 90 — вертикальная дверь, 0 — горизонтальная. Панель уезжает вдоль своей длины.
-        private static Door CreateDoor(Transform parent, string name, Vector2 position, Sprite panelSprite, Vector2 lampPosition,
+        internal static Door CreateDoor(Transform parent, string name, Vector2 position, Sprite panelSprite, Vector2 lampPosition,
             float angle = 90f, float length = DoorLength)
         {
             var root = new GameObject(name) { layer = WallLayer };

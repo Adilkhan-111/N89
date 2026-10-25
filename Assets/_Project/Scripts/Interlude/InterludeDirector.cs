@@ -71,11 +71,22 @@ namespace N89.Interlude
         [SerializeField] private Door _frontDoor;
         [Tooltip("Площадка у входной двери изнутри: подошёл — дверь открывается")]
         [SerializeField] private TriggerZone _doorZone;
-        [Tooltip("Конец коридора за дверью: дошёл — грузится миссия")]
-        [SerializeField] private TriggerZone _exitZone;
         [SerializeField] private LoadingScreen _loading;
         [SerializeField] private string _doorObjective = "Иди к двери";
-        [SerializeField] private string _leaveObjective = "Выйди из коридора";
+
+        [Header("Подъезд, лифт, улица")]
+        [SerializeField] private Door _elevatorDoor;
+        [Tooltip("Площадка перед лифтом в конце подъезда: подошёл — двери открываются")]
+        [SerializeField] private TriggerZone _elevatorZone;
+        [Tooltip("Кабина лифта: зашёл — едет вниз")]
+        [SerializeField] private TriggerZone _cabZone;
+        [Tooltip("Кабина лифта внизу, на улице (поворот — куда смотрит герой)")]
+        [SerializeField] private Transform _streetSpawn;
+        [SerializeField] private Door _streetDoor;
+        [SerializeField] private AirCar _car;
+        [SerializeField] private float _carReach = 1.9f;
+        [SerializeField] private string _elevatorObjective = "Иди к лифту";
+        [SerializeField] private string _carObjective = "Сядь в машину";
         [SerializeField] private string _missionScene = "Mission01";
         [SerializeField] private string _missionTitle = "МИССИЯ 1";
         [SerializeField] private string _missionSubtitle = "ЛОГОВО БАНДЫ  //  ЗАЧИСТИТЬ ВСЕХ";
@@ -147,16 +158,82 @@ namespace N89.Interlude
             _objective.Set(string.Empty);
             yield return ChooseLoadout(rb);
 
-            // К двери, через коридор мегаблока — и загрузка миссии
+            yield return LeaveHome();
+        }
+
+        // Из квартиры — по подъезду к лифту, вниз на улицу, к машине — и на задание
+        private IEnumerator LeaveHome()
+        {
+            Rigidbody2D rb = _hero.GetComponent<Rigidbody2D>();
             _objective.Set(_doorObjective);
             yield return new WaitUntil(() => _doorZone.PlayerInside);
             _frontDoor.Open();
-            _objective.Set(_leaveObjective);
-            yield return new WaitUntil(() => _exitZone.WasEntered);
+            _objective.Set(_elevatorObjective);
+            yield return new WaitUntil(() => _elevatorZone.PlayerInside);
+            _elevatorDoor.Open();
+            yield return new WaitUntil(() => _cabZone.PlayerInside);
+            yield return RideElevator(rb);
 
+            _objective.Set(_carObjective);
+            yield return new WaitUntil(() => Vector2.Distance(_hero.transform.position, _car.transform.position) <= _carReach);
+            _objective.Set(string.Empty);
+            yield return FlyAway(rb);
+            yield return _loading.Load(_missionScene, _missionTitle, _missionSubtitle);
+        }
+
+        // Двери кабины закрываются, затемнение, лифт гудит и едет вниз — внизу двери открываются на улицу
+        private IEnumerator RideElevator(Rigidbody2D rb)
+        {
             _objective.Set(string.Empty);
             SetControl(false, rb);
-            yield return _loading.Load(_missionScene, _missionTitle, _missionSubtitle);
+            _heroBody.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            _elevatorDoor.Close();
+            yield return new WaitForSeconds(0.6f);
+            _cameraFollow.Shake(0.04f, 0.3f);
+            yield return _fader.Fade(0f, 1f, 0.5f);
+
+            _cameraFollow.Shake(0.03f, 1f);
+            yield return new WaitForSeconds(1f);
+            rb.position = _streetSpawn.position;
+            _hero.transform.position = _streetSpawn.position;
+            _heroBody.transform.rotation = _streetSpawn.rotation;
+            _cameraFollow.SnapToTarget();
+
+            yield return _fader.Fade(1f, 0f, 0.5f);
+            _streetDoor.Open();
+            yield return new WaitForSeconds(0.4f);
+            SetControl(true, rb);
+            StartCoroutine(CloseBehind(_streetDoor, _streetSpawn.position));
+        }
+
+        // Двери лифта закрываются за спиной, когда герой вышел из кабины
+        private IEnumerator CloseBehind(Door door, Vector2 cab)
+        {
+            yield return new WaitUntil(() => Vector2.Distance(_hero.transform.position, cab) > 1.8f);
+            door.Close();
+        }
+
+        // Садится в машину: та поднимается и улетает за кадр (камера остаётся на месте)
+        private IEnumerator FlyAway(Rigidbody2D rb)
+        {
+            SetControl(false, rb);
+            _car.DisableColliders();
+            var focus = new GameObject("CarFocus").transform;
+            focus.position = _car.transform.position;
+            _cameraFollow.Focus(focus, 0.5f);
+            StartCoroutine(Letterbox(_letterboxHeight, 0.5f));
+
+            Vector2 door = _car.DoorFor(_hero.transform.position);
+            Vector2 dir = door - (Vector2)_hero.transform.position;
+            _heroBody.transform.rotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg);
+            yield return Move(_hero.transform, _hero.transform.position, door, 0.35f);
+            _hero.gameObject.SetActive(false);
+            _cameraFollow.Shake(0.05f, 0.15f);
+            yield return new WaitForSeconds(0.6f);
+
+            _cameraFollow.Shake(0.12f, 1.4f);
+            yield return _car.TakeOff();
+            yield return new WaitForSeconds(0.3f);
         }
 
         private IEnumerator ShowTitle()

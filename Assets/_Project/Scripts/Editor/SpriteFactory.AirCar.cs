@@ -64,6 +64,18 @@ namespace N89.EditorTools
             c.Outline(Outline);
         });
 
+        // Дверь лифта мегаблока (вид сверху, как HomeDoor): шлифованная сталь, шов посередине, голубые стрелки
+        public static Sprite ElevatorDoor() => Create("door_elevator", 32, 20, c =>
+        {
+            c.Rect(0, 0, 31, 19, new Color(0.42f, 0.44f, 0.5f));
+            for (int x = 0; x < 32; x += 2) c.Rect(x, 3, x, 16, new Color(0.5f, 0.52f, 0.58f));
+            c.Rect(0, 0, 31, 2, new Color(0.12f, 0.12f, 0.15f));
+            c.Rect(0, 17, 31, 19, new Color(0.12f, 0.12f, 0.15f));
+            c.Rect(15, 2, 16, 17, new Color(0.15f, 0.15f, 0.18f));
+            c.Rect(6, 9, 9, 10, Neon);
+            c.Rect(22, 9, 25, 10, Neon);
+        });
+
         // Тень машины на земле: при взлёте отъезжает в сторону и бледнеет
         public static Sprite AirCarShadow() => Create("air_car_shadow", 88, 44, c =>
         {

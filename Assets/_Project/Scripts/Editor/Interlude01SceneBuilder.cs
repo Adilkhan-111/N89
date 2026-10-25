@@ -84,7 +84,9 @@ namespace N89.EditorTools
             Transform apartment = new GameObject("Apartment").transform;
             BuildRooms(apartment, out Door frontDoor);
             BuildFurniture(apartment);
-            TriggerZone exitZone = BuildCorridor(apartment, lights);
+            var exit = new ExitRefs();
+            BuildCorridor(apartment, lights, ref exit);
+            BuildStreet(apartment, lights, ref exit);
 
             // --- Герой и точки катсцены ---
             Transform gameplay = new GameObject("Gameplay").transform;
@@ -148,7 +150,12 @@ namespace N89.EditorTools
                 P(so, "_arsenal").objectReferenceValue = arsenal;
                 P(so, "_frontDoor").objectReferenceValue = frontDoor;
                 P(so, "_doorZone").objectReferenceValue = doorZone;
-                P(so, "_exitZone").objectReferenceValue = exitZone;
+                P(so, "_elevatorDoor").objectReferenceValue = exit.ElevatorDoor;
+                P(so, "_elevatorZone").objectReferenceValue = exit.ElevatorZone;
+                P(so, "_cabZone").objectReferenceValue = exit.CabZone;
+                P(so, "_streetSpawn").objectReferenceValue = exit.StreetSpawn;
+                P(so, "_streetDoor").objectReferenceValue = exit.StreetDoor;
+                P(so, "_car").objectReferenceValue = exit.Car;
                 P(so, "_loading").objectReferenceValue = loading;
                 P(so, "_letterboxTop").objectReferenceValue = letterboxTop;
                 P(so, "_letterboxBottom").objectReferenceValue = letterboxBottom;
@@ -224,10 +231,26 @@ namespace N89.EditorTools
             });
         }
 
-        // Коридор мегаблока за входной дверью: тусклые мигающие лампы, мусор, в конце — выход
-        private static TriggerZone BuildCorridor(Transform parent, Transform lights)
+        internal struct ExitRefs
         {
-            const float left = -0.6f, right = 2.6f, end = -15.5f;
+            public Door ElevatorDoor;
+            public TriggerZone ElevatorZone;
+            public TriggerZone CabZone;
+            public Transform StreetSpawn;
+            public Door StreetDoor;
+            public AirCar Car;
+        }
+
+        private const float CorridorEnd = -22f;
+        // Улица далеко внизу мира — отдельная «локация», куда герой попадает на лифте
+        private static readonly Vector2 Street = new Vector2(0f, -45f);
+
+        // Подъезд мегаблока за входной дверью: по стенам — закрытые двери соседей с красными лампами,
+        // мигающий свет, мусор; в конце — лифт с кабиной
+        private static void BuildCorridor(Transform parent, Transform lights, ref ExitRefs refs)
+        {
+            const float left = -1.4f, right = 3.4f, end = CorridorEnd;
+            const float cabLeft = 0.1f, cabRight = 1.9f, cabDepth = 2f;
             Transform corridor = new GameObject("Corridor").transform;
             corridor.SetParent(parent);
             Sprite wall = SpriteFactory.HomeWall();
@@ -236,20 +259,141 @@ namespace N89.EditorTools
             SpriteRenderer floor = CreateSprite("Floor", corridor, SpriteFactory.ApartmentFloor(), new Vector2((left + right) * 0.5f, (Bottom + end) * 0.5f), -100);
             floor.drawMode = SpriteDrawMode.Tiled;
             floor.size = new Vector2(right - left, Bottom - end);
-            floor.color = new Color(0.7f, 0.72f, 0.8f);
+            floor.color = new Color(0.62f, 0.64f, 0.74f);
 
             CreateWall(corridor, "Wall_W", new Vector2(left, Bottom), new Vector2(left, end - t), wall, WallLayer, 5);
             CreateWall(corridor, "Wall_E", new Vector2(right, Bottom), new Vector2(right, end - t), wall, WallLayer, 5);
-            CreateWall(corridor, "Wall_End", new Vector2(left - t, end), new Vector2(right + t, end), wall, WallLayer, 5);
+            CreateWall(corridor, "Wall_End_W", new Vector2(left - t, end), new Vector2(cabLeft, end), wall, WallLayer, 5);
+            CreateWall(corridor, "Wall_End_E", new Vector2(cabRight, end), new Vector2(right + t, end), wall, WallLayer, 5);
 
-            Prop("Clutter", corridor, SpriteFactory.Clutter(), new Vector2(-0.05f, -9.2f), Vector2.zero);
-            Prop("Crate", corridor, SpriteFactory.Crate(), new Vector2(2.05f, -11.6f), new Vector2(0.85f, 0.85f));
-            NeonSign(corridor, SpriteFactory.NeonSign(), new Vector2(1f, end + 0.45f), 0f, new Color(0.35f, 1f, 0.5f));
+            // Квартиры соседей: двери в стенах, заперты навсегда
+            Sprite door = SpriteFactory.HomeDoor();
+            float[] westDoors = { -8.4f, -12.6f, -16.8f };
+            float[] eastDoors = { -7.6f, -11.4f, -15.2f, -19f };
+            foreach (float y in westDoors)
+            {
+                NeighbourDoor(corridor, new Vector2(left, y), door, new Vector2(left + 0.35f, y + 1f));
+            }
+            foreach (float y in eastDoors)
+            {
+                NeighbourDoor(corridor, new Vector2(right, y), door, new Vector2(right - 0.35f, y + 1f));
+            }
+
+            Prop("Clutter", corridor, SpriteFactory.Clutter(), new Vector2(-0.6f, -10.5f), Vector2.zero);
+            Prop("Clutter", corridor, SpriteFactory.Clutter(), new Vector2(2.7f, -17.3f), Vector2.zero, 90f);
+            Prop("Crate", corridor, SpriteFactory.Crate(), new Vector2(-0.9f, -14.7f), new Vector2(0.85f, 0.85f));
+            NeonSign(corridor, SpriteFactory.NeonSign(), new Vector2(-0.7f, end + 0.45f), 0f, new Color(0.35f, 1f, 0.5f));
 
             Pulsing(AddLight(lights, "Corridor_1", new Vector2(1f, -8f), new Color(0.75f, 0.9f, 1f), 3.5f, 0.7f), 17f, 0.25f, 0.8f);
             AddLight(lights, "Corridor_2", new Vector2(1f, -12.5f), new Color(1f, 0.6f, 0.4f), 3.5f, 0.6f);
+            Pulsing(AddLight(lights, "Corridor_3", new Vector2(1f, -17f), new Color(0.75f, 0.9f, 1f), 3.5f, 0.6f), 9f, 0.1f, 0.7f);
+            AddLight(lights, "Corridor_Elevator", new Vector2(1f, end + 1f), new Color(0.4f, 1f, 1f), 3f, 0.8f);
 
-            return CreateZone(corridor, "ExitZone", new Vector2(1f, end + 1.1f), new Vector2(right - left, 1.4f));
+            // Лифт: двери в торцевой стене и кабина за ними
+            BuildElevatorCab(corridor, lights, new Vector2((cabLeft + cabRight) * 0.5f, end), -1f, cabRight - cabLeft, cabDepth,
+                new Vector2(cabRight + 0.4f, end + 0.4f), out refs.ElevatorDoor);
+            refs.ElevatorZone = CreateZone(corridor, "ElevatorZone", new Vector2(1f, end + 1.3f), new Vector2(right - left, 2f));
+            refs.CabZone = CreateZone(corridor, "CabZone", new Vector2(1f, end - cabDepth * 0.55f), new Vector2(1.3f, 1.2f));
+        }
+
+        private static void InvisibleWall(Transform parent, string name, Vector2 position, Vector2 size)
+        {
+            var go = new GameObject(name) { layer = WallLayer };
+            go.transform.SetParent(parent);
+            go.transform.position = position;
+            go.AddComponent<BoxCollider2D>().size = size;
+        }
+
+        // Дверь соседской квартиры поверх сплошной стены подъезда: всегда заперта (красная лампа)
+        private static void NeighbourDoor(Transform parent, Vector2 position, Sprite sprite, Vector2 lampPosition)
+        {
+            Door door = TutorialSceneBuilder.CreateDoor(parent, "NeighbourDoor", position, sprite, lampPosition, 90f, 1.4f);
+            foreach (SpriteRenderer sr in door.GetComponentsInChildren<SpriteRenderer>()) sr.sortingOrder = 6;
+        }
+
+        // Кабина лифта за проёмом в стене (dir: -1 — уходит вниз от стены, +1 — вверх): двери, металлический пол, свет
+        private static void BuildElevatorCab(Transform parent, Transform lights, Vector2 doorCenter, float dir, float width, float depth,
+            Vector2 lampPosition, out Door door)
+        {
+            Sprite wall = SpriteFactory.HomeWall();
+            float t = WallThickness * 0.5f;
+            float back = doorCenter.y + dir * depth;
+            float l = doorCenter.x - width * 0.5f, r = doorCenter.x + width * 0.5f;
+
+            SpriteRenderer floor = CreateSprite("CabFloor", parent, SpriteFactory.ApartmentFloor(), new Vector2(doorCenter.x, doorCenter.y + dir * depth * 0.5f), -100);
+            floor.drawMode = SpriteDrawMode.Tiled;
+            floor.size = new Vector2(width, depth);
+            floor.color = new Color(0.55f, 0.6f, 0.7f);
+            CreateWall(parent, "Cab_W", new Vector2(l, doorCenter.y), new Vector2(l, back + dir * t), wall, WallLayer, 5);
+            CreateWall(parent, "Cab_E", new Vector2(r, doorCenter.y), new Vector2(r, back + dir * t), wall, WallLayer, 5);
+            CreateWall(parent, "Cab_Back", new Vector2(l - t, back), new Vector2(r + t, back), wall, WallLayer, 5);
+            AddLight(lights, "Cab", new Vector2(doorCenter.x, doorCenter.y + dir * depth * 0.5f), new Color(0.85f, 0.95f, 1f), 1.8f, 0.9f);
+
+            door = TutorialSceneBuilder.CreateDoor(parent, "ElevatorDoor", doorCenter, SpriteFactory.ElevatorDoor(), lampPosition, 0f, width);
+        }
+
+        // Улица у подножия мегаблока: тротуар вдоль стены дома, лифт выходит прямо на него, ниже — дорога,
+        // на обочине — летающая машина Рэя
+        private static void BuildStreet(Transform parent, Transform lights, ref ExitRefs refs)
+        {
+            const float halfW = 8f, sidewalk = 4.5f, road = 6.5f;
+            float top = Street.y, curb = top - sidewalk, bottom = curb - road;
+            float left = Street.x - halfW, right = Street.x + halfW;
+            Transform street = new GameObject("Street").transform;
+            street.SetParent(parent);
+            Sprite wall = SpriteFactory.HomeWall();
+            float t = WallThickness * 0.5f;
+
+            // Крыша дома над тротуаром (вид сверху — тёмная плоскость), тротуар, асфальт
+            SpriteRenderer roof = CreateSprite("Roof", street, SpriteFactory.ApartmentFloor(), new Vector2(Street.x, top + 3.5f), -100);
+            roof.drawMode = SpriteDrawMode.Tiled;
+            roof.size = new Vector2(halfW * 2f + 2f, 7f);
+            roof.color = new Color(0.18f, 0.17f, 0.24f);
+            SpriteRenderer walk = CreateSprite("Sidewalk", street, SpriteFactory.Sidewalk(), new Vector2(Street.x, (top + curb) * 0.5f), -100);
+            walk.drawMode = SpriteDrawMode.Tiled;
+            walk.size = new Vector2(halfW * 2f, sidewalk);
+            // Дорога уходит за края кадра — машина улетает вдоль неё
+            SpriteRenderer asphalt = CreateSprite("Road", street, SpriteFactory.Asphalt(), new Vector2(Street.x, (curb + bottom) * 0.5f), -100);
+            asphalt.drawMode = SpriteDrawMode.Tiled;
+            asphalt.size = new Vector2(halfW * 2f + 30f, road);
+            // Бордюр и прерывистая разметка
+            SpriteRenderer curbLine = CreateSprite("Curb", street, SpriteFactory.White(), new Vector2(Street.x, curb), -99);
+            curbLine.transform.localScale = new Vector3(halfW * 2f / 0.25f, 0.5f, 1f);
+            curbLine.color = new Color(0.55f, 0.55f, 0.6f);
+            for (float x = left - 14f; x < right + 15f; x += 2.2f)
+            {
+                SpriteRenderer dash = CreateSprite("Lane", street, SpriteFactory.White(), new Vector2(x, curb - road * 0.55f), -99);
+                dash.transform.localScale = new Vector3(3.6f, 0.4f, 1f);
+                dash.color = new Color(0.95f, 0.8f, 0.25f, 0.8f);
+            }
+
+            // Стена дома с выходом из лифта; по краям — глухие стены переулка; снизу — невидимая граница
+            CreateWall(street, "House_W", new Vector2(left - t, top), new Vector2(Street.x - 0.9f, top), wall, WallLayer, 5);
+            CreateWall(street, "House_E", new Vector2(Street.x + 0.9f, top), new Vector2(right + t, top), wall, WallLayer, 5);
+            CreateWall(street, "Alley_W", new Vector2(left, top), new Vector2(left, curb), wall, WallLayer, 5);
+            CreateWall(street, "Alley_E", new Vector2(right, top), new Vector2(right, curb), wall, WallLayer, 5);
+            // Невидимые границы дороги: пешком дальше кадра не уйти
+            InvisibleWall(street, "RoadEdge_S", new Vector2(Street.x, bottom - 0.3f), new Vector2(halfW * 2f, 0.6f));
+            InvisibleWall(street, "RoadEdge_W", new Vector2(left - 0.3f, (curb + bottom) * 0.5f), new Vector2(0.6f, road));
+            InvisibleWall(street, "RoadEdge_E", new Vector2(right + 0.3f, (curb + bottom) * 0.5f), new Vector2(0.6f, road));
+
+            // Кабина лифта внизу: герой появляется внутри, двери открываются на тротуар
+            BuildElevatorCab(street, lights, new Vector2(Street.x, top), 1f, 1.8f, 2f, new Vector2(Street.x + 1.3f, top - 0.4f), out refs.StreetDoor);
+            refs.StreetSpawn = Point(street, "StreetSpawn", new Vector2(Street.x, top + 1.1f), -90f);
+
+            // Неон на стене, фонари, кадки, мусор
+            NeonSign(street, SpriteFactory.NeonSign(), new Vector2(Street.x - 4.5f, top - 0.45f), 0f, Magenta);
+            NeonSign(street, SpriteFactory.NeonSign(), new Vector2(Street.x + 4.5f, top - 0.45f), 0f, Cyan);
+            AddLight(lights, "Street_Lamp_W", new Vector2(Street.x - 5f, curb + 0.8f), Cyan, 6f, 0.7f);
+            AddLight(lights, "Street_Lamp_E", new Vector2(Street.x + 5f, curb + 0.8f), Magenta, 6f, 0.7f);
+            AddLight(lights, "Street_Door", new Vector2(Street.x, top - 1f), new Color(1f, 0.85f, 0.6f), 3f, 0.6f);
+            AddLight(lights, "Street_Road", new Vector2(Street.x + 2f, curb - 2.5f), new Color(0.7f, 0.8f, 1f), 7f, 0.45f);
+            Prop("Plant", street, SpriteFactory.Plant(), new Vector2(Street.x - 6.6f, top - 0.9f), new Vector2(0.7f, 0.7f));
+            Prop("Plant", street, SpriteFactory.Plant(), new Vector2(Street.x + 6.6f, top - 0.9f), new Vector2(0.7f, 0.7f));
+            Prop("Trash", street, SpriteFactory.TrashPile(), new Vector2(Street.x - 3f, curb + 0.6f), Vector2.zero);
+            Prop("Stain", street, SpriteFactory.OilStain(), new Vector2(Street.x + 4f, curb - 2.4f), Vector2.zero);
+
+            refs.Car = Mission01SceneBuilder.BuildAirCar(street, new Vector2(Street.x + 3.5f, curb - 1.6f), 0f);
         }
 
         // Экран загрузки миссии: чёрный фон, название, полоска прогресса

@@ -184,7 +184,7 @@ namespace N89.EditorTools
                 P(so, "_letterboxBottom").objectReferenceValue = hud.LetterboxBottom;
 
                 // Отход: со второго этажа по лестнице вниз, во двор к машине (припаркована справа от E1)
-                BuildAirCar(gameplay, V(16f, -4.6f), 0f, so);
+                P(so, "_car").objectReferenceValue = BuildAirCar(gameplay, V(16f, -4.6f), 0f);
                 P(so, "_returnZone").rectValue = floor2Stairs;
                 P(so, "_returnSpawn").objectReferenceValue = returnSpawn;
                 P(so, "_returnFacing").floatValue = -90f;
@@ -201,7 +201,7 @@ namespace N89.EditorTools
 
         // Летающая машина Рэя на улице (мировые координаты, нос — по angle): кузов на слое Glass (не пройти,
         // поверх видно), тень, четыре голубые опоры-двигателя (гаснут, пока стоит). Для отхода в конце миссии
-        internal static void BuildAirCar(Transform parent, Vector2 position, float angle, SerializedObject director)
+        internal static AirCar BuildAirCar(Transform parent, Vector2 position, float angle)
         {
             var root = new GameObject("AirCar") { layer = GlassLayer };
             root.transform.SetParent(parent);
@@ -221,10 +221,14 @@ namespace N89.EditorTools
             // Фары: свет вперёд, чтобы машину было видно в темноте двора
             AddLight(body.transform, "Headlight", root.transform.TransformPoint(new Vector2(1.8f, 0f)), new Color(0.85f, 1f, 1f), 2.2f, 0.7f);
 
-            P(director, "_car").objectReferenceValue = root.transform;
-            P(director, "_carBody").objectReferenceValue = body;
-            P(director, "_carShadow").objectReferenceValue = shadow.transform;
-            SetArray(director, "_carThrusters", thrusters);
+            AirCar car = root.AddComponent<AirCar>();
+            Configure(car, so =>
+            {
+                P(so, "_body").objectReferenceValue = body;
+                P(so, "_shadow").objectReferenceValue = shadow.transform;
+                SetArray(so, "_thrusters", thrusters);
+            });
+            return car;
         }
 
         // ---------------------------------------------------------------- Здание

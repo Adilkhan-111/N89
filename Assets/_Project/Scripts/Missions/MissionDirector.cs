@@ -5,6 +5,7 @@ using N89.Enemies;
 using N89.Hacking;
 using N89.Player;
 using N89.UI;
+using N89.World;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Rendering.Universal;
@@ -75,10 +76,7 @@ namespace N89.Missions
 
         [Header("Отход к машине (необязательно)")]
         [Tooltip("Летающая машина Рэя у входа: цель выполнена — вернись к ней и улетай, только тогда миссия окончена")]
-        [SerializeField] private Transform _car;
-        [SerializeField] private SpriteRenderer _carBody;
-        [SerializeField] private Transform _carShadow;
-        [SerializeField] private Light2D[] _carThrusters;
+        [SerializeField] private AirCar _car;
         [Tooltip("Насколько близко к центру машины подойти, чтобы сесть")]
         [SerializeField] private float _carReach = 1.9f;
         [Tooltip("Лестница обратно на первый этаж (на втором этаже / в подвале, мировые координаты); пусто — герой уже внизу")]
@@ -440,72 +438,42 @@ namespace N89.Missions
                 SetControl(true);
                 yield return _fader.Fade(1f, 0f, 0.4f);
                 _objective.Set(_carText);
-                if (_waypoint != null) _waypoint.Show(_car.position);
+                if (_waypoint != null) _waypoint.Show(_car.transform.position);
             }
             else
             {
                 _objective.Set(_carText);
-                Announce("ЦЕЛЬ ВЫПОЛНЕНА", _carText.ToUpper(), _car.position);
+                Announce("ЦЕЛЬ ВЫПОЛНЕНА", _carText.ToUpper(), _car.transform.position);
             }
 
-            yield return new WaitUntil(() => Vector2.Distance(_player.transform.position, _car.position) <= _carReach);
+            yield return new WaitUntil(() => Vector2.Distance(_player.transform.position, _car.transform.position) <= _carReach);
             if (_waypoint != null) _waypoint.Hide();
             yield return FlyAway();
         }
 
-        // Герой садится в машину, двигатели вспыхивают, машина поднимается (растёт, тень уходит в сторону)
-        // и, разгоняясь, улетает за кадр — камера остаётся на месте
+        // Герой садится в машину, и она улетает за кадр (AirCar.TakeOff) — камера остаётся на месте
         private IEnumerator FlyAway()
         {
             SetControl(false);
             _player.CanAim = false;
             _objective.Set(string.Empty);
-            foreach (Collider2D col in _car.GetComponentsInChildren<Collider2D>()) col.enabled = false;
+            _car.DisableColliders();
 
             var focus = new GameObject("CarFocus").transform;
-            focus.position = _car.position;
+            focus.position = _car.transform.position;
             _cameraFollow.Focus(focus, 0.5f);
             StartCoroutine(Letterbox(120f, 0.5f));
 
             // К ближайшей двери — и внутрь
-            Vector2 side = _car.up * (Vector2.Dot(_player.transform.position - _car.position, _car.up) >= 0f ? 0.8f : -0.8f);
-            Vector2 door = (Vector2)_car.position + side;
+            Vector2 door = _car.DoorFor(_player.transform.position);
             yield return Turn(_heroBody.transform, door, 0.15f);
             yield return Move(_player.transform, _player.transform.position, door, 0.35f);
             _player.gameObject.SetActive(false);
             _cameraFollow.Shake(0.05f, 0.15f);
             yield return new WaitForSeconds(0.6f);
 
-            // Двигатели и взлёт
-            Transform body = _carBody.transform;
-            int order = _carBody.sortingOrder;
-            _carBody.sortingOrder = 60;
-            Vector3 shadowFrom = _carShadow.localPosition;
-            for (float t = 0f; t < 1.3f; t += Time.deltaTime)
-            {
-                float k = Mathf.SmoothStep(0f, 1f, t / 1.3f);
-                foreach (Light2D thruster in _carThrusters) thruster.intensity = k * Random.Range(1.2f, 1.8f);
-                body.localScale = Vector3.one * (1f + 0.15f * k);
-                body.localPosition = new Vector3(0f, 0.04f * Mathf.Sin(t * 9f), 0f);
-                _carShadow.localPosition = shadowFrom + new Vector3(0.3f, -0.45f, 0f) * k;
-                _carShadow.localScale = Vector3.one * (1f - 0.15f * k);
-                yield return null;
-            }
-            _cameraFollow.Shake(0.12f, 0.3f);
-            yield return new WaitForSeconds(0.3f);
-
-            // Разгон вперёд и вверх
-            float speed = 0f;
-            for (float t = 0f; t < 2.2f; t += Time.deltaTime)
-            {
-                speed += 24f * Time.deltaTime;
-                _car.position += _car.right * (speed * Time.deltaTime);
-                body.localScale = Vector3.one * (1.15f + 0.3f * Mathf.Clamp01(t / 2.2f));
-                _carShadow.localPosition = shadowFrom + new Vector3(0.3f, -0.45f, 0f) * (1f + t);
-                foreach (Light2D thruster in _carThrusters) thruster.intensity = Random.Range(1.6f, 2.4f);
-                yield return null;
-            }
-            _carBody.sortingOrder = order;
+            _cameraFollow.Shake(0.12f, 1.4f);
+            yield return _car.TakeOff();
 
             yield return new WaitForSeconds(0.4f);
             yield return Letterbox(0f, 0.5f);
